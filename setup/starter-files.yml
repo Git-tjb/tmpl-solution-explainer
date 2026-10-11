@@ -1,0 +1,3 @@
+schema_version: 1
+# Paths in `from` are relative to the project's folder in its KB vault (schema.md section 13).
+files: []

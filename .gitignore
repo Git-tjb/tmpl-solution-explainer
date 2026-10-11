@@ -1,0 +1,6 @@
+# Template in development: dry run output is never committed (schema.md section 10).
+# New-Workspace drops these lines from an instance's .gitignore.
+**/output/*
+!**/output/.gitkeep
+.env
+__pycache__/

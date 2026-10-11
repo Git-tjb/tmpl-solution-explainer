@@ -1,0 +1,7 @@
+work_type: pipeline     # pipeline | multi-agent-job
+trigger: manual         # manual | automated
+state: active           # active | archived
+project: {{project_name}}
+template: solution-explainer
+template_version:       # set by New-Workspace
+kb_vault:               # set by New-Workspace
