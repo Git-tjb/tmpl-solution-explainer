@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flow.schema.json",
+  "title": "Flows",
+  "description": "Structure of stages/01_discover/output/flows.yaml. Binding and ordering rules are in flows.md and enforced by scripts/check-model.mjs.",
+  "type": "object",
+  "required": ["schema_version", "flows"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "flows": { "type": "array", "items": { "$ref": "#/$defs/flow" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "line": { "type": "string", "minLength": 1, "pattern": "^[^\\n]+$" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^F[0-9]{3,}$" }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["id", "title", "sources", "nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/line" },
+        "sources": { "$ref": "#/$defs/sources" },
+        "continues": { "$ref": "#/$defs/id" },
+        "nodes": { "type": "array", "minItems": 2, "maxItems": 12, "items": { "$ref": "#/$defs/node" } },
+        "edges": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/edge" } }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "label", "step", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["trigger", "step", "gate", "decision", "store", "external", "output"] },
+        "label": { "$ref": "#/$defs/line" },
+        "step": { "type": "integer", "minimum": 1 },
+        "on": { "$ref": "#/$defs/id" },
+        "sources": { "$ref": "#/$defs/sources" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["trigger", "output"] } } },
+          "then": { "not": { "required": ["on"] } },
+          "else": { "required": ["on"] }
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to", "kind", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["control", "data"] },
+        "label": { "$ref": "#/$defs/line" },
+        "condition": { "$ref": "#/$defs/line" }
+      }
+    }
+  }
+}

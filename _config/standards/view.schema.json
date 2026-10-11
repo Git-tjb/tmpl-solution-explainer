@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "view.schema.json",
+  "title": "View spec",
+  "description": "Structure of stages/04_design/output/views/<view-id>.yaml. Level and count rules are in views.md and enforced by scripts/check-design.mjs.",
+  "type": "object",
+  "required": ["schema_version", "id", "level", "scope", "title"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "level": { "enum": ["L1", "L2", "L3", "flow"] },
+    "scope": { "$ref": "#/$defs/id", "description": "The system (L1, L2), a container (L3), or a flow ID (flow)" },
+    "title": { "type": "string", "pattern": "^(Context|Containers|Components|Flow): .+$" },
+    "elements": {
+      "type": "array",
+      "maxItems": 9,
+      "items": { "$ref": "#/$defs/id" },
+      "description": "Narrows the default element set. Omit to use the default."
+    },
+    "lanes": { "type": "boolean", "description": "flow views only: group nodes into lanes by container" },
+    "inherit_from": { "$ref": "#/$defs/id", "description": "L3 only: the L2 view whose positions neighbors keep" },
+    "pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target", "layer", "order"],
+        "additionalProperties": false,
+        "properties": {
+          "target": { "$ref": "#/$defs/id" },
+          "layer": { "type": "integer", "minimum": 0 },
+          "order": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "states": {
+      "type": "object",
+      "description": "Named highlight states a scene can switch to",
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "elements": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "relationships": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "steps": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+  }
+}

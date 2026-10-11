@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "system-model.schema.json",
+  "title": "System model",
+  "description": "Structure of stages/01_discover/output/system-model.yaml. Integrity rules that span records are in system-model.md and enforced by scripts/check-model.mjs.",
+  "type": "object",
+  "required": ["schema_version", "elements", "relationships"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "elements": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/element" } },
+    "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "line": { "type": "string", "minLength": 1, "pattern": "^[^\\n]+$" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^F[0-9]{3,}$" }
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "name", "type", "responsibility", "why_separate", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/line" },
+        "type": { "enum": ["actor", "system", "external", "container", "component", "store"] },
+        "parent": { "$ref": "#/$defs/id" },
+        "responsibility": { "$ref": "#/$defs/line" },
+        "why_separate": { "$ref": "#/$defs/line" },
+        "sources": { "$ref": "#/$defs/sources" },
+        "tech": { "$ref": "#/$defs/line" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["container", "component", "store"] } } },
+          "then": { "required": ["parent"] }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["actor", "system", "external"] } } },
+          "then": { "not": { "required": ["parent"] } }
+        }
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["id", "from", "to", "verb", "kind", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "verb": { "$ref": "#/$defs/line" },
+        "kind": { "enum": ["control", "data", "human"] },
+        "sources": { "$ref": "#/$defs/sources" }
+      }
+    }
+  }
+}

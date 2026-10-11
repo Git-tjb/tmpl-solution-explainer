@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scenes.schema.json",
+  "title": "Storyboard scenes",
+  "description": "Structure of stages/03_storyboard/output/scenes.json. Information-architecture rules are in _config/information-architecture.md and enforced by scripts/check-storyboard.mjs.",
+  "type": "object",
+  "required": ["schema_version", "core_message", "target_minutes", "views", "scenes", "map"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "core_message": { "type": "string", "minLength": 1, "pattern": "^[^\\n]+$" },
+    "target_minutes": { "type": "number", "exclusiveMinimum": 0, "maximum": 15 },
+    "views": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "level", "scope"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "level": { "enum": ["L1", "L2", "L3", "flow"] },
+          "scope": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "scenes": { "type": "array", "minItems": 8, "maxItems": 12, "items": { "$ref": "#/$defs/scene" } },
+    "map": {
+      "type": "object",
+      "required": ["overview", "panels"],
+      "additionalProperties": false,
+      "properties": {
+        "overview": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" }, "description": "L1 and L2 view IDs" },
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["element"],
+            "additionalProperties": false,
+            "properties": {
+              "element": { "$ref": "#/$defs/id" },
+              "view": { "$ref": "#/$defs/id", "description": "The element's L3 view, if it has one" },
+              "detail": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^[^/\\\\:][^:]*$" },
+                "description": "Paths inside the source snapshot shown as L4 detail (folder tree or file)"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "scene": {
+      "type": "object",
+      "required": ["id", "section", "title", "point", "mode", "level", "view", "text", "reveals", "facts", "minutes"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^S[0-9]{2}$" },
+        "section": { "enum": ["answer", "why", "segmentation", "build", "in-use", "close"] },
+        "intent": { "enum": ["educate", "how-to", "persuade"], "description": "Set when the run has two intents" },
+        "title": { "type": "string", "minLength": 1 },
+        "point": { "type": "string", "minLength": 1, "description": "The single point this scene makes" },
+        "mode": { "enum": ["explanation", "how-to"] },
+        "level": { "enum": ["L1", "L2", "L3", "flow"] },
+        "view": { "$ref": "#/$defs/id", "description": "A view ID from views[]" },
+        "highlight": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "elements": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "relationships": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+            "steps": { "type": "array", "items": { "type": "integer", "minimum": 1 } }
+          }
+        },
+        "text": { "type": "array", "maxItems": 3, "items": { "type": "string", "minLength": 1 } },
+        "reveals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["step", "shows"],
+            "additionalProperties": false,
+            "properties": {
+              "step": { "type": "integer", "minimum": 1 },
+              "shows": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "animation": {
+          "type": "object",
+          "required": ["explains"],
+          "additionalProperties": false,
+          "properties": { "explains": { "type": "string", "minLength": 1, "description": "The state change the animation explains" } }
+        },
+        "returns_to": { "type": "string", "pattern": "^S[0-9]{2}$", "description": "Close scenes: the scene whose picture they return to" },
+        "facts": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^F[0-9]{3,}$" } },
+        "minutes": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

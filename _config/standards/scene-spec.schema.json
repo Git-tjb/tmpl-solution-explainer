@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scene-spec.schema.json",
+  "title": "Scene specs",
+  "description": "Structure of stages/04_design/output/scene-specs.yaml: layout, entry, and the actions of each reveal step, in the motion vocabulary of _config/build-rules.md. Read by scripts/build-site.mjs.",
+  "type": "object",
+  "required": ["schema_version", "scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scenes": {
+      "type": "object",
+      "propertyNames": { "pattern": "^S[0-9]{2}$" },
+      "additionalProperties": { "$ref": "#/$defs/scene" }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "scene": {
+      "type": "object",
+      "required": ["layout", "enter", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "layout": { "enum": ["diagram", "diagram-with-text", "statement"] },
+        "enter": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["cut", "fade", "zoom-in", "zoom-out"] },
+            "from_view": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the view the zoom starts from" },
+            "target": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the container that expands or collapses" }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["step", "actions"],
+            "additionalProperties": false,
+            "properties": {
+              "step": { "type": "integer", "minimum": 1 },
+              "actions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["do"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "do": { "enum": ["show", "hide", "highlight", "clear-highlight", "trace", "show-text", "state"] },
+                    "targets": { "type": "array", "items": { "type": "string" }, "description": "Element, relationship, or step IDs ('step-3'); text line indexes ('text-1')" },
+                    "state": { "$ref": "#/$defs/id", "description": "do: state - a named state from the view spec" },
+                    "duration_ms": { "type": "integer", "minimum": 0, "maximum": 4000 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "end_state": { "type": "string", "description": "What the screen shows after the last step, in words" }
+      }
+    }
+  }
+}
