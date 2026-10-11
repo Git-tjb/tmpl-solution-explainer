@@ -35,10 +35,9 @@ any stage filing into a KB vault or copying into a solution repo; automated chec
 | `_config/retro.md` | Retro sections |
 | `_config/standards/` | The consistency layer: model, flows, views, notation, layout profile, and the schemas for every machine-read output. Never edited in a run. |
 | `stages/01_discover` ... `07_retro` | Stage contracts and stage references |
-| `scripts/` | Deterministic helpers (section 4) and the page runtime (`scripts/site/`) |
-| `package.json`, `package-lock.json` | Pinned tooling |
-| `vendor/fonts/` | Bundled open-licence fonts |
-| `docs/fixtures/` | Made-up inputs for dry runs (never copied into an instance) |
+| `scripts/` | Deterministic helpers (section 4), shared code (`scripts/lib/`), and the page runtime (`scripts/site/`: `runtime.js`, `base.css`) |
+| `package.json`, `package-lock.json` | Pinned tooling: elkjs, yaml, ajv, playwright, @axe-core/playwright, and the IBM Plex fonts (OFL) from @fontsource |
+| `docs/fixtures/` | Made-up inputs for dry runs: run answers, a source folder, and stage 01-04 outputs (never copied into an instance) |
 
 ## 4. Behavior
 
@@ -66,6 +65,7 @@ Every stage ends with `stamp.mjs <nn>`.
 | `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `tokens.css` | SVG per view in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule |
 | `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing |
 | `verify.mjs` | the site, `scenes.json` | `06_verify/output/verify-results.json`, `screenshots/` | never (results record failures) |
+| `dry-run.mjs` | `docs/fixtures/` | every stage's output, in the template only (gitignored) | any script fails |
 | `stamp.mjs <nn>` | the stage's declared inputs | `stages/<nn>_*/output/.stamp.json` (sha256 per input) | — |
 | `status.mjs` | every stamp | report: not run, done, or stale per stage | — |
 
@@ -84,6 +84,9 @@ and model order; the same inputs give byte-identical files.
 | D-7 | Staleness by input hashes (`stamp` / `status`) | Satisfies "no later stage uses output built from a superseded input" without moving files or editing `status.yml` |
 | D-8 | Tooling pinned in `package-lock.json`; `npm ci` and the Playwright browser install run when missing | V1 allows network use by stages; machine setup needs only Node.js |
 | D-9 | Edge is tested through Playwright's `msedge` channel; Safari is not a target | Requirements (rev 3) |
+| D-10 | Edge labels are placed by the renderer on each edge's longest free segment, not by ELK | ELK's centered labels add a layer of height per edge; at 1080p that alone pushed views below the 16px label minimum |
+| D-11 | Label and text minimums are measured as rendered, and scale with viewport height below 1080p; chrome and padding scale in `vh` | The requirement is legibility on the shared screen; a fixed-pixel check at 900p would fail every view the 1080p check passes |
+| D-12 | Fonts come from @fontsource packages (pinned), copied into the site with their licence | Replaces a hand-maintained `vendor/fonts/` |
 
 ### How the format meets the output-format requirements (AC-15)
 | Requirement | How |
@@ -105,13 +108,11 @@ template itself:
 | ID | Criterion | Check |
 | --- | --- | --- |
 | T-1 | The template has the workshop shape | `Test-Workspace.ps1 -Path <template> -Template` |
-| T-2 | A dry run on `docs/fixtures/` passes every stage's scripts and every scripted criterion | `manual: copy the fixtures into place, run stages 01-06's scripts, read verify-results.json` |
+| T-2 | A dry run on `docs/fixtures/` passes every stage's scripts and every scripted criterion | `node scripts/dry-run.mjs` |
 | T-3 | Rendering and building twice gives byte-identical output | `verify.mjs` (AC-14) |
 | T-4 | The scrub scan finds no configured term | `Test-Scrub.ps1` (pre-commit) |
 
 ## 6. Known Limits
-- **Build phase 2 pending:** `scripts/`, `package.json`, `vendor/fonts/`, and `docs/fixtures/` described above
-  don't exist yet. Until they do, stages can be read but not run.
 - In development: no `v1.0.0` tag; no run has happened. Whether it earns a release is decided after the
   first trial run's retro; no second solution is lined up.
 - `container` is an adaptation of C4 and is the type most likely to need refining.

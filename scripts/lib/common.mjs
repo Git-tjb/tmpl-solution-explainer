@@ -1,0 +1,254 @@
+// Shared helpers for the solution-explainer scripts. Every script runs from the workspace root.
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import YAML from 'yaml';
+import Ajv2020 from 'ajv/dist/2020.js';
+
+export const ROOT = process.cwd();
+if (!fs.existsSync(path.join(ROOT, 'AGENTS.md')) || !fs.existsSync(path.join(ROOT, 'stages'))) {
+  console.error('Run this script from the workspace root (the folder with AGENTS.md and stages/).');
+  process.exit(2);
+}
+
+export const STAGES = {
+  '01': 'stages/01_discover',
+  '02': 'stages/02_scope',
+  '03': 'stages/03_storyboard',
+  '04': 'stages/04_design',
+  '05': 'stages/05_build',
+  '06': 'stages/06_verify',
+  '07': 'stages/07_retro',
+};
+export const out = (nn, ...p) => path.join(ROOT, STAGES[nn], 'output', ...p);
+export const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+
+// Paths every script uses. A dry run points SE_RUN_MD at fixture answers.
+export const P = {
+  runMd: path.resolve(ROOT, process.env.SE_RUN_MD || '_config/run.md'),
+  standards: path.join(ROOT, '_config/standards'),
+  sources: out('01', 'sources'),
+  factSheet: out('01', 'fact-sheet.md'),
+  model: out('01', 'system-model.yaml'),
+  flows: out('01', 'flows.yaml'),
+  inventory: out('01', 'inventory.md'),
+  scope: out('02', 'scope.md'),
+  scenes: out('03', 'scenes.json'),
+  views: out('04', 'views'),
+  sceneSpecs: out('04', 'scene-specs.yaml'),
+  tokens: out('04', 'tokens.css'),
+  site: out('05', 'site'),
+};
+
+// ---------- files ----------
+export function readText(p) {
+  if (!fs.existsSync(p)) throw new UserError(`Missing file: ${rel(p)}`);
+  return fs.readFileSync(p, 'utf8');
+}
+export function readYaml(p) {
+  try { return YAML.parse(readText(p)); }
+  catch (e) { if (e instanceof UserError) throw e; throw new UserError(`${rel(p)} is not valid YAML: ${e.message}`); }
+}
+export function readJson(p) {
+  try { return JSON.parse(readText(p)); }
+  catch (e) { if (e instanceof UserError) throw e; throw new UserError(`${rel(p)} is not valid JSON: ${e.message}`); }
+}
+export function writeText(p, text) {
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, text.replace(/\r\n/g, '\n'));
+}
+export function frontmatter(p) {
+  const text = readText(p).replace(/\r\n/g, '\n');
+  const m = text.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!m) throw new UserError(`${rel(p)} has no YAML frontmatter.`);
+  try { return { data: YAML.parse(m[1]) || {}, body: text.slice(m[0].length) }; }
+  catch (e) { throw new UserError(`${rel(p)} frontmatter is not valid YAML: ${e.message}`); }
+}
+export function walk(dir, { skipDirs = [] } = {}) {
+  const files = [];
+  if (!fs.existsSync(dir)) return files;
+  const visit = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = path.join(d, e.name);
+      if (e.isDirectory()) { if (!skipDirs.includes(e.name)) visit(full); }
+      else if (e.isFile()) files.push(full);
+    }
+  };
+  visit(dir);
+  return files;
+}
+export const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+
+// ---------- errors and reports ----------
+export class UserError extends Error {}
+export function main(fn) {
+  Promise.resolve().then(fn).catch((e) => {
+    if (e instanceof UserError) { console.error(`ERROR: ${e.message}`); process.exit(1); }
+    console.error(e); process.exit(3);
+  });
+}
+export class Report {
+  constructor(title) { this.title = title; this.errors = []; this.notes = []; }
+  fail(msg) { this.errors.push(msg); }
+  note(msg) { this.notes.push(msg); }
+  check(cond, msg) { if (!cond) this.fail(msg); return cond; }
+  print() {
+    console.log(`${this.title}: ${this.errors.length ? `FAIL (${this.errors.length})` : 'PASS'}`);
+    for (const e of this.errors) console.log(`  - ${e}`);
+    for (const n of this.notes) console.log(`  note: ${n}`);
+  }
+  exit() { this.print(); process.exit(this.errors.length ? 1 : 0); }
+}
+
+// ---------- schemas ----------
+let ajv;
+export function validate(schemaFile, data, report, label) {
+  if (!ajv) {
+    ajv = new Ajv2020({ allErrors: true, strict: false });
+    for (const f of fs.readdirSync(P.standards).filter((f) => f.endsWith('.schema.json')).sort()) {
+      ajv.addSchema(readJson(path.join(P.standards, f)), f);
+    }
+  }
+  const v = ajv.getSchema(schemaFile);
+  if (!v(data)) for (const e of v.errors) report.fail(`${label}${e.instancePath || ''}: ${e.message}${e.params?.allowedValues ? ` (${e.params.allowedValues.join(', ')})` : ''}${e.params?.additionalProperty ? ` (\"${e.params.additionalProperty}\"; quote values that contain commas)` : ''}`);
+  return !v.errors;
+}
+
+// ---------- run answers ----------
+export function runAnswers() { return frontmatter(P.runMd).data; }
+
+// ---------- fact sheet ----------
+export function factIds() {
+  const ids = new Set();
+  for (const m of readText(P.factSheet).matchAll(/^\|\s*(F\d{3,})\s*\|/gm)) ids.add(m[1]);
+  return ids;
+}
+
+// ---------- model ----------
+export function loadModel() {
+  const model = readYaml(P.model) || {};
+  const els = new Map((model.elements || []).map((e) => [e.id, e]));
+  const rels = model.relationships || [];
+  const children = new Map();
+  for (const e of els.values()) if (e.parent) {
+    if (!children.has(e.parent)) children.set(e.parent, []);
+    children.get(e.parent).push(e.id);
+  }
+  const system = [...els.values()].find((e) => e.type === 'system');
+  return { model, els, rels, children, system };
+}
+export function loadFlows() {
+  const data = readYaml(P.flows) || {};
+  return { data, flows: new Map((data.flows || []).map((f) => [f.id, f])) };
+}
+export function ancestors(M, id) {
+  const out = [];
+  let e = M.els.get(id);
+  while (e && e.parent) { out.push(e.parent); e = M.els.get(e.parent); }
+  return out;
+}
+export function descendants(M, id) {
+  const out = [];
+  const visit = (x) => { for (const c of M.children.get(x) || []) { out.push(c); visit(c); } };
+  visit(id);
+  return out;
+}
+
+// The default element set of a view (views.md), before a view spec narrows it.
+export function defaultViewElements(M, level, scope) {
+  const sys = M.system?.id;
+  const outside = [...M.els.values()].filter((e) => e.type === 'actor' || e.type === 'external').map((e) => e.id);
+  const touching = (inner) => {
+    const inSet = new Set(inner);
+    return outside.filter((o) => M.rels.some((r) => (r.from === o && inSet.has(r.to)) || (r.to === o && inSet.has(r.from))));
+  };
+  if (level === 'L1') return [sys, ...touching([sys, ...descendants(M, sys)])];
+  if (level === 'L2') {
+    const kids = M.children.get(sys) || [];
+    return [...kids, ...touching([sys, ...descendants(M, sys)])];
+  }
+  if (level === 'L3') {
+    const kids = M.children.get(scope) || [];
+    const inner = new Set([scope, ...descendants(M, scope)]);
+    const neighbors = new Set();
+    for (const r of M.rels) {
+      for (const [a, b] of [[r.from, r.to], [r.to, r.from]]) {
+        if (inner.has(a) && !inner.has(b)) neighbors.add(liftTo(M, b, 'L2'));
+      }
+    }
+    neighbors.delete(scope);
+    neighbors.delete(sys);
+    return [...kids, ...[...neighbors].filter(Boolean).sort()];
+  }
+  return [];
+}
+// The ancestor of id that is visible at a level's granularity.
+export function liftTo(M, id, level) {
+  const e = M.els.get(id);
+  if (!e) return undefined;
+  if (e.type === 'actor' || e.type === 'external') return id;
+  const chain = [id, ...ancestors(M, id)];
+  if (level === 'L1') return M.system?.id;
+  if (level === 'L2') return chain.find((x) => M.els.get(x)?.parent === M.system?.id) || id;
+  return id;
+}
+// Relationships of a view: lifted to visible ends and merged (views.md).
+// For L2 and L3, a relationship ending at the scope itself is drawn to its boundary. For L3, only
+// relationships with at least one end inside the container are drawn.
+export function viewRelationships(M, elementIds, level, scope) {
+  const visible = new Set(elementIds);
+  if (level === 'L2' || level === 'L3') visible.add(scope);
+  const inner = level === 'L3' ? new Set([scope, ...descendants(M, scope)]) : null;
+  const resolve = (id) => {
+    let x = id;
+    while (x && !visible.has(x)) x = M.els.get(x)?.parent;
+    if (x) return x;
+    if (level === 'L3') { const l = liftTo(M, id, 'L2'); if (visible.has(l)) return l; }
+    return undefined;
+  };
+  const merged = new Map();
+  for (const r of M.rels) {
+    if (inner && !inner.has(r.from) && !inner.has(r.to)) continue;
+    const a = resolve(r.from), b = resolve(r.to);
+    if (!a || !b || a === b) continue;
+    const key = `${a}>${b}`;
+    if (!merged.has(key)) merged.set(key, { from: a, to: b, ids: [], verbs: [], kinds: [] });
+    const m = merged.get(key);
+    m.ids.push(r.id);
+    if (!m.verbs.includes(r.verb)) m.verbs.push(r.verb);
+    if (!m.kinds.includes(r.kind)) m.kinds.push(r.kind);
+  }
+  return [...merged.values()].map((m) => ({
+    ...m, verb: m.verbs.join('; '), kind: m.kinds.length === 1 ? m.kinds[0] : (m.kinds.includes('control') ? 'control' : m.kinds[0]),
+  }));
+}
+
+// The element set of a view after a view spec (if any) narrows it.
+export function viewElements(M, view, spec) {
+  const def = defaultViewElements(M, view.level, view.scope);
+  if (spec?.elements) return spec.elements.filter((id) => def.includes(id));
+  return def;
+}
+
+// ---------- tokens ----------
+export function readTokens(cssText) {
+  const tokens = {};
+  for (const m of cssText.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) tokens[m[1]] = m[2].trim();
+  return tokens;
+}
+export function hexToRgb(hex) {
+  const h = hex.replace('#', '').trim();
+  const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6);
+  if (!/^[0-9a-f]{6}$/i.test(f)) return null;
+  return [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16));
+}
+export function luminance([r, g, b]) {
+  const c = [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+export function contrast(a, b) {
+  const la = luminance(a), lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+export const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;

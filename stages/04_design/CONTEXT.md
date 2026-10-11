@@ -22,7 +22,7 @@ Run the commands from the workspace root.
 **Do NOT load:** `../01_discover/output/sources/`, `fact-sheet.md`; `../02_scope/output/`.
 
 ## Process
-1. Set the run's visual system in `tokens.css`: color token values, type scale, spacing, motion durations.
+1. Set the run's visual system in `tokens.css`: color token values (hex), type scale, spacing, motion durations.
    Start from `visual-direction.md`; change it only for `visual_references` or `avoid` in `run.md`.
 2. Write a view spec for every view in `scenes.json` (`views/<view-id>.yaml`): title, element list if
    narrowed, named highlight states, pins, and `inherit_from` for L3 views.
@@ -33,6 +33,8 @@ Run the commands from the workspace root.
    the defaults, any runtime library and its justification, and a self-check against each banned pattern.
 5. Run `node scripts/check-design.mjs` and fix what it reports.
 6. Run `node scripts/render-diagrams.mjs --preview` to draw every view into `output/preview/` for review.
+   Act on every WARN: a view too tall or wide to show labels at 16px must be narrowed, split, or given the
+   `diagram` layout, then re-checked.
 7. Run `node scripts/stamp.mjs 04`.
 
 ## Outputs

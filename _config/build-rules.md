@@ -25,7 +25,11 @@ checks them.
   `cut`, `fade`, `zoom-in`, `zoom-out` (a container's region expands into its L3 view in place, or back).
 
 ## Screen-share legibility
-- Body text at least 20px at 1920x1080; diagram labels at least 16px.
+- Body text at least 20px at 1920x1080; diagram labels at least 16px as rendered (after the diagram is
+  scaled to fit). At 1440x900 both minimums scale with the viewport height (x0.83).
+- A tall view will not fit at full size: five layers top to bottom is about the limit beside text.
+  `render-diagrams --preview` warns per scene; narrow or split the view, or give the scene the
+  `diagram` layout.
 - No hairline strokes: every stroke at least 2px.
 - Text contrast at least 7:1 against its background; dimmed diagram text at least 3:1.
 

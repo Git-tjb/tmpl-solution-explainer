@@ -5,35 +5,61 @@
     "elk.algorithm": "layered",
     "elk.direction": "DOWN",
     "elk.edgeRouting": "ORTHOGONAL",
-    "elk.spacing.nodeNode": "60",
-    "elk.layered.spacing.nodeNodeBetweenLayers": "90",
+    "elk.spacing.nodeNode": "40",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "80",
     "elk.spacing.edgeNode": "30",
     "elk.spacing.edgeLabel": "8",
     "elk.portConstraints": "FIXED_SIDE",
     "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
     "elk.layered.crossingMinimization.forceNodeModelOrder": "true",
-    "elk.padding": "[top=48,left=32,bottom=32,right=32]",
-    "elk.randomSeed": "1"
+    "elk.padding": "[top=12,left=12,bottom=12,right=12]",
+    "elk.randomSeed": "1",
+    "elk.layered.spacing.edgeNodeBetweenLayers": "14",
+    "elk.layered.spacing.edgeEdgeBetweenLayers": "10"
   },
   "flow": {
     "elk.algorithm": "layered",
     "elk.direction": "RIGHT",
     "elk.edgeRouting": "ORTHOGONAL",
     "elk.spacing.nodeNode": "40",
-    "elk.layered.spacing.nodeNodeBetweenLayers": "70",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "120",
     "elk.spacing.edgeLabel": "8",
     "elk.portConstraints": "FIXED_SIDE",
     "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-    "elk.randomSeed": "1"
+    "elk.randomSeed": "1",
+    "elk.layered.wrapping.strategy": "MULTI_EDGE",
+    "elk.aspectRatio": "1.7",
+    "elk.padding": "[top=12,left=12,bottom=12,right=12]",
+    "elk.layered.spacing.edgeNodeBetweenLayers": "14"
   },
   "node": {
-    "element": { "width": 260, "height": 132 },
-    "flow_node": { "width": 220, "height": 96 },
-    "font_px": { "name": 20, "type_label": 16, "responsibility": 16, "edge_label": 16, "step_number": 16 },
-    "stroke_px": { "min": 2 }
+    "element": {
+      "width": 300,
+      "height": 84
+    },
+    "flow_node": {
+      "width": 210,
+      "height": 92
+    },
+    "font_px": {
+      "name": 20,
+      "type_label": 16,
+      "responsibility": 16,
+      "edge_label": 16,
+      "step_number": 16
+    },
+    "stroke_px": {
+      "min": 2
+    }
   },
   "ports": {
-    "structure": { "out": "SOUTH", "in": "NORTH" },
-    "flow": { "out": "EAST", "in": "WEST" }
+    "structure": {
+      "out": "SOUTH",
+      "in": "NORTH"
+    },
+    "flow": {
+      "out": "EAST",
+      "in": "WEST"
+    }
   }
 }

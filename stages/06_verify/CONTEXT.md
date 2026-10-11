@@ -18,7 +18,8 @@ Run the commands from the workspace root.
 **Do NOT load:** `../01_discover/output/sources/`; design and storyboard prose.
 
 ## Process
-1. If the test browsers are missing, run `npx playwright install chromium firefox msedge`.
+1. If the test browsers are missing, run `npx playwright install chromium firefox` (Edge is used from the
+   machine; if it is missing, `npx playwright install msedge`).
 2. Run `node scripts/verify.mjs`. It runs the scripted criteria in Chromium, Edge, and Firefox at both
    viewports, writes `output/verify-results.json`, and captures every scene at its final step into
    `output/screenshots/`.
