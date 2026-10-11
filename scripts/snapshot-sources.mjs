@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import YAML from 'yaml';
-import { ROOT, P, main, runAnswers, walk, writeText, UserError, rel } from './lib/common.mjs';
+import { ROOT, P, main, runAnswers, writeText, UserError, rel } from './lib/common.mjs';
 
 const SKIP_DIRS = ['.git', 'node_modules', '.obsidian', '.trash', '__pycache__', '.venv', '.vs', '.idea'];
 // Never copied: secrets and local-only files (the workshop's never-commit list), and very large files.
@@ -12,6 +12,22 @@ const SKIP_FILE = [/^\.env(\..*)?$/i, /\.local\.[^.]+$/i, /^context\.local.*\.ya
 const MAX_BYTES = 2 * 1024 * 1024;
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'source';
+// Files of a folder, honouring git: inside any git repo, only what git tracks or would track
+// (gitignored files are never copied); elsewhere, every file except SKIP_DIRS.
+function listFiles(dir) {
+  if (git(['rev-parse', '--is-inside-work-tree'], dir) === 'true') {
+    const outp = git(['ls-files', '-co', '--exclude-standard', '-z'], dir);
+    return outp.split('\0').filter(Boolean).map((r) => path.join(dir, r)).filter((f) => fs.existsSync(f) && fs.statSync(f).isFile())
+      .filter((f) => !path.relative(dir, f).split(path.sep).some((part) => SKIP_DIRS.includes(part))).sort();
+  }
+  const files = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) { if (!SKIP_DIRS.includes(e.name)) files.push(...listFiles(full)); }
+    else if (e.isFile()) files.push(full);
+  }
+  return files;
+}
 function git(args, cwd) {
   try { return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); }
   catch { return ''; }
@@ -35,7 +51,7 @@ main(() => {
     const name = `${String(i + 1).padStart(2, '0')}-${slug(path.basename(s.abs))}`;
     const dest = path.join(P.sources, name);
     const isDir = fs.statSync(s.abs).isDirectory();
-    const files = isDir ? walk(s.abs, { skipDirs: SKIP_DIRS }) : [s.abs];
+    const files = isDir ? listFiles(s.abs) : [s.abs];
     const skipped = [];
     let copied = 0;
     for (const f of files) {
