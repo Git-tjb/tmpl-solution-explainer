@@ -25,7 +25,7 @@ Run the commands from the workspace root.
 1. Set the run's visual system in `tokens.css`: color token values (hex), type scale, spacing, motion durations.
    Start from `visual-direction.md`. If `visual` in `run.md` is `default`, stop at tokens within that
    direction. If it describes a look, build a run theme in `theme/` (`theme.css`, fonts, licences) over the
-   hooks in `build-rules.md`; keep `tokens.css` valid and put the themed values in `theme.css` `:root`.
+   styling points listed in `build-rules.md`; keep `tokens.css` valid and put the themed values in `theme.css` `:root`.
 2. Write a view spec for every view in `scenes.json` (`views/<view-id>.yaml`): title, element list if
    narrowed, `mode` (`structure` for the structure view, default `wired`), named highlight states, pins, and
    `inherit_from` for L3 views.
