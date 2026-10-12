@@ -1,7 +1,7 @@
 ---
 component: tmpl-solution-explainer
 kind: template
-version: 0.0.0
+version: 0.1.0
 ---
 # Solution Explainer Design
 
@@ -32,40 +32,44 @@ any stage filing into a KB vault or copying into a solution repo; automated chec
 | `_config/run.md` | Per-run answers (frontmatter read by scripts) |
 | `_config/narrative-arc.md`, `information-architecture.md` | What every explainer says, in what order |
 | `_config/visual-direction.md`, `banned-patterns.md`, `build-rules.md` | Look, anti-patterns, technical constraints |
-| `_config/retro.md` | Retro sections |
+| `_config/retro.md` | Retro sections, with gate feedback grouped by template area |
+| `_config/gate-feedback.md` | The format of each stage's `gate-feedback.md` |
 | `_config/standards/` | The consistency layer: model, flows, views, notation, layout profile, and the schemas for every machine-read output. Never edited in a run. |
 | `stages/01_discover` ... `07_retro` | Stage contracts and stage references |
 | `scripts/` | Deterministic helpers (section 4), shared code (`scripts/lib/`), and the page runtime (`scripts/site/`: `runtime.js`, `base.css`) |
 | `package.json`, `package-lock.json` | Pinned tooling: elkjs, yaml, ajv, playwright, @axe-core/playwright, and the IBM Plex fonts (OFL) from @fontsource |
-| `docs/fixtures/` | Made-up inputs for dry runs: run answers, a source folder, and stage 01-04 outputs (never copied into an instance) |
+| `docs/fixtures/` | Made-up inputs for dry runs: run answers, a source folder, and stage 01-04 outputs including a small run theme (never copied into an instance) |
+| `docs/iterations/` | Iteration records: requirements, design, and verification per iteration |
+| `.gitleaks.toml` | Secret scanning with the default rules, allowing `.stamp.json` hash files |
 
 ## 4. Behavior
 
 ### Stages
 | Stage | Agent work | Scripts | Gate |
 | --- | --- | --- | --- |
-| `01_discover` | fact sheet, model, flows, source index, conflicts | `snapshot-sources`, `inventory-sources`, `check-model` | resolve conflicts, correct the model |
-| `02_scope` | `scope.md` | `check-model --scope` | approve the scope |
+| `01_discover` | operator notes, fact sheet, model, flows, source index, conflicts | `snapshot-sources`, `inventory-sources`, `check-model` | confirm the Terms and zoom candidates; resolve conflicts; correct the model |
+| `02_scope` | `scope.md` (depth, in scope, map only, excluded) | `check-model --scope` | approve the scope |
 | `03_storyboard` | `scenes.json`, `storyboard.md` | `check-storyboard` | edit sequence and text |
-| `04_design` | tokens, view specs, scene specs, design spec | `check-design`, `render-diagrams --preview` | approve the look |
+| `04_design` | tokens, a run theme if `visual` asks for one, view specs, scene specs, design spec | `check-design`, `render-diagrams --preview`, `mockups` | approve the look from the mockups |
 | `05_build` | step through the result | `render-diagrams`, `build-site` | present it to yourself |
 | `06_verify` | content-fidelity and banned-pattern review | `verify` | accept the report |
 | `07_retro` | `retro.md` | — | close the run |
 
-Every stage ends with `stamp.mjs <nn>`.
+Every stage from 01 to 06 logs its gate's corrections in `gate-feedback.md`, and every stage ends with
+`stamp.mjs <nn>`.
 
 ### Scripts (Node.js, run from the workspace root)
 | Script | Reads | Writes | Fails when |
 | --- | --- | --- | --- |
 | `snapshot-sources.mjs` | `_config/run.md` `sources` | `01_discover/output/sources/<n>-<name>/`, `sources/provenance.yml` (origin, git commit if any, copy time) | a source is missing |
 | `inventory-sources.mjs` | the snapshot | `01_discover/output/inventory.md` | — |
-| `check-model.mjs [--scope]` | model, flows, fact sheet [, `scope.md`] | report to the console | any schema or integrity rule in `system-model.md` / `flows.md` fails; with `--scope`, an unknown ID in `scope.md` |
-| `check-storyboard.mjs` | `scenes.json`, model, flows, `scope.md`, fact sheet | report | schema, IA rules marked (checked), talk time, map coverage |
-| `check-design.mjs` | views, scene specs, `tokens.css`, `scenes.json`, model | report | view rules, scene/step coverage, action vocabulary, contrast below 7:1 |
-| `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `tokens.css` | SVG per view in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule |
-| `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing |
+| `check-model.mjs [--scope]` | model, flows, fact sheet [, `scope.md`] | report to the console | any schema or integrity rule in `system-model.md` / `flows.md` fails (including `what_it_does`); with `--scope`, an unknown or excluded ID, a bad depth, or more than 14 target scenes |
+| `check-storyboard.mjs` | `scenes.json`, model, flows, `scope.md`, fact sheet | report | schema, IA rules marked (checked) including orientation and structure before wiring, `excluded` and `map_only`, talk time, map coverage |
+| `check-design.mjs` | views, scene specs, `tokens.css`, `theme/`, `scenes.json`, model | report | view rules and modes, scene/step coverage, action vocabulary (incl. expand targets), theme contents, contrast below 7:1 |
+| `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `tokens.css`, theme tokens | SVG per view in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule |
+| `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, `theme/`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing |
 | `mockups.mjs` | scenes, scene specs, model, views, tokens | `04_design/output/mockup/`, `mockups/` (PNG per scene, `index.html`) | when Chromium cannot start |
-| `verify.mjs` | the site, `scenes.json` | `06_verify/output/verify-results.json`, `screenshots/` | never (results record failures) |
+| `verify.mjs` | the site, `scenes.json`, view specs, model | `06_verify/output/verify-results.json`, `screenshots/` (AC-1 to AC-18) | never (results record failures) |
 | `dry-run.mjs` | `docs/fixtures/` | every stage's output, in the template only (gitignored) | any script fails |
 | `stamp.mjs <nn>` | the stage's declared inputs | `stages/<nn>_*/output/.stamp.json` (sha256 per input) | — |
 | `status.mjs` | every stamp | report: not run, done, or stale per stage | — |
@@ -81,13 +85,19 @@ and model order; the same inputs give byte-identical files.
 | D-3 | Layout with elkjs (layered), rendered to SVG at build time | Built for directed node-link diagrams with ports; deterministic with a fixed seed; nothing runs at presentation time |
 | D-4 | A fixed page runtime in the template (`scripts/site/`) and a fixed motion vocabulary (`build-rules.md`) | Build becomes scripted and every run's navigation, map, and reveals behave the same and can be tested the same way |
 | D-5 | Every machine-read output has a schema in `_config/standards/` (`scenes`, `view`, `scene-spec` added to the two the requirements named) | The handoffs between agent stages and scripts are checked, not assumed |
-| D-6 | The answer section is two scenes (S01 at L1, S02 at L2) | The requirements ask for "the L1/L2 picture" first and also "one level per scene"; two scenes satisfy both |
+| D-6 | The answer is one L1 scene, followed by an orientation scene; the first L2 scene is a structure view in its own section | Iteration 001: the audience needs the levels explained before going deeper, and what each part does before how they connect (trial run 1, O24-O26) |
 | D-7 | Staleness by input hashes (`stamp` / `status`) | Satisfies "no later stage uses output built from a superseded input" without moving files or editing `status.yml` |
 | D-8 | Tooling pinned in `package-lock.json`; `npm ci` and the Playwright browser install run when missing | V1 allows network use by stages; machine setup needs only Node.js |
 | D-9 | Edge is tested through Playwright's `msedge` channel; Safari is not a target | Requirements (rev 3) |
 | D-10 | Edge labels are placed by the renderer on each edge's longest free segment, not by ELK | ELK's centered labels add a layer of height per edge; at 1080p that alone pushed views below the 16px label minimum |
 | D-11 | Label and text minimums are measured as rendered, and scale with viewport height below 1080p; chrome and padding scale in `vh` | The requirement is legibility on the shared screen; a fixed-pixel check at 900p would fail every view the 1080p check passes |
 | D-12 | Fonts come from @fontsource packages (pinned), copied into the site with their licence | Replaces a hand-maintained `vendor/fonts/` |
+| D-13 | The C4 `container` type is `function`: elements are named by what they do, with the real name as `exact_name`, and carry 3-5 sourced `what_it_does` items | Trial run 1: "container" read as Docker, and the audience needed to know what each part does (iteration 001, D1) |
+| D-14 | One level indicator, defined in `notation.md`, in the page chrome and as a badge in every diagram | Every scene shows its level the same way, in every theme (iteration 001, D2) |
+| D-15 | "What it does" opens as an HTML popover over the diagram, and can be scripted with `expand` / `collapse` | The layout never moves, and the presenter can open it for the audience (iteration 001, D4) |
+| D-16 | No themes in the template; a run may bring `theme/` (CSS, fonts, licences) over named styling points | Keeps the template's look neutral while letting a run have its own, under the same checks (iteration 001, D5) |
+| D-17 | Stage 04's gate reviews scene mockups (`mockups.mjs`), not loose diagram previews | The operator judges the look as the audience will see it (iteration 001, D6) |
+| D-18 | `excluded` in `scope.md` is honoured by every later stage and script | Excluding an element must remove it everywhere, map included (trial run 1, O12) |
 
 ### How the format meets the output-format requirements (AC-15)
 | Requirement | How |
@@ -95,7 +105,7 @@ and model order; the same inputs give byte-identical files.
 | Presented live over a screen share | Full-window page at 1920x1080 or 1440x900; legibility rules in `build-rules.md` |
 | Opens locally and offline, no server, nothing to install | `file://`, no modules or fetch, everything bundled (fonts included) |
 | Step forward and back through the path, one reveal at a time | Page runtime keyboard and on-screen navigation; hash per scene and step |
-| Map as a second, non-linear layer with direct jumps | Map overlay (M) from the L1/L2 views; a panel per element; deep links to scenes |
+| Map as a second, non-linear layer with direct jumps | Map overlay (M) from the L1/L2 views; a panel per element with what it does; deep links to scenes |
 | Animate on trigger, static end state, reduced motion | Motion vocabulary on Web Animations; every step has an end state; reduced motion jumps to it |
 | Diagrams generated from the model | `render-diagrams` is the only way a diagram enters the site |
 | Checkable automatically | Playwright and axe-core in `verify.mjs` |
@@ -114,14 +124,20 @@ template itself:
 | T-4 | The scrub scan finds no configured term | `Test-Scrub.ps1` (pre-commit) |
 
 ## 6. Known Limits
-- In development: no `v1.0.0` tag; no run has happened. Whether it earns a release is decided after the
-  first trial run's retro; no second solution is lined up.
+- In development: no `v1.0.0` tag. Trial run 1 (on the AI Workshop) closed at the stage 04 gate, and
+  iteration 001 applied its retro. Trial run 2 is the next test; whether the template earns a release is
+  decided after it.
 - `function` (formerly `container`) is an adaptation of C4 and is the type most likely to need refining.
-- The element (9) and node (12) limits are untested defaults.
-- Pins may prove brittle for keeping positions across levels; the fallback is fixed coordinates in the view
-  spec, still rendered from the model.
+- The element (9) and node (12) limits, the 8-14 scene range, the depth meanings, and the zoom table in
+  `narrative-arc.md` are starting points, to be tuned after real presentations.
+- Pins work on top-level nodes only; pins on parts inside a boundary or lane have no effect.
+- Narrower boxes (iteration 001) make two-line names more common, so tall views reach the 16px label limit
+  sooner; the preview warns, and the fix is to narrow or split the view.
+- The label fallback (beside the line's start, with a leader) has not yet been needed by a real diagram.
 - Whether the tooling installs on a company-managed machine is unverified.
 
 ## 7. History
-Requirements: "Solution Explainer ICM Workflow (V1)", rev 3 (2026-10-11), drafted in a session and to be
-filed as a proposal in the KB vault.
+| Version | Date | What changed |
+| --- | --- | --- |
+| 0.0.0 | 2026-10-11 | First build from the requirements "Solution Explainer ICM Workflow (V1)", rev 3 |
+| 0.1.0 | 2026-10-12 | Iteration 001 (`docs/iterations/001-trial-run-1-lessons/`): trial run 1's lessons, requirements rev 4 |
