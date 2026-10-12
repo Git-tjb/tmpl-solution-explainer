@@ -75,6 +75,24 @@ after the run; don't edit the template mid-run for these.
 - [ ] Every function the operator marked for zoom has parts in the model
 
 ## Human Check
-Resolve every item in `conflicts.md`, then read `system-model.yaml` against what you know: wrong elements
-or a weak `why_separate` flow into every diagram. Edit the fact sheet and model in place, run `check-model`
-again, and run `node scripts/stamp.mjs 01` again after editing. Nothing advances without this.
+Nine files are written; the operator reviews three. The rest are derived from those, from the operator's own
+words, or checked by script.
+
+**Review these (the primaries):**
+| File | What to check |
+| --- | --- |
+| `conflicts.md` | Answer every item. Each is a decision only the operator can make. |
+| `system-model.yaml` | The elements, their `name (exact_name)`, `responsibility`, `why_separate`, `what_it_does`, and relationships. This is what every diagram draws; a wrong element or a weak `why_separate` flows into all of them. |
+| `fact-sheet.md`, the topics the model doesn't carry: `purpose`, `outcomes`, `constraints`, `environment`, `principle`, `gaps` | Read these sections only. Stage 02 builds the core message from them. The other topics are the evidence behind the model; you check them through the model. |
+
+**Don't review these (derived or scripted):**
+| File | Why |
+| --- | --- |
+| `sources/`, `inventory.md`, `source-index.md` | Made by script, or an audit trail; `check-model` and Verify confirm every source is covered. |
+| `operator-notes.md` | Your own words, quoted. Skim it only if you suspect a misquote. |
+| `fact-sheet.md`, the other topics | Each claim is cited, and the model's claims cite them; `check-model` confirms every cited ID exists. Open one when the model looks wrong to find its source. |
+| `flows.yaml` | Candidates only. Stage 02 chooses one or two, and you review those flows there. |
+| `gate-feedback.md` | Your own corrections, logged. |
+
+Edit the model and fact sheet in place, run `check-model` again, and run `node scripts/stamp.mjs 01` again
+after editing. Nothing advances without this.
