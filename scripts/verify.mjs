@@ -243,7 +243,7 @@ main(async () => {
   // AC-7 length
   const minutes = S.scenes.reduce((a, s) => a + s.minutes, 0);
   crit('AC-7');
-  if (S.scenes.length < 8 || S.scenes.length > 12) fail('AC-7', `${S.scenes.length} scenes (8-12)`);
+  if (S.scenes.length < 8 || S.scenes.length > 14) fail('AC-7', `${S.scenes.length} scenes (8-14)`);
   if (minutes > Math.min(15, S.target_minutes)) fail('AC-7', `${minutes} minutes exceeds ${Math.min(15, S.target_minutes)}`);
   note('AC-7', `${S.scenes.length} scenes, ${minutes} minutes`);
 

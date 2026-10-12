@@ -124,6 +124,14 @@ export function factIds() {
   return ids;
 }
 
+// Snapshot-relative path each fact cites (the first `backticked` path in its Source cell, without the
+// "sources/" prefix and the section). Used to refuse map detail under an excluded element.
+export function factPaths() {
+  const map = new Map();
+  for (const m of readText(P.factSheet).matchAll(/^\|\s*(F\d{3,})\s*\|[^|]*\|\s*`([^`]+)`/gm)) map.set(m[1], m[2].replace(/^sources\//, ''));
+  return map;
+}
+
 // ---------- model ----------
 export function loadModel() {
   const model = readYaml(P.model) || {};
@@ -135,7 +143,14 @@ export function loadModel() {
     children.get(e.parent).push(e.id);
   }
   const system = [...els.values()].find((e) => e.type === 'system');
-  return { model, els, rels, children, system };
+  const M = { model, els, rels, children, system, excluded: new Set(), mapOnly: new Set() };
+  // scope.md (stage 02) says what is excluded; everything downstream honours it, descendants included.
+  if (fs.existsSync(P.scope)) {
+    const scope = frontmatter(P.scope).data || {};
+    for (const id of scope.excluded || []) if (els.has(id)) { M.excluded.add(id); for (const d of descendants(M, id)) M.excluded.add(d); }
+    for (const id of scope.map_only || []) if (els.has(id)) M.mapOnly.add(id);
+  }
+  return M;
 }
 export function loadFlows() {
   const data = readYaml(P.flows) || {};
@@ -156,6 +171,9 @@ export function descendants(M, id) {
 
 // The default element set of a view (views.md), before a view spec narrows it.
 export function defaultViewElements(M, level, scope) {
+  return rawViewElements(M, level, scope).filter((id) => !M.excluded.has(id));
+}
+function rawViewElements(M, level, scope) {
   const sys = M.system?.id;
   const outside = [...M.els.values()].filter((e) => e.type === 'actor' || e.type === 'external').map((e) => e.id);
   const touching = (inner) => {
@@ -208,6 +226,7 @@ export function viewRelationships(M, elementIds, level, scope) {
   };
   const merged = new Map();
   for (const r of M.rels) {
+    if (M.excluded.has(r.from) || M.excluded.has(r.to)) continue;
     if (inner && !inner.has(r.from) && !inner.has(r.to)) continue;
     const a = resolve(r.from), b = resolve(r.to);
     if (!a || !b || a === b) continue;

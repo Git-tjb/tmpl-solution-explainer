@@ -2,7 +2,7 @@
 
 ## What This Is
 A workflow that turns a finished solution's own sources (repos, folders, KB vault notes) into a local,
-dark-mode explainer the operator presents live over a screen share: a narrated linear path of 8-12 scenes
+dark-mode explainer the operator presents live over a screen share: a narrated linear path of 8-14 scenes
 plus a map that serves as the reference layer. Every diagram is drawn from one system model that discovery
 builds and cites, so explainers for different solutions are structurally comparable. An instance serves the
 project whose solution it explains. It is not a slide deck, a document for the audience to keep, or

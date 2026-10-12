@@ -19,6 +19,17 @@ a { color: var(--c-highlight); }
 .scene[data-layout="diagram-with-text"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
 .scene[data-layout="diagram-with-text"] .figure { grid-column: 2; grid-row: 1 / span 2; }
 .scene[data-layout="diagram"] { grid-template-rows: auto 1fr; }
+/* Orientation: the four levels, drawn from data (build-site.mjs). W5 replaces the plain list with the ladder. */
+.scene[data-layout="orientation"] { grid-template-columns: minmax(360px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
+.scene[data-layout="orientation"] header { grid-column: 1; grid-row: 1; flex-direction: column; gap: 6px; align-self: end; }
+.scene[data-layout="orientation"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
+.scene[data-layout="orientation"] .figure { grid-column: 2; grid-row: 1 / span 2; }
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; width: 100%; }
+.ladder li { border: 2px solid var(--c-internal); border-radius: 6px; padding: 18px 22px; display: grid; gap: 6px; font-size: 24px; }
+.ladder li strong { font-size: 30px; }
+.ladder .line { color: var(--text-muted); }
+.ladder .uses { font-family: var(--font-mono); font-size: 22px; }
+.ladder .uses a { margin-right: 10px; }
 .scene[data-layout="statement"] { align-content: center; justify-items: start; }
 .scene header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 20px; margin-bottom: 12px; }
 .scene h2 { font-size: var(--size-title, 44px); font-weight: 600; margin: 0; line-height: 1.15; }

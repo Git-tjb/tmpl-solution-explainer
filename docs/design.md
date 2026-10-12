@@ -7,7 +7,7 @@ version: 0.0.0
 
 ## 1. Purpose and Scope
 Turns a finished solution's sources into a local, dark-mode explainer that the operator presents live over
-a screen share: a narrated linear path of 8-12 scenes (at most 15 minutes) and a map as the reference layer.
+a screen share: a narrated linear path of 8-14 scenes (at most 15 minutes) and a map as the reference layer.
 Every diagram is a view of one cited system model, under shared standards, so explainers for different
 solutions are structurally comparable.
 

@@ -18,7 +18,7 @@ A run never edits this file. Changes are made in the template.
 | flow | Flow | One flow from `flows.yaml` | What happens, in what order? | one flow |
 
 - One view, one level. Never mix levels.
-- L1 and L2 views are mandatory in every run.
+- L1 and L2 views are mandatory in every run. The L2 views come as a pair: a structure view first, then a wired view.
 - L3 views exist only for functions that are in scope (`02_scope`).
 - L4 is not a diagram. It appears only in a map panel, built from the source snapshot, never on the linear
   path unless a usage example needs it.

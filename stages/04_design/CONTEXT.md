@@ -25,9 +25,11 @@ Run the commands from the workspace root.
 1. Set the run's visual system in `tokens.css`: color token values (hex), type scale, spacing, motion durations.
    Start from `visual-direction.md`; change it only for `visual_references` or `avoid` in `run.md`.
 2. Write a view spec for every view in `scenes.json` (`views/<view-id>.yaml`): title, element list if
-   narrowed, named highlight states, pins, and `inherit_from` for L3 views.
+   narrowed, `mode` (`structure` for the structure view, default `wired`), named highlight states, pins, and
+   `inherit_from` for L3 views.
 3. Write `scene-specs.yaml`: for every scene, its layout, entry, and the actions of each reveal step, in
-   the motion vocabulary of `build-rules.md`, with the end state in words. With `animation: false` in
+   the motion vocabulary of `build-rules.md`, with the end state in words. The orientation scene (and only
+   it) uses the `orientation` layout; its step reveals text lines only, since the page draws the levels from data. With `animation: false` in
    `run.md`, use `cut` entries and actions with `duration_ms: 0` only.
 4. Write `design-spec.md`: the visual system and why, the map and navigation chrome, any departure from
    the defaults, any runtime library and its justification, and a self-check against each banned pattern.

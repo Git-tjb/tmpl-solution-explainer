@@ -21,7 +21,7 @@
       "required": ["layout", "enter", "steps"],
       "additionalProperties": false,
       "properties": {
-        "layout": { "enum": ["diagram", "diagram-with-text", "statement"] },
+        "layout": { "enum": ["diagram", "diagram-with-text", "statement", "orientation"] },
         "enter": {
           "type": "object",
           "required": ["kind"],

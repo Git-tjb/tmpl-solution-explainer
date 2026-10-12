@@ -64,6 +64,7 @@ export function checkDesign(report) {
     for (const s of S.scenes) {
       const spec = SS.scenes[s.id];
       if (!report.check(!!spec, `scene-specs.yaml: no spec for ${s.id}`)) continue;
+      report.check((spec.layout === 'orientation') === (s.section === 'orientation'), `${s.id}: layout "orientation" is for the orientation scene, and only for it`);
       const want = s.reveals.map((r) => r.step).join(',');
       const got = spec.steps.map((x) => x.step).join(',');
       report.check(want === got, `${s.id}: scene-spec steps (${got}) must match the storyboard's reveal steps (${want})`);

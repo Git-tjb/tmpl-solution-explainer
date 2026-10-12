@@ -13,7 +13,7 @@ stage 06 agent and recorded in the report.
 | AC-4 | Every animation runs on trigger, completes, and lands on its end state; reduced motion shows end states directly | script |
 | AC-5 | All internal links and anchors resolve | script |
 | AC-6 | Text and diagram sizes and contrast meet `build-rules.md` at 1920x1080 and 1440x900, with nothing clipped or overflowing | script |
-| AC-7 | 8-12 scenes, total `minutes` within `target_minutes` (at most 15) | script |
+| AC-7 | 8-14 scenes, total `minutes` within `target_minutes` (at most 15) | script |
 
 ## Standards conformance
 | ID | Criterion | Check |

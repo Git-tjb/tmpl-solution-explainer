@@ -11,7 +11,7 @@ model, and the explainer is a static page set checked in three browsers.
 | --- | --- | --- | --- |
 | `01_discover` | Snapshot sources; fact sheet, system model, flows, conflicts | `_config/run.md`, the sources | `stages/01_discover/output/` |
 | `02_scope` | Core message, audience framing, what is in and out | `01_discover/output/` | `stages/02_scope/output/` |
-| `03_storyboard` | 8-12 scenes and the map | `02_scope/output/`, `01_discover/output/` | `stages/03_storyboard/output/` |
+| `03_storyboard` | 8-14 scenes and the map | `02_scope/output/`, `01_discover/output/` | `stages/03_storyboard/output/` |
 | `04_design` | Tokens, view specs, scene specs, previews | `03_storyboard/output/`, the model | `stages/04_design/output/` |
 | `05_build` | Render diagrams and build the page set | `04_design/output/`, `03_storyboard/output/`, the model | `stages/05_build/output/` |
 | `06_verify` | Scripted checks, content and design review | `05_build/output/site/`, the model, the fact sheet | `stages/06_verify/output/` |

@@ -1,6 +1,6 @@
 // Validate system-model.yaml and flows.yaml against their schemas and the integrity rules in
 // _config/standards/system-model.md and flows.md. With --scope, also check stages/02_scope/output/scope.md.
-import { P, main, Report, validate, readYaml, factIds, loadModel, frontmatter, words } from './lib/common.mjs';
+import { P, main, Report, validate, readYaml, factIds, loadModel, loadFlows, frontmatter, words } from './lib/common.mjs';
 
 export function checkModel(report) {
   const facts = factIds();
@@ -79,23 +79,30 @@ export function checkModel(report) {
 
 export function checkScope(report) {
   const M = loadModel();
-  const flows = new Set((readYaml(P.flows)?.flows || []).map((f) => f.id));
+  const { flows } = loadFlows();
   const { data } = frontmatter(P.scope);
   for (const k of ['core_message', 'opening', 'intents', 'in_scope', 'example_flows', 'excluded', 'target_scenes']) {
     report.check(data[k] !== undefined, `scope.md frontmatter is missing "${k}"`);
   }
   report.check(typeof data.core_message === 'string' && !/\n/.test(data.core_message), 'core_message must be one line');
-  report.check(['outcome-first', 'story-first'].includes(data.opening), 'opening must be outcome-first or story-first');
+  report.check(['outcome-first', 'story-first'].includes(data.opening), 'opening must be outcome-first or story-first (the operator words stay in run.md)');
   report.check(Array.isArray(data.intents) && data.intents.length >= 1 && data.intents.length <= 2
     && data.intents.every((i) => ['educate', 'how-to', 'persuade'].includes(i)), 'intents: one or two of educate, how-to, persuade');
+  report.check(data.depth === undefined || ['conceptual', 'logical', 'physical'].includes(data.depth), 'depth must be conceptual, logical, or physical (default conceptual)');
   for (const id of data.in_scope || []) {
     const e = M.els.get(id);
     report.check(e?.type === 'function', `in_scope "${id}" must be a function in the model`);
+    report.check(!M.excluded.has(id), `in_scope "${id}" is excluded (or inside an excluded element)`);
+    report.check(!(data.map_only || []).includes(id), `"${id}" is both in_scope and map_only`);
   }
+  for (const id of data.map_only || []) report.check(M.els.has(id), `map_only "${id}" is not a model element`);
   const ef = data.example_flows || [];
   report.check(ef.length >= 1 && ef.length <= 2, 'example_flows: one or two flows');
-  for (const id of ef) report.check(flows.has(id), `example_flows "${id}" is not in flows.yaml`);
-  report.check(Number.isInteger(data.target_scenes) && data.target_scenes >= 8 && data.target_scenes <= 12, 'target_scenes must be 8-12');
+  for (const id of ef) {
+    if (!report.check(flows.has(id), `example_flows "${id}" is not in flows.yaml`)) continue;
+    for (const n of flows.get(id).nodes) report.check(!n.on || !M.excluded.has(n.on), `example flow "${id}" uses "${n.on}", which is excluded`);
+  }
+  report.check(Number.isInteger(data.target_scenes) && data.target_scenes >= 8 && data.target_scenes <= 14, 'target_scenes must be 8-14');
 }
 
 if (process.argv[1]?.endsWith('check-model.mjs')) {

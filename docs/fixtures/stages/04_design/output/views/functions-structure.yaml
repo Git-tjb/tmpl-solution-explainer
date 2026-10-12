@@ -1,0 +1,7 @@
+schema_version: 1
+id: functions-structure
+level: L2
+scope: kit
+mode: structure
+title: "Functions: Example Pipeline Kit"
+elements: [templates, instances, library]

@@ -4,8 +4,10 @@ opening: outcome-first
 intents: [educate]
 in_scope: [templates, instances]
 example_flows: [run-a-stage]
+depth: logical
+map_only: [library]
 excluded: [code-host]
-target_scenes: 8
+target_scenes: 9
 ---
 # Scope (fixture)
 

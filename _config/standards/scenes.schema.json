@@ -20,11 +20,12 @@
         "properties": {
           "id": { "$ref": "#/$defs/id" },
           "level": { "enum": ["L1", "L2", "L3", "flow"] },
-          "scope": { "$ref": "#/$defs/id" }
+          "scope": { "$ref": "#/$defs/id" },
+          "mode": { "enum": ["wired", "structure"], "default": "wired", "description": "Matches the view spec's mode; structure views show what each part does, wired views show how they connect" }
         }
       }
     },
-    "scenes": { "type": "array", "minItems": 8, "maxItems": 12, "items": { "$ref": "#/$defs/scene" } },
+    "scenes": { "type": "array", "minItems": 8, "maxItems": 14, "items": { "$ref": "#/$defs/scene" } },
     "map": {
       "type": "object",
       "required": ["overview", "panels"],
@@ -55,17 +56,17 @@
     "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "scene": {
       "type": "object",
-      "required": ["id", "section", "title", "point", "mode", "level", "view", "text", "reveals", "facts", "minutes"],
+      "required": ["id", "section", "title", "point", "mode", "level", "text", "reveals", "facts", "minutes"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^S[0-9]{2}$" },
-        "section": { "enum": ["answer", "why", "segmentation", "build", "in-use", "close"] },
+        "section": { "enum": ["answer", "orientation", "why", "structure", "segmentation", "build", "in-use", "close"] },
         "intent": { "enum": ["educate", "how-to", "persuade"], "description": "Set when the run has two intents" },
         "title": { "type": "string", "minLength": 1 },
         "point": { "type": "string", "minLength": 1, "description": "The single point this scene makes" },
         "mode": { "enum": ["explanation", "how-to"] },
-        "level": { "enum": ["L1", "L2", "L3", "flow"] },
-        "view": { "$ref": "#/$defs/id", "description": "A view ID from views[]" },
+        "level": { "enum": ["key", "L1", "L2", "L3", "flow"], "description": "key: the orientation scene, which shows the level ladder and no view" },
+        "view": { "$ref": "#/$defs/id", "description": "A view ID from views[]. Absent on the orientation scene." },
         "highlight": {
           "type": "object",
           "additionalProperties": false,
@@ -98,7 +99,10 @@
         "returns_to": { "type": "string", "pattern": "^S[0-9]{2}$", "description": "Close scenes: the scene whose picture they return to" },
         "facts": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^F[0-9]{3,}$" } },
         "minutes": { "type": "number", "exclusiveMinimum": 0 }
-      }
+      },
+      "allOf": [
+        { "if": { "properties": { "section": { "const": "orientation" } }, "required": ["section"] }, "then": { "properties": { "level": { "const": "key" } }, "not": { "required": ["view"] } }, "else": { "required": ["view"], "properties": { "level": { "enum": ["L1", "L2", "L3", "flow"] } } } }
+      ]
     }
   }
 }

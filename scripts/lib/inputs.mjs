@@ -10,7 +10,7 @@ const std = (f) => `_config/standards/${f}`;
 export function stageInputs(nn) {
   switch (nn) {
     case '01': return [run(), 'stages/01_discover/references/extraction-guide.md', std('system-model.md'), std('flows.md')];
-    case '02': return [o('01', 'fact-sheet.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'), run(), '_config/narrative-arc.md', '_config/information-architecture.md'];
+    case '02': return [o('01', 'fact-sheet.md'), o('01', 'operator-notes.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'), run(), '_config/narrative-arc.md', '_config/information-architecture.md'];
     case '03': return [o('02', 'scope.md'), o('01', 'fact-sheet.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'), o('01', 'inventory.md'),
       '_config/narrative-arc.md', '_config/information-architecture.md', std('views.md'), std('scenes.schema.json')];
     case '04': return [o('03', 'scenes.json'), o('03', 'storyboard.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'),

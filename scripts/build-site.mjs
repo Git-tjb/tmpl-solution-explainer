@@ -71,20 +71,33 @@ export function buildSite(siteDir) {
   const appearsIn = new Map();
   for (const s of S.scenes) {
     const v = views.get(s.view);
+    if (!v) continue; // the orientation scene has no view
     let ids = [];
     if (v.level === 'flow') ids = flows.get(v.scope).nodes.map((n) => n.on).filter(Boolean);
     else ids = [...viewElements(M, v, specs.get(v.id)), ...(v.level === 'L3' ? [v.scope] : [])];
     for (const id of new Set(ids)) { if (!appearsIn.has(id)) appearsIn.set(id, []); appearsIn.get(id).push(s); }
   }
 
+  // The orientation scene is drawn from data: the four levels, what each shows, and the scenes that use it.
+  const RUNGS = [
+    ['L1', 'Context', 'The solution as one box, with the people and outside things it touches'],
+    ['L2', 'Functions', 'The major parts and how they relate'],
+    ['L3', 'Components', 'What is inside one part'],
+    ['L4', 'Code', 'Folders, files, and config, in the map only'],
+  ];
+  const ladderHtml = () => `<ol class="ladder">${RUNGS.map(([lvl, name, line]) => {
+    const used = S.scenes.filter((x) => x.level === lvl);
+    return `<li data-level="${lvl}"><strong>${name}</strong> <span class="line">${esc(line)}</span> <span class="uses">${used.length ? used.map((x) => `<a href="#${x.id}">${x.id}</a>`).join(' ') : 'Map only'}</span></li>`;
+  }).join('')}</ol>`;
+
   // Scenes
   const sceneHtml = S.scenes.map((s) => {
     const spec = SS.scenes[s.id];
     const text = s.text.map((t, i) => `<p data-text="${i + 1}">${esc(t)}</p>`).join('');
-    return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view)}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
+    return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
       + `<header><h2>${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
       + `<div class="text">${text}</div>`
-      + (spec.layout === 'statement' ? '' : `<div class="figure">${inlineSvg(svgOf(s.view), s.id.toLowerCase())}</div>`)
+      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>` : `<div class="figure">${inlineSvg(svgOf(s.view), s.id.toLowerCase())}</div>`)
       + `</section>`;
   }).join('\n');
 
