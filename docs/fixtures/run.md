@@ -11,7 +11,7 @@ familiarity: some
 intent:
   primary: educate
   secondary:
-opening: outcome-first
+opening: "Outcome first: say what the kit gives you, then how it is built."
 takeaway: "Runs are reviewed at every stage, and templates never change during a run."
 target_minutes: 12
 sources:
@@ -21,9 +21,12 @@ sources:
 usage_examples:
   - "Run one stage and review its output"
 animation: true
+visual: default
 visual_references: []
 avoid: []
 must_include: []
 must_exclude: []
+environment: "Runs on one laptop with a text editor and a hosted model."
+intent_notes: "Meant to make recurring work repeatable; had to work without any server."
 ---
 # Run: Example Pipeline Kit (fixture)
