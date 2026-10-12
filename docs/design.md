@@ -64,6 +64,7 @@ Every stage ends with `stamp.mjs <nn>`.
 | `check-design.mjs` | views, scene specs, `tokens.css`, `scenes.json`, model | report | view rules, scene/step coverage, action vocabulary, contrast below 7:1 |
 | `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `tokens.css` | SVG per view in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule |
 | `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing |
+| `mockups.mjs` | scenes, scene specs, model, views, tokens | `04_design/output/mockup/`, `mockups/` (PNG per scene, `index.html`) | when Chromium cannot start |
 | `verify.mjs` | the site, `scenes.json` | `06_verify/output/verify-results.json`, `screenshots/` | never (results record failures) |
 | `dry-run.mjs` | `docs/fixtures/` | every stage's output, in the template only (gitignored) | any script fails |
 | `stamp.mjs <nn>` | the stage's declared inputs | `stages/<nn>_*/output/.stamp.json` (sha256 per input) | — |

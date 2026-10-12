@@ -39,7 +39,11 @@ Run the commands from the workspace root.
 6. Run `node scripts/render-diagrams.mjs --preview` to draw every view into `output/preview/` for review.
    Act on every WARN: a view too tall or wide to show labels at 16px must be narrowed, split, or given the
    `diagram` layout, then re-checked.
-7. Run `node scripts/stamp.mjs 04`.
+7. Run `node scripts/mockups.mjs`. It renders the diagrams and builds the page into `output/mockup/`, then
+   captures every scene at its final reveal step at 1920x1080 into `output/mockups/`, numbered in
+   storyboard order, with `mockups/index.html` as a contact sheet. If Chromium is missing, run
+   `npx playwright install chromium`.
+8. Run `node scripts/stamp.mjs 04`.
 
 ## Outputs
 | File | Destination |
@@ -50,6 +54,8 @@ Run the commands from the workspace root.
 | `scene-specs.yaml` | `output/` |
 | `design-spec.md` | `output/` |
 | `preview/*.svg` | `output/` |
+| `mockup/` (the page the mockups show) | `output/` |
+| `mockups/NN-SXX-<title>.png`, `mockups/index.html` | `output/` |
 
 ## Verify
 - [ ] `check-design` passes: every view has a title, a single level, at most 9 elements; every scene and
@@ -59,6 +65,7 @@ Run the commands from the workspace root.
 - [ ] With a theme: `theme/` holds only `theme.css`, fonts, and licences, with no remote URLs
 
 ## Human Check
-Open the previews and read `design-spec.md`. This is where visual quality is set: expect the most
-iteration here. Edit in place, then run `check-design`, `render-diagrams --preview`, and `stamp.mjs 04`
-again. Nothing advances without this.
+Open `output/mockups/index.html` and read `design-spec.md`: the mockups are the scenes as the audience
+will see them; use `preview/` to look at one view on its own. This is where visual quality is set: expect
+the most iteration here. Edit in place, then run `check-design`, `render-diagrams --preview`,
+`mockups.mjs`, and `stamp.mjs 04` again. Nothing advances without this.

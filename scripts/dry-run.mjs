@@ -1,6 +1,6 @@
 // Dry run (template only): put the made-up fixtures in docs/fixtures/ in place of the agent-written
 // outputs, then run every script in stage order. Stage outputs are gitignored in the template.
-//   node scripts/dry-run.mjs [--until <script>] [--no-verify]
+//   node scripts/dry-run.mjs [--until <script>] [--no-verify]   (--no-verify skips the browsers: mockups and verify)
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -18,13 +18,13 @@ main(() => {
   const steps = [
     ['snapshot-sources.mjs'], ['inventory-sources.mjs'], ['place-fixtures'], ['check-model.mjs', '--scope'],
     ['stamp.mjs', '01'], ['stamp.mjs', '02'], ['check-storyboard.mjs'], ['stamp.mjs', '03'],
-    ['check-design.mjs'], ['render-diagrams.mjs', '--preview'], ['stamp.mjs', '04'],
+    ['check-design.mjs'], ['render-diagrams.mjs', '--preview'], ['mockups.mjs'], ['stamp.mjs', '04'],
     ['render-diagrams.mjs'], ['build-site.mjs'], ['stamp.mjs', '05'],
     ['verify.mjs'], ['stamp.mjs', '06'], ['status.mjs'],
   ];
   const until = process.argv.includes('--until') ? process.argv[process.argv.indexOf('--until') + 1] : null;
   for (const [script, ...args] of steps) {
-    if (script === 'verify.mjs' && process.argv.includes('--no-verify')) continue;
+    if (['verify.mjs', 'mockups.mjs'].includes(script) && process.argv.includes('--no-verify')) continue;
     if (script === 'place-fixtures') { placeFixtures(); continue; }
     console.log(`\n=== ${script} ${args.join(' ')}`);
     const r = spawnSync(process.execPath, [path.join('scripts', script), ...args], { cwd: ROOT, env, stdio: 'inherit' });
