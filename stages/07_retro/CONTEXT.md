@@ -15,7 +15,7 @@ version of this template.
 1. Fill in every section of `_config/retro.md` from what the run produced and from the operator's edits at
    each gate. Name each stage's contract defects.
 2. Record, in Contract Defects or Generalizable Lessons as fits, how the standards held up:
-   - element types that were hard to call (especially `container`),
+   - element types that were hard to call (especially `function`),
    - views that hit the 9-element limit and flows that hit 12 nodes,
    - layout problems that needed pins, and whether pins held across levels,
    - motion actions that were missing from the vocabulary,

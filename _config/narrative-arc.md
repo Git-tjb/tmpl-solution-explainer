@@ -8,8 +8,8 @@ Stage 03 sequences scenes within this arc. A run that needs a different arc says
 | --- | --- | --- | --- | --- |
 | 1 | `answer` | The whole system in one sentence (the core message) and its picture: an L1 scene, then an L2 scene | explanation | L1, then L2 |
 | 2 | `why` | The problem baseline, why the solution was built, and the outcomes it produces. Outcome-first or story-first per `run.md`. | explanation | L1 |
-| 3 | `segmentation` | The naive alternative first, then each container as the fix for a specific problem in it, from `why_separate` | explanation | L2 |
-| 4 | `build` | Zoom into each in-scope container, one at a time, returning to L2 between them | explanation | L3 |
+| 3 | `segmentation` | The naive alternative first, then each function as the fix for a specific problem in it, from `why_separate` | explanation | L2 |
+| 4 | `build` | Zoom into each in-scope function, one at a time, returning to L2 between them | explanation | L3 |
 | 5 | `in-use` | One or two usage-example flows, walked step by step through elements already shown | how-to | flow |
 | 6 | `close` | Return to the first scene's picture and core message, now understood | explanation | L1 |
 

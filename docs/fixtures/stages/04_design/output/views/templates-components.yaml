@@ -1,0 +1,6 @@
+schema_version: 1
+id: templates-components
+level: L3
+scope: templates
+title: "Components: Templates"
+inherit_from: functions

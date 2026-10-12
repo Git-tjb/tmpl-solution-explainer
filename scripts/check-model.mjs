@@ -15,7 +15,7 @@ export function checkModel(report) {
   }
   const systems = raw.elements.filter((e) => e.type === 'system');
   report.check(systems.length === 1, `the model needs exactly one system element (found ${systems.length})`);
-  const allowedParent = { container: ['system'], component: ['container'], store: ['system', 'container'] };
+  const allowedParent = { function: ['system'], component: ['function'], store: ['system', 'function'] };
   const relIds = new Set();
   for (const e of raw.elements) {
     if (allowedParent[e.type]) {
@@ -26,6 +26,11 @@ export function checkModel(report) {
     }
     report.check(words(e.responsibility) <= 12, `element "${e.id}": responsibility has ${words(e.responsibility)} words (max 12)`);
     for (const f of e.sources) report.check(facts.has(f), `element "${e.id}" cites ${f}, which is not in the fact sheet`);
+    for (const [i, item] of (e.what_it_does || []).entries()) {
+      report.check(words(item.text) <= 12, `element "${e.id}": what_it_does item ${i + 1} has ${words(item.text)} words (max 12)`);
+      for (const f of item.sources) report.check(facts.has(f), `element "${e.id}": what_it_does item ${i + 1} cites ${f}, which is not in the fact sheet`);
+    }
+    if (e.type === 'function' && !e.exact_name) report.note(`function "${e.id}" has no exact_name`);
   }
   for (const r of raw.relationships) {
     report.check(!relIds.has(r.id), `relationship id "${r.id}" is used twice`);
@@ -85,7 +90,7 @@ export function checkScope(report) {
     && data.intents.every((i) => ['educate', 'how-to', 'persuade'].includes(i)), 'intents: one or two of educate, how-to, persuade');
   for (const id of data.in_scope || []) {
     const e = M.els.get(id);
-    report.check(e?.type === 'container', `in_scope "${id}" must be a container in the model`);
+    report.check(e?.type === 'function', `in_scope "${id}" must be a function in the model`);
   }
   const ef = data.example_flows || [];
   report.check(ef.length >= 1 && ef.length <= 2, 'example_flows: one or two flows');

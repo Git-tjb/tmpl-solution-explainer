@@ -25,18 +25,33 @@
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "name": { "$ref": "#/$defs/line" },
-        "type": { "enum": ["actor", "system", "external", "container", "component", "store"] },
+        "name": { "$ref": "#/$defs/line", "description": "The functional name: what it does (\"Agent setup\")" },
+        "exact_name": { "$ref": "#/$defs/line", "description": "The real name, shown in parentheses after name (\"aiso-ops\")" },
+        "type": { "enum": ["actor", "system", "external", "function", "component", "store"] },
         "parent": { "$ref": "#/$defs/id" },
         "responsibility": { "$ref": "#/$defs/line" },
         "why_separate": { "$ref": "#/$defs/line" },
         "sources": { "$ref": "#/$defs/sources" },
+        "what_it_does": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["text", "sources"],
+            "additionalProperties": false,
+            "properties": {
+              "text": { "$ref": "#/$defs/line", "description": "One line, at most 12 words" },
+              "sources": { "$ref": "#/$defs/sources" }
+            }
+          }
+        },
         "tech": { "$ref": "#/$defs/line" },
         "tags": { "type": "array", "items": { "type": "string" } }
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "enum": ["container", "component", "store"] } } },
+          "if": { "properties": { "type": { "enum": ["function", "component", "store"] } } },
           "then": { "required": ["parent"] }
         },
         {

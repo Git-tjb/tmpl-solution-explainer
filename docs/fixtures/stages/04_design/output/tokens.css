@@ -1,0 +1,22 @@
+/* Design tokens (fixture). Colors are hex; check-design checks contrast. */
+:root {
+  --bg: #14161a;
+  --surface: #1c1f24;
+  --text: #eceae4;
+  --text-muted: #b9b6ad;
+  --c-system: #eceae4;
+  --c-internal: #8fb8de;
+  --c-actor: #e6c27a;
+  --c-external: #a8a49a;
+  --c-human: #e6c27a;
+  --c-highlight: #7fd1b9;
+  --c-dim: #5d6068;
+  --c-edge: #c9c6be;
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  --size-body: 22px;
+  --size-title: 44px;
+  --size-point: 28px;
+  --space: 24px;
+  --motion-base: 700ms;
+}

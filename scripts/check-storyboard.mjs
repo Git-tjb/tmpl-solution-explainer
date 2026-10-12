@@ -20,11 +20,11 @@ export function checkStoryboard(report) {
     report.check(!views.has(v.id), `view "${v.id}" is declared twice`);
     views.set(v.id, v);
     if (v.level === 'L1' || v.level === 'L2') report.check(v.scope === M.system?.id, `view "${v.id}" (${v.level}) must be scoped to the system "${M.system?.id}"`);
-    if (v.level === 'L3') report.check(M.els.get(v.scope)?.type === 'container', `view "${v.id}" (L3) must be scoped to a container`);
+    if (v.level === 'L3') report.check(M.els.get(v.scope)?.type === 'function', `view "${v.id}" (L3) must be scoped to a function`);
     if (v.level === 'flow') report.check(flows.has(v.scope), `view "${v.id}" (flow) scope "${v.scope}" is not a flow`);
   }
   for (const lvl of ['L1', 'L2']) report.check(S.views.some((v) => v.level === lvl), `an ${lvl} view is mandatory`);
-  for (const c of scope.in_scope || []) report.check(S.views.some((v) => v.level === 'L3' && v.scope === c), `in-scope container "${c}" has no L3 view`);
+  for (const c of scope.in_scope || []) report.check(S.views.some((v) => v.level === 'L3' && v.scope === c), `in-scope function "${c}" has no L3 view`);
   for (const v of S.views) if (v.level === 'L3') report.check((scope.in_scope || []).includes(v.scope), `L3 view "${v.id}" is for "${v.scope}", which is not in scope`);
 
   // Scenes

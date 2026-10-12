@@ -5,7 +5,7 @@ import path from 'node:path';
 import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loadFlows, runAnswers,
   defaultViewElements, viewElements, viewRelationships, readTokens, hexToRgb, contrast } from './lib/common.mjs';
 
-const TITLE = { L1: 'Context', L2: 'Containers', L3: 'Components', flow: 'Flow' };
+const TITLE = { L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
 export const REQUIRED_TOKENS = ['--bg', '--surface', '--text', '--text-muted', '--c-system', '--c-internal', '--c-actor',
   '--c-external', '--c-human', '--c-highlight', '--c-dim', '--c-edge'];
 
@@ -50,6 +50,11 @@ export function checkDesign(report) {
       }
       if (v.level === 'L3') report.check(!spec.inherit_from || views.get(spec.inherit_from)?.level === 'L2', `view "${v.id}": inherit_from must name an L2 view`);
     }
+    if (spec.mode === 'structure') {
+      report.check(v.level === 'L2' || v.level === 'L3', `view "${v.id}": mode structure is for L2 and L3 views only`);
+      report.check(!(spec.pins || []).length, `view "${v.id}": a structure view has no pins`);
+      for (const [name, st] of Object.entries(spec.states || {})) report.check(!(st.relationships || []).length, `view "${v.id}" state "${name}": a structure view has no relationship highlights`);
+    }
     for (const p of spec.pins || []) report.check(ids.has(p.target), `view "${v.id}": pin target "${p.target}" is not in the view`);
   }
 
@@ -82,7 +87,7 @@ export function checkDesign(report) {
       }
       if (['zoom-in', 'zoom-out'].includes(spec.enter.kind)) {
         report.check(!!spec.enter.from_view && views.has(spec.enter.from_view), `${s.id}: ${spec.enter.kind} needs from_view naming a declared view`);
-        report.check(!!spec.enter.target, `${s.id}: ${spec.enter.kind} needs a target container`);
+        report.check(!!spec.enter.target, `${s.id}: ${spec.enter.kind} needs a target function`);
       }
       if (spec.enter.kind !== 'cut') moving = true;
       if (moving) report.check(!!spec.end_state, `${s.id}: has motion, so it needs end_state`);

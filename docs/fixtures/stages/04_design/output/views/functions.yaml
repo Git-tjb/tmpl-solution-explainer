@@ -1,0 +1,8 @@
+schema_version: 1
+id: functions
+level: L2
+scope: kit
+title: "Functions: Example Pipeline Kit"
+states:
+  split: { elements: [templates, instances], relationships: [templates-create] }
+elements: [operator, templates, instances, library]

@@ -1,0 +1,6 @@
+schema_version: 1
+id: instances-components
+level: L3
+scope: instances
+title: "Components: Instances"
+inherit_from: functions

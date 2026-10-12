@@ -194,7 +194,7 @@ export function liftTo(M, id, level) {
 }
 // Relationships of a view: lifted to visible ends and merged (views.md).
 // For L2 and L3, a relationship ending at the scope itself is drawn to its boundary. For L3, only
-// relationships with at least one end inside the container are drawn.
+// relationships with at least one end inside the function are drawn.
 export function viewRelationships(M, elementIds, level, scope) {
   const visible = new Set(elementIds);
   if (level === 'L2' || level === 'L3') visible.add(scope);
@@ -252,3 +252,6 @@ export function contrast(a, b) {
 }
 
 export const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
+
+// How an element's name is shown everywhere: "name (exact_name)", or just the name (system-model.md).
+export const shownName = (e) => (e?.exact_name ? `${e.name} (${e.exact_name})` : e?.name);

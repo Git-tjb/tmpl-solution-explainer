@@ -43,7 +43,7 @@ Each edge has `from`, `to`, `kind` (`control`: drawn solid; `data`: drawn dashed
 3. Steps are numbered 1..n without gaps or repeats.
 4. At most 12 nodes per flow. Split a longer flow and link the parts with `continues`.
 5. Every node and every flow cites at least one fact ID that exists in the fact sheet.
-6. Lanes are not written by hand: when a flow is drawn with lanes, each node's lane is the container its
+6. Lanes are not written by hand: when a flow is drawn with lanes, each node's lane is the function its
    `on:` element belongs to (or the element itself, for actors, externals, and the system).
 
 ## Example

@@ -22,7 +22,7 @@ checks them.
   state.
 - Only these actions exist (`scene-spec.schema.json`): `show`, `hide`, `highlight`, `clear-highlight`,
   `state`, `trace` (a dot travels along a relationship or flow edge), `show-text`; and on scene entry
-  `cut`, `fade`, `zoom-in`, `zoom-out` (a container's region expands into its L3 view in place, or back).
+  `cut`, `fade`, `zoom-in`, `zoom-out` (a function's region expands into its L3 view in place, or back).
 
 ## Screen-share legibility
 - Body text at least 20px at 1920x1080; diagram labels at least 16px as rendered (after the diagram is

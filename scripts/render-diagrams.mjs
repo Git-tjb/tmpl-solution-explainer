@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { ROOT, P, out, main, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
+import { ROOT, P, out, main, shownName, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
   writeText, readTokens, UserError, rel } from './lib/common.mjs';
 import { loadViewSpecs, REQUIRED_TOKENS } from './check-design.mjs';
 
@@ -34,7 +34,7 @@ export function wrap(text, width, px, maxLines = 99) {
 // ---------- node content ----------
 function elementBox(e) {
   const w = profile.node.element.width;
-  const name = wrap(e.name, w - 28, FONT.name, 2);
+  const name = wrap(shownName(e), w - 28, FONT.name, 2);
   const resp = wrap(e.responsibility, w - 28, FONT.responsibility, 4);
   const h = Math.max(profile.node.element.height, 16 + name.length * LINE(FONT.name) + LINE(FONT.type_label) + 6 + resp.length * LINE(FONT.responsibility) + 14);
   return { w, h, name, resp };
@@ -71,7 +71,7 @@ function shape(kind, w, h) {
       return `<path class="shape" d="M${f1(w / 2)} 0 L${w} ${f1(h / 2)} L${f1(w / 2)} ${h} L0 ${f1(h / 2)} Z"/>`;
     case 'output':
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}"/><path class="shape rim" d="M0 ${h - 6} H${w}"/>`;
-    default: // container, external, flow external
+    default: // function, external, flow external
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}"/>`;
   }
 }
@@ -91,11 +91,11 @@ function styleBlock(tokens) {
 .diagram .resp,.diagram .lbl{fill:${v('--text')};font-size:${FONT.responsibility}px;}
 .diagram .shape{fill:${v('--surface')};stroke-width:2px;}
 .diagram .t-system .shape{stroke:${v('--c-system')};}
-.diagram .t-container .shape{stroke:${v('--c-internal')};stroke-width:3px;}
+.diagram .t-function .shape{stroke:${v('--c-internal')};stroke-width:3px;}
 .diagram .t-component .shape,.diagram .t-store .shape,.diagram .n-decision .shape,.diagram .n-store .shape{stroke:${v('--c-internal')};}
 .diagram .t-actor .shape,.diagram .on-actor .shape{stroke:${v('--c-actor')};}
 .diagram .t-external .shape,.diagram .n-external .shape{stroke:${v('--c-external')};stroke-dasharray:8 6;}
-.diagram .on-container .shape,.diagram .on-component .shape,.diagram .on-store .shape{stroke:${v('--c-internal')};}
+.diagram .on-function .shape,.diagram .on-component .shape,.diagram .on-store .shape{stroke:${v('--c-internal')};}
 .diagram .on-external .shape{stroke:${v('--c-external')};}
 .diagram .n-step .shape{stroke:${v('--c-internal')};}
 .diagram .n-trigger .shape{stroke:${v('--c-edge')};}
@@ -141,7 +141,7 @@ function buildStructureGraph(M, view, spec, priorLayout) {
     const outer = els.filter((id) => !inner.includes(id));
     boundary = { id: `boundary:${boundaryId}`, _boundary: M.els.get(boundaryId), layoutOptions: { ...spacing(profile.structure), 'elk.padding': '[top=48,left=20,bottom=20,right=20]', ...pinOpts(spec, boundaryId) }, children: inner.map(nodeOf) };
     children = [...outer.map(nodeOf)];
-    // Keep neighbors and the zoomed container where the L2 view put them (views.md rule 5).
+    // Keep neighbors and the zoomed function where the L2 view put them (views.md rule 5).
     if (view.level === 'L3' && priorLayout) {
       const x = (id) => priorLayout.nodes[id]?.x ?? 1e9;
       children.sort((a, b) => x(a.id) - x(b.id));
@@ -171,7 +171,7 @@ function buildFlowGraph(M, view, spec, flow) {
     const laneOf = (n) => {
       if (!n.on) return '_edge';
       const chain = [n.on, ...(function anc() { const a = []; let e = M.els.get(n.on); while (e?.parent) { a.push(e.parent); e = M.els.get(e.parent); } return a; })()];
-      const c = chain.find((x) => M.els.get(x)?.type === 'container');
+      const c = chain.find((x) => M.els.get(x)?.type === 'function');
       return c || n.on;
     };
     const lanes = [];
@@ -202,7 +202,7 @@ function emit(view, spec, laid, tokens, M) {
     if (n._boundary || n._lane) {
       const e = n._boundary || n._lane;
       const cls = n._lane ? 'b-lane' : `b-${e.type}`;
-      parts.boundaries.push(`<g class="boundary ${cls}" data-el="${esc(e.id)}"><rect x="${f1(x)}" y="${f1(y)}" width="${f1(n.width)}" height="${f1(n.height)}"/><text x="${f1(x + 16)}" y="${f1(y + 30)}">${esc(e.name)} <tspan class="type">[${e.type}]</tspan></text></g>`);
+      parts.boundaries.push(`<g class="boundary ${cls}" data-el="${esc(e.id)}"><rect x="${f1(x)}" y="${f1(y)}" width="${f1(n.width)}" height="${f1(n.height)}"/><text x="${f1(x + 16)}" y="${f1(y + 30)}">${esc(shownName(e))} <tspan class="type">[${e.type}]</tspan></text></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: +f1(n.width), h: +f1(n.height) };
       if (!n._lane) legendTypes.add(e.type);
     }
@@ -214,7 +214,7 @@ function emit(view, spec, laid, tokens, M) {
         + textLines(b.name, b.w / 2, cy + (e.type === 'store' ? 8 : 0), FONT.name, 'name')
         + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${e.type}]</text>`
         + textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp')
-        + `<title>${esc(e.name)} [${e.type}]: ${esc(e.responsibility)}</title></g>`);
+        + `<title>${esc(shownName(e))} [${e.type}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
     if (n._node) {
@@ -273,7 +273,7 @@ function emit(view, spec, laid, tokens, M) {
   }
 
   // Legend (views.md rule 2): generated from what is present.
-  const order = ['actor', 'system', 'external', 'container', 'component', 'store', 'trigger', 'step', 'gate', 'decision', 'output'];
+  const order = ['actor', 'system', 'external', 'function', 'component', 'store', 'trigger', 'step', 'gate', 'decision', 'output'];
   const present = order.filter((t) => legendTypes.has(t));
   const contentW = laid.width + PADX * 2;
   const contentH = laid.height + TOP;

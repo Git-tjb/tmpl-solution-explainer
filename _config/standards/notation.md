@@ -16,7 +16,7 @@ outline, so it survives screen-share compression and color-vision differences.
 | Token | Meaning |
 | --- | --- |
 | `--c-system` | the system boundary and system element |
-| `--c-internal` | containers, components, and stores (inside the system) |
+| `--c-internal` | functions, components, and stores (inside the system) |
 | `--c-actor` | actors |
 | `--c-external` | externals |
 | `--c-human` | human relationships and gates |
@@ -31,15 +31,36 @@ outline, so it survives screen-share compression and color-vision differences.
 | `actor` | stadium (fully rounded ends) | solid 2px, `--c-actor` | person |
 | `system` | rectangle, square corners | double, 2px + 2px, `--c-system` | none |
 | `external` | rectangle, square corners | dashed 2px, `--c-external` | arrow out of box |
-| `container` | rectangle, square corners | solid 3px, `--c-internal` | none |
+| `function` | rectangle, square corners | solid 3px, `--c-internal` | none |
 | `component` | rectangle, 6px corner radius | solid 2px, `--c-internal` | none |
 | `store` | cylinder | solid 2px, `--c-internal` | none |
 
-Inside every element, top to bottom: `name` (bold), `[type]` label (small caps), `responsibility`.
+Inside every element, top to bottom: `name (exact_name)` (bold; just `name` when there is no `exact_name`),
+`[type]` label (small caps), `responsibility`.
 `why_separate` is not drawn in diagrams; it appears on segmentation scenes as on-screen text and in map
 panels.
 
-A container drawn as the scope of an L3 view is a labeled boundary (solid 3px, no fill) around its children.
+A function drawn as the scope of an L3 view is a labeled boundary (solid 3px, no fill) around its children.
+
+## Level indicator
+
+A four-rung ladder, defined here once and drawn the same way in every scene and every theme: **Context,
+Functions, Components, Code** (L1 to L4), top to bottom or left to right.
+
+- The current rung is filled; the other three are outlined. The scope name sits beside the ladder
+  ("Components · Agent setup").
+- On a flow scene the ladder carries a "Flow" tag and fills the rungs the flow's steps come from.
+- It appears in the page chrome of every scene, and as a compact badge in the title row of every rendered
+  diagram (`L2 · FUNCTIONS`), so a standalone diagram carries it too.
+- A theme may restyle the indicator but may not remove it. Its colors come from the tokens above; filled
+  versus outlined is the signal, not color.
+
+## Structure mode
+
+A view spec may set `mode: structure` (default `wired`). A structure view shows what the parts are, not how
+they connect: no relationship lines, each element's `what_it_does` bullets inside its box, and the parts
+laid out as a grid inside the system or function boundary. A wired view is the default drawing described
+above.
 
 ## Relationship lines
 

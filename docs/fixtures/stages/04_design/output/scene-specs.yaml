@@ -1,0 +1,55 @@
+schema_version: 1
+scenes:
+  S01:
+    layout: diagram-with-text
+    enter: { kind: fade }
+    steps:
+      - { step: 1, actions: [{ do: show, targets: [kit], duration_ms: 800 }] }
+      - { step: 2, actions: [{ do: show, targets: [operator, hosted-model, code-host, operator-runs, runs-call-model, templates-versioned], duration_ms: 800 }] }
+    end_state: The system with its operator and both externals.
+  S02:
+    layout: diagram-with-text
+    enter: { kind: cut }
+    steps:
+      - { step: 1, actions: [{ do: show, targets: [templates, instances, library], duration_ms: 700 }] }
+    end_state: All three parts inside the system boundary.
+  S03:
+    layout: diagram-with-text
+    enter: { kind: cut }
+    steps:
+      - { step: 1, actions: [{ do: highlight, targets: [operator, operator-runs], duration_ms: 600 }] }
+      - { step: 2, actions: [{ do: show-text, targets: [text-2], duration_ms: 500 }] }
+    end_state: The operator and the review relationship highlighted, both lines shown.
+  S04:
+    layout: diagram-with-text
+    enter: { kind: cut }
+    steps:
+      - { step: 1, actions: [{ do: state, state: split, duration_ms: 600 }] }
+      - { step: 2, actions: [{ do: trace, targets: [templates-create], duration_ms: 1200 }] }
+    end_state: Templates and instances highlighted; the create relationship traced.
+  S05:
+    layout: diagram-with-text
+    enter: { kind: zoom-in, from_view: functions, target: templates }
+    steps:
+      - { step: 1, actions: [{ do: highlight, targets: [contracts, standards], duration_ms: 600 }] }
+    end_state: Contracts and standards highlighted inside the template boundary.
+  S06:
+    layout: diagram-with-text
+    enter: { kind: zoom-in, from_view: functions, target: instances }
+    steps:
+      - { step: 1, actions: [{ do: highlight, targets: [stage-runs, outputs], duration_ms: 600 }] }
+    end_state: Stage runs and outputs highlighted inside the run boundary.
+  S07:
+    layout: diagram
+    enter: { kind: fade }
+    steps:
+      - { step: 1, actions: [{ do: show, targets: [step-1, step-2, step-3, start--load, load--execute], duration_ms: 700 }] }
+      - { step: 2, actions: [{ do: show, targets: [step-4, step-5, execute--ask-model, ask-model--write], duration_ms: 700 }, { do: trace, targets: [ask-model--write], duration_ms: 1000 }] }
+      - { step: 3, actions: [{ do: show, targets: [step-6, step-7, write--review, review--done], duration_ms: 700 }, { do: highlight, targets: [review], duration_ms: 500 }] }
+    end_state: All seven steps shown; the review gate highlighted.
+  S08:
+    layout: diagram-with-text
+    enter: { kind: zoom-out, from_view: functions, target: kit }
+    steps:
+      - { step: 1, actions: [{ do: clear-highlight, duration_ms: 0 }] }
+    end_state: The opening picture, unhighlighted.

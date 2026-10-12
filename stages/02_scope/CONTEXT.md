@@ -21,7 +21,7 @@ Run the commands from the workspace root.
 1. Write the core message: the answer-first statement, one sentence.
 2. Confirm the opening order from `run.md`, or propose a change with the reason.
 3. Map audience and intent to emphasis. With two intents, plan a section per intent.
-4. Choose the in-scope containers (each gets an L3 view) and one or two flows as usage examples.
+4. Choose the in-scope functions (each gets an L3 view) and one or two flows as usage examples.
 5. List what is deliberately excluded, including everything in `must_exclude`, and why.
 6. Say whether a secondary intent would make the primary one shallow within the time budget.
 7. Write `scope.md` with the frontmatter below, then the reasoning in prose.
@@ -33,7 +33,7 @@ Run the commands from the workspace root.
 core_message: "<one sentence>"
 opening: outcome-first          # or story-first
 intents: [educate]              # one or two
-in_scope: [<container ids>]     # get L3 views
+in_scope: [<function ids>]     # get L3 views
 example_flows: [<flow ids>]     # one or two
 excluded: [<element ids or topics>]
 target_scenes: 10               # 8-12

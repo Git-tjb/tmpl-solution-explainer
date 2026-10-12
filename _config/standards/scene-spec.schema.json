@@ -29,7 +29,7 @@
           "properties": {
             "kind": { "enum": ["cut", "fade", "zoom-in", "zoom-out"] },
             "from_view": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the view the zoom starts from" },
-            "target": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the container that expands or collapses" }
+            "target": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the function that expands or collapses" }
           }
         },
         "steps": {

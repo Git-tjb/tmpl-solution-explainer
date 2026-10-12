@@ -1,0 +1,5 @@
+schema_version: 1
+id: context
+level: L1
+scope: kit
+title: "Context: Example Pipeline Kit"

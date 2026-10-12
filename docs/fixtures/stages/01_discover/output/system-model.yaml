@@ -1,0 +1,23 @@
+schema_version: 1
+elements:
+  - { id: operator, name: Operator, type: actor, responsibility: Runs stages and reviews every output, why_separate: The only human in the loop, sources: [F002] }
+  - { id: kit, name: Example Pipeline Kit, type: system, responsibility: Turns recurring work into reviewed staged runs, why_separate: The solution being explained, sources: [F001] }
+  - { id: hosted-model, name: Model provider, type: external, responsibility: Answers the stage agent's requests, why_separate: "Outside the kit; called over the network", sources: [F006] }
+  - { id: code-host, name: Code host, type: external, responsibility: Stores template versions, why_separate: "Outside the kit; a hosted service", sources: [F009] }
+  - { id: templates, name: Templates, exact_name: example-kit/templates, type: function, parent: kit, responsibility: "Define stages, contracts, and shared standards", why_separate: "Change only through review; runs never edit them", what_it_does: [{ text: Define the stages of a workflow, sources: [F013] }, { text: Hold the standards every run follows, sources: [F014] }, { text: Change only through review, sources: [F015] }], sources: [F003, F007] }
+  - { id: instances, name: Instances, exact_name: example-kit/instances, type: function, parent: kit, responsibility: Hold one run's stages and outputs, why_separate: Each run is disposable and separate from its template, what_it_does: [{ text: Hold one run's stages and outputs, sources: [F016] }, { text: Are created from a template, sources: [F017] }, { text: Are disposable once archived, sources: [F018] }], sources: [F004, F007] }
+  - { id: library, name: Knowledge library, type: store, parent: kit, responsibility: Keeps archived runs, why_separate: Outlives every run, sources: [F005] }
+  - { id: contracts, name: Stage contracts, type: component, parent: templates, responsibility: "Say what each stage reads, does, and writes", why_separate: One contract per stage keeps context small, sources: [F008] }
+  - { id: standards, name: Shared standards, type: component, parent: templates, responsibility: Rules every run follows, why_separate: "Shared across stages; changed in one place", sources: [F003] }
+  - { id: stage-runs, name: Stage runs, type: component, parent: instances, responsibility: Execute one stage at a time, why_separate: The only part that does work, sources: [F011] }
+  - { id: outputs, name: Stage outputs, type: store, parent: instances, responsibility: Hold each stage's reviewed files, why_separate: The edit surface between stages, sources: [F011, F012] }
+relationships:
+  - { id: operator-runs, from: operator, to: instances, verb: runs stages in, kind: human, sources: [F002] }
+  - { id: operator-maintains, from: operator, to: templates, verb: maintains, kind: human, sources: [F007] }
+  - { id: templates-create, from: templates, to: instances, verb: create, kind: control, sources: [F004] }
+  - { id: contracts-direct, from: contracts, to: stage-runs, verb: direct, kind: control, sources: [F008] }
+  - { id: standards-constrain, from: standards, to: contracts, verb: constrain, kind: control, sources: [F003] }
+  - { id: runs-call-model, from: stage-runs, to: hosted-model, verb: calls, kind: control, sources: [F006] }
+  - { id: runs-write, from: stage-runs, to: outputs, verb: write, kind: data, sources: [F011] }
+  - { id: instances-archive, from: instances, to: library, verb: are archived to, kind: data, sources: [F005] }
+  - { id: templates-versioned, from: templates, to: code-host, verb: are versioned in, kind: data, sources: [F009] }

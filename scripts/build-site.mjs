@@ -4,7 +4,7 @@
 // Run scripts/render-diagrams.mjs first. Deterministic: the same inputs give byte-identical files.
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, P, main, readJson, readYaml, readText, loadModel, loadFlows, runAnswers, viewElements,
+import { ROOT, P, main, shownName, readJson, readYaml, readText, loadModel, loadFlows, runAnswers, viewElements,
   writeText, walk, UserError, rel } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
 
@@ -91,16 +91,16 @@ export function buildSite(siteDir) {
   // Map: overview views plus a panel per element
   const panelIds = new Set(S.map.panels.map((p) => p.element));
   const linkify = (svg) => svg.replace(' role="img" ', ' role="group" ').replace(/<g class="(node el [^"]*|boundary [^"]*)" data-el="([^"]+)"/g, (m, cls, id) => (panelIds.has(id)
-    ? `<g class="${cls} has-link" data-el="${id}" tabindex="0" role="button" aria-label="${esc((M.els.get(id)?.name || id) + ': open details')}"` : m));
+    ? `<g class="${cls} has-link" data-el="${id}" tabindex="0" role="button" aria-label="${esc((shownName(M.els.get(id)) || id) + ': open details')}"` : m));
   const overview = S.map.overview.map((id) => linkify(inlineSvg(svgOf(id), `map-${id}`))).join('\n');
   const panels = S.map.panels.map((p) => {
     const e = M.els.get(p.element);
-    const relsOut = M.rels.filter((r) => r.from === e.id).map((r) => `<li>${esc(r.verb)} <strong>${esc(M.els.get(r.to)?.name || r.to)}</strong> <span class="type">(${r.kind})</span></li>`);
-    const relsIn = M.rels.filter((r) => r.to === e.id).map((r) => `<li><strong>${esc(M.els.get(r.from)?.name || r.from)}</strong> ${esc(r.verb)} it <span class="type">(${r.kind})</span></li>`);
-    const kids = (M.children.get(e.id) || []).map((c) => `<li>${esc(M.els.get(c).name)} <span class="type">[${M.els.get(c).type}]</span></li>`);
+    const relsOut = M.rels.filter((r) => r.from === e.id).map((r) => `<li>${esc(r.verb)} <strong>${esc(shownName(M.els.get(r.to)) || r.to)}</strong> <span class="type">(${r.kind})</span></li>`);
+    const relsIn = M.rels.filter((r) => r.to === e.id).map((r) => `<li><strong>${esc(shownName(M.els.get(r.from)) || r.from)}</strong> ${esc(r.verb)} it <span class="type">(${r.kind})</span></li>`);
+    const kids = (M.children.get(e.id) || []).map((c) => `<li>${esc(shownName(M.els.get(c)))} <span class="type">[${M.els.get(c).type}]</span></li>`);
     const scenesList = (appearsIn.get(e.id) || []).map((s) => `<li><a href="#${s.id}">${s.id}: ${esc(s.title)}</a></li>`);
     return `<section data-panel="${esc(e.id)}" hidden>`
-      + `<h3>${esc(e.name)}</h3><div class="type">[${e.type}]${e.tech ? ` · ${esc(e.tech)}` : ''}</div>`
+      + `<h3>${esc(shownName(e))}</h3><div class="type">[${e.type}]${e.tech ? ` · ${esc(e.tech)}` : ''}</div>`
       + `<h4>Responsibility</h4><p>${esc(e.responsibility)}</p>`
       + `<h4>Why it is separate</h4><p>${esc(e.why_separate)}</p>`
       + (kids.length ? `<h4>Contains</h4><ul>${kids.join('')}</ul>` : '')

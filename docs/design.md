@@ -115,7 +115,7 @@ template itself:
 ## 6. Known Limits
 - In development: no `v1.0.0` tag; no run has happened. Whether it earns a release is decided after the
   first trial run's retro; no second solution is lined up.
-- `container` is an adaptation of C4 and is the type most likely to need refining.
+- `function` (formerly `container`) is an adaptation of C4 and is the type most likely to need refining.
 - The element (9) and node (12) limits are untested defaults.
 - Pins may prove brittle for keeping positions across levels; the fallback is fixed coordinates in the view
   spec, still rendered from the model.

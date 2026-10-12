@@ -34,7 +34,7 @@ Nothing in this instance files itself. When the operator declares the run comple
 its KB vault. Copying the explainer anywhere else is the operator's manual step.
 
 ## Known Limits
-- `container` is the element type most likely to be ambiguous outside software; record hard calls in the
+- `function` is the element type most likely to be ambiguous outside software; record hard calls in the
   retro.
 - The 9-element and 12-node limits are starting defaults, to be tuned from retros.
 - Automatic layout can't guarantee positions across levels on its own; view-spec pins carry it.

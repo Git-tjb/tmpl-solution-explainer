@@ -1,0 +1,20 @@
+schema_version: 1
+flows:
+  - id: run-a-stage
+    title: Run one stage
+    sources: [F010, F011, F012]
+    nodes:
+      - { id: start, type: trigger, label: Operator opens a session, step: 1, sources: [F010] }
+      - { id: load, type: step, label: Load the stage contract, on: contracts, step: 2, sources: [F011] }
+      - { id: execute, type: step, label: Run the stage, on: stage-runs, step: 3, sources: [F011] }
+      - { id: ask-model, type: external, label: Ask the model, on: hosted-model, step: 4, sources: [F006] }
+      - { id: write, type: store, label: Write output files, on: outputs, step: 5, sources: [F011] }
+      - { id: review, type: gate, label: Operator reviews output, on: operator, step: 6, sources: [F012] }
+      - { id: done, type: output, label: Approved stage output, step: 7, sources: [F012] }
+    edges:
+      - { from: start, to: load, kind: control, label: starts }
+      - { from: load, to: execute, kind: control, label: directs }
+      - { from: execute, to: ask-model, kind: control, label: calls }
+      - { from: ask-model, to: write, kind: data, label: returns text for }
+      - { from: write, to: review, kind: data, label: is read in }
+      - { from: review, to: done, kind: control, label: approves }

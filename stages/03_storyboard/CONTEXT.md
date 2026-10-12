@@ -21,7 +21,7 @@ Run the commands from the workspace root.
 `conflicts.md`, `source-index.md`.
 
 ## Process
-1. Name the views the run needs: the L1 and L2 views of the system, one L3 view per in-scope container,
+1. Name the views the run needs: the L1 and L2 views of the system, one L3 view per in-scope function,
    and one flow view per example flow.
 2. Sequence 8-12 scenes along the arc. For each: ID (`S01`...), section, title, the single point, mode,
    level, view, highlighted elements, relationships, or steps, at most 3 lines of on-screen text, reveal
