@@ -122,6 +122,7 @@ export function checkStoryboard(report) {
       report.check(!refused.some((r) => norm === r || norm.startsWith(`${r}/`)), `map panel "${p.element}": detail path "${d}" belongs to an excluded element`);
     }
   }
+  if (S.map.panels.length > 25) report.note(`the map has ${S.map.panels.length} panels (over 25 gets hard to use live); consider excluding by depth in scope.md or moving low-level parts out of the views`);
   report.note(`${sc.length} scenes, ${minutes} of ${target} minutes`);
 }
 

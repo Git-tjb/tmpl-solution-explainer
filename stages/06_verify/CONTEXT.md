@@ -14,6 +14,7 @@ Run the commands from the workspace root.
 | 4 | `../01_discover/output/system-model.yaml`, `flows.yaml` | for the model checks |
 | 3 | `references/acceptance-criteria.md` | the criteria and how each is checked |
 | 3 | `../../_config/banned-patterns.md`, `../../_config/information-architecture.md` | for the review |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 
 **Do NOT load:** `../01_discover/output/sources/`; design and storyboard prose.
 
@@ -29,7 +30,7 @@ Run the commands from the workspace root.
    `acceptance-criteria.md`.
 5. Write `verify-report.md`: pass or fail per criterion; each failure with its scene or element ID and the
    stage that should be re-run.
-6. Run `node scripts/stamp.mjs 06`.
+6. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 06`.
 
 ## Outputs
 | File | Destination |
@@ -37,6 +38,7 @@ Run the commands from the workspace root.
 | `verify-results.json` | `output/` |
 | `screenshots/` | `output/` |
 | `verify-report.md` | `output/` |
+| `gate-feedback.md` | `output/` |
 
 ## Verify
 - [ ] Every criterion in `acceptance-criteria.md` has a result

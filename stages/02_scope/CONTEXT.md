@@ -15,6 +15,7 @@ Run the commands from the workspace root.
 | 4 | `../01_discover/output/operator-notes.md` | the operator's own statements, citable as `OPN` |
 | 3 | `../../_config/narrative-arc.md` | the sections to plan |
 | 3 | `../../_config/information-architecture.md` | the rules the plan must allow |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 
 **Do NOT load:** `../01_discover/output/sources/` (the fact sheet already holds what is needed); any later stage.
 
@@ -34,7 +35,7 @@ Run the commands from the workspace root.
 7. Say whether a secondary intent would make the primary one shallow within the time budget.
 8. Write `scope.md` with the frontmatter below, then the reasoning in prose.
 9. Run `node scripts/check-model.mjs --scope` and fix what it reports.
-10. Run `node scripts/stamp.mjs 02`.
+10. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 02`.
 
 ```yaml
 ---
@@ -54,6 +55,7 @@ target_scenes: 10               # 8-14
 | File | Destination |
 | --- | --- |
 | `scope.md` | `output/` |
+| `gate-feedback.md` | `output/` |
 
 ## Verify
 - [ ] Every ID in the frontmatter exists in the model or flows (`check-model --scope`)

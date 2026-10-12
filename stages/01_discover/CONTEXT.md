@@ -12,6 +12,7 @@ Run the commands from the workspace root.
 | 3 | `references/extraction-guide.md` | what to extract and how to write the fact sheet |
 | 3 | `../../_config/standards/system-model.md` | element types, Terms, and model rules |
 | 3 | `../../_config/standards/flows.md` | flow node types and rules |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 | 4 | `output/sources/` | the snapshot step 1 makes; the only copy of the sources this run reads |
 
 **Do NOT load:** the original source locations after step 1; any other stage's `output/`.
@@ -43,7 +44,7 @@ Run the commands from the workspace root.
      and model it changes.
    - If an answer contradicts the sources, keep both as facts and add the pair to `conflicts.md`.
 9. Run `node scripts/check-model.mjs` and fix what it reports until it passes.
-10. Write `gate-feedback.md` (see Outputs), then run `node scripts/stamp.mjs 01`.
+10. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 01`.
 
 ## Outputs
 | File | Destination |
@@ -61,10 +62,8 @@ Run the commands from the workspace root.
 `operator-notes.md` is a list of the operator's statements, each with an ID (`OPN01`, ...), a one-line
 context (when and in answer to what), and the quote. Quotes are never paraphrased or corrected.
 
-`gate-feedback.md` logs every correction or comment the operator or the agent raises at this gate, one item
-each: what was wrong, which template area it points to (questionnaire, extraction guide, standards,
-contract, scripts), and how it was handled in this run. The template is fixed once, from the collected set,
-after the run; don't edit the template mid-run for these.
+`gate-feedback.md` logs every correction or comment raised at this gate, in the format of
+`_config/gate-feedback.md`.
 
 ## Verify
 - [ ] Every fact has an ID and a citation into `output/sources/` or an `OPN` note in `operator-notes.md`

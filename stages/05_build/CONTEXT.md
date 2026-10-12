@@ -13,6 +13,7 @@ Run the commands from the workspace root.
 | 4 | `../01_discover/output/sources/` | L4 detail for map panels (read by the script only) |
 | 3 | `../../_config/build-rules.md` | delivery, motion, legibility, navigation |
 | 3 | `../../_config/standards/layout-profile.json` | fixed layout options |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 
 **Do NOT load:** `fact-sheet.md`, `storyboard.md`, `design-spec.md` (the machine-readable outputs carry
 what the build needs); `../02_scope/output/`.
@@ -27,13 +28,14 @@ what the build needs); `../02_scope/output/`.
    snapshot.
 4. Open `output/site/index.html` and step through every scene once. If something is wrong, the fix belongs
    upstream: name the stage and the file, and stop.
-5. Run `node scripts/stamp.mjs 05`.
+5. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 05`.
 
 ## Outputs
 | File | Destination |
 | --- | --- |
 | `site/index.html` | `output/` |
 | `site/assets/` (css, js, fonts, diagrams) | `output/` |
+| `gate-feedback.md` | `output/` |
 
 ## Verify
 Stage 06 runs the full checks.

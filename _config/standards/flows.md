@@ -55,12 +55,43 @@ flows:
     title: Run one stage
     sources: [F010]
     nodes:
-      - { id: start, type: trigger, label: Operator opens a session, step: 1, sources: [F010] }
-      - { id: load, type: step, label: Load the stage contract, on: instance, step: 2, sources: [F011] }
-      - { id: review, type: gate, label: Operator reviews output, on: operator, step: 3, sources: [F012] }
-      - { id: done, type: output, label: Approved stage output, step: 4, sources: [F012] }
+      - id: start
+        type: trigger
+        label: Operator opens a session
+        step: 1
+        sources: [F010]
+      - id: load
+        type: step
+        label: "Load the contract, then run the stage"
+        on: instance
+        step: 2
+        sources: [F011]
+      - id: review
+        type: gate
+        label: Operator reviews output
+        on: operator
+        step: 3
+        sources: [F012]
+      - id: done
+        type: output
+        label: Approved stage output
+        step: 4
+        sources: [F012]
     edges:
-      - { from: start, to: load, kind: control, label: starts }
-      - { from: load, to: review, kind: data, label: writes output for }
-      - { from: review, to: done, kind: control, label: approves }
+      - from: start
+        to: load
+        kind: control
+        label: starts
+      - from: load
+        to: review
+        kind: data
+        label: writes output for
+      - from: review
+        to: done
+        kind: control
+        label: approves
 ```
+
+Write records in block style, as above. In flow style (`{ a: b, c: d }`) an unquoted value with a comma
+splits into two keys, and the file stops validating or, worse, still validates with the wrong text. If a
+value has a comma or a colon, quote it either way (`label: "Load the contract, then run the stage"`).

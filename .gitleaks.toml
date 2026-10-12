@@ -1,0 +1,8 @@
+# Secret scanning: the default rules, plus one exception. Stage stamp files hold only SHA-256 hashes of file contents,
+# keyed by path, which the generic API-key rule mistakes for keys when a path contains "Key" or "Credential".
+[extend]
+useDefault = true
+
+[allowlist]
+description = "stage stamp files (hashes only)"
+paths = [ '''(^|/)\.stamp\.json$''' ]

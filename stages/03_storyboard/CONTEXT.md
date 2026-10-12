@@ -16,6 +16,7 @@ Run the commands from the workspace root.
 | 3 | `../../_config/information-architecture.md` | the rules each scene follows |
 | 3 | `../../_config/standards/views.md` | levels and what a view includes |
 | 3 | `../../_config/standards/scenes.schema.json` | the shape of `scenes.json` |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 
 **Do NOT load:** `../01_discover/output/sources/` file contents (paths from the inventory are enough);
 `conflicts.md`, `source-index.md`.
@@ -35,13 +36,14 @@ Run the commands from the workspace root.
 4. Write `scenes.json` (machine-readable) and `storyboard.md`: the same scenes in readable form, one block
    per scene, with what the operator will say in a sentence or two.
 5. Run `node scripts/check-storyboard.mjs` and fix what it reports.
-6. Run `node scripts/stamp.mjs 03`.
+6. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 03`.
 
 ## Outputs
 | File | Destination |
 | --- | --- |
 | `scenes.json` | `output/` |
 | `storyboard.md` | `output/` |
+| `gate-feedback.md` | `output/` |
 
 ## Verify
 - [ ] `check-storyboard` passes: schema, IA rules (orientation, structure before wiring), talk time within

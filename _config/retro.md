@@ -12,9 +12,12 @@ project: {{project}}
 | Stage | Worked | Didn't | Human edits needed |
 | --- | --- | --- | --- |
 
-## Contract Defects
-| Stage | What the contract got wrong or left out | Suggested change |
-| --- | --- | --- |
+## By Template Area
+Every item from the stages' `gate-feedback.md` files, grouped by the template file or area it points at,
+plus anything stage 07 adds. This is what the template's next iteration is written from.
+
+| Template area | Items (gate feedback IDs) | What went wrong or was missing | Suggested change |
+| --- | --- | --- | --- |
 
 ## Starter Files
 {{Files that were missing, unused, or wrong in the manifest.}}

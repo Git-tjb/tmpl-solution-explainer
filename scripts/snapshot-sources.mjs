@@ -8,6 +8,8 @@ import { ROOT, P, main, runAnswers, writeText, UserError, rel } from './lib/comm
 
 const SKIP_DIRS = ['.git', 'node_modules', '.obsidian', '.trash', '__pycache__', '.venv', '.vs', '.idea'];
 // Never copied: secrets and local-only files (the workshop's never-commit list), and very large files.
+// A placeholder copy such as `.env.example` holds no secret, so it is read like any other file.
+const EXAMPLE_FILE = /\.example$/i;
 const SKIP_FILE = [/^\.env(\..*)?$/i, /\.local\.[^.]+$/i, /^context\.local.*\.ya?ml$/i, /\.(pem|key|pfx|p12)$/i];
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -57,7 +59,7 @@ main(() => {
     for (const f of files) {
       const r = isDir ? path.relative(s.abs, f) : path.basename(f);
       const base = path.basename(f);
-      if (SKIP_FILE.some((re) => re.test(base))) { skipped.push({ path: r.split(path.sep).join('/'), reason: 'local or secret file' }); continue; }
+      if (SKIP_FILE.some((re) => re.test(base)) && !EXAMPLE_FILE.test(base)) { skipped.push({ path: r.split(path.sep).join('/'), reason: 'local or secret file' }); continue; }
       const size = fs.statSync(f).size;
       if (size > MAX_BYTES) { skipped.push({ path: r.split(path.sep).join('/'), reason: `larger than ${MAX_BYTES} bytes` }); continue; }
       const target = path.join(dest, r);

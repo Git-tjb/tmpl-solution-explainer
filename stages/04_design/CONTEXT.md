@@ -18,6 +18,7 @@ Run the commands from the workspace root.
 | 3 | `../../_config/standards/notation.md` | type-to-shape mapping and color token meanings |
 | 3 | `../../_config/standards/views.md` | per-view rules |
 | 3 | `../../_config/standards/view.schema.json`, `scene-spec.schema.json` | output shapes |
+| 3 | `../../_config/gate-feedback.md` | the format of `gate-feedback.md` |
 
 **Do NOT load:** `../01_discover/output/sources/`, `fact-sheet.md`; `../02_scope/output/`.
 
@@ -43,7 +44,7 @@ Run the commands from the workspace root.
    captures every scene at its final reveal step at 1920x1080 into `output/mockups/`, numbered in
    storyboard order, with `mockups/index.html` as a contact sheet. If Chromium is missing, run
    `npx playwright install chromium`.
-8. Run `node scripts/stamp.mjs 04`.
+8. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 04`.
 
 ## Outputs
 | File | Destination |
@@ -56,6 +57,7 @@ Run the commands from the workspace root.
 | `preview/*.svg` | `output/` |
 | `mockup/` (the page the mockups show) | `output/` |
 | `mockups/NN-SXX-<title>.png`, `mockups/index.html` | `output/` |
+| `gate-feedback.md` | `output/` |
 
 ## Verify
 - [ ] `check-design` passes: every view has a title, a single level, at most 9 elements; every scene and
