@@ -70,7 +70,9 @@ above.
 | `data` | dashed 2px, `--c-edge` | open |
 | `human` | dotted 2px, `--c-human` | filled |
 
-Every line carries its verb as a label.
+Every line carries its verb as a label. A line that stands for several merged relationships shows the first
+verb and a count ("file into +3"); its tooltip lists them all. A label sits on its line, or beside it, and
+never over a box or another line; when neither fits, it sits near the line's start with a dotted leader.
 
 ## Flow node types
 

@@ -32,12 +32,21 @@ export function wrap(text, width, px, maxLines = 99) {
 }
 
 // ---------- node content ----------
-function elementBox(e) {
-  const w = profile.node.element.width;
+// One width per type (layout-profile.json), so four parts fit side by side beside the text at 1080p.
+// In a structure view the box shows the element's what_it_does bullets in place of its responsibility.
+function elementBox(e, structure = false) {
+  const w = profile.node.element.width_by_type?.[e.type] || profile.node.element.width;
   const name = wrap(shownName(e), w - 28, FONT.name, 2);
+  const items = structure ? (e.what_it_does || []).map((x) => x.text) : [];
+  if (items.length) {
+    const bullets = items.map((t) => wrap(t, w - 46, FONT.responsibility, 3));
+    const lines = bullets.reduce((a, b) => a + b.length, 0);
+    const h = 16 + name.length * LINE(FONT.name) + LINE(FONT.type_label) + 10 + lines * LINE(FONT.responsibility) + (bullets.length - 1) * 4 + 14;
+    return { w, h, name, resp: [], bullets };
+  }
   const resp = wrap(e.responsibility, w - 28, FONT.responsibility, 4);
   const h = Math.max(profile.node.element.height, 16 + name.length * LINE(FONT.name) + LINE(FONT.type_label) + 6 + resp.length * LINE(FONT.responsibility) + 14);
-  return { w, h, name, resp };
+  return { w, h, name, resp, bullets: null };
 }
 function flowBox(n) {
   const w = profile.node.flow_node.width;
@@ -75,6 +84,15 @@ function shape(kind, w, h) {
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}"/>`;
   }
 }
+// "What it does" bullets inside a structure-view box: a dot, then the wrapped lines, left-aligned.
+function bulletLines(bullets, y) {
+  let out = '', yy = y;
+  for (const lines of bullets) {
+    out += `<circle class="bullet" cx="20" cy="${f1(yy - FONT.responsibility * 0.32)}" r="3"/>` + textLines(lines, 32, yy, FONT.responsibility, 'resp wid', 'start');
+    yy += lines.length * LINE(FONT.responsibility) + 4;
+  }
+  return out;
+}
 function textLines(lines, x, y, px, cls, anchor = 'middle') {
   return lines.map((l, i) => `<text class="${cls}" x="${f1(x)}" y="${f1(y + i * LINE(px))}" text-anchor="${anchor}">${esc(l)}</text>`).join('');
 }
@@ -93,6 +111,8 @@ function styleBlock(tokens) {
 .diagram .name{fill:${v('--text')};font-size:${FONT.name}px;font-weight:600;}
 .diagram .type{fill:${v('--text-muted')};font-size:${FONT.type_label}px;font-variant:small-caps;letter-spacing:.04em;}
 .diagram .resp,.diagram .lbl{fill:${v('--text')};font-size:${FONT.responsibility}px;}
+.diagram .bullet{fill:${v('--text')};}
+.diagram .edge .leader{fill:none;stroke:${v('--c-edge')};stroke-width:2px;stroke-dasharray:2 4;}
 .diagram .shape{fill:${v('--surface')};stroke-width:2px;}
 .diagram .t-system .shape{stroke:${v('--c-system')};}
 .diagram .t-function .shape{stroke:${v('--c-internal')};stroke-width:3px;}
@@ -128,13 +148,15 @@ function styleBlock(tokens) {
 
 // ---------- graph building ----------
 function buildStructureGraph(M, view, spec, priorLayout) {
+  const structure = spec?.mode === 'structure';
   const els = viewElements(M, view, spec);
-  const rels = viewRelationships(M, els, view.level, view.scope);
+  // A structure view draws no lines (views.md, Modes).
+  const rels = structure ? [] : viewRelationships(M, els, view.level, view.scope);
   const opts = { ...profile.structure };
   const nodeOf = (id) => {
     const e = M.els.get(id);
-    const b = elementBox(e);
-    return { id, width: b.w, height: b.h, _box: b, _el: e, layoutOptions: pinOpts(spec, id) };
+    const b = elementBox(e, structure);
+    return { id, width: b.w, height: b.h, _box: b, _el: e };
   };
   let children;
   let boundary = null;
@@ -143,7 +165,9 @@ function buildStructureGraph(M, view, spec, priorLayout) {
     const boundaryId = view.level === 'L2' ? view.scope : view.scope;
     const inner = view.level === 'L2' ? els.filter((id) => M.els.get(id).parent === view.scope) : els.filter((id) => M.els.get(id).parent === view.scope);
     const outer = els.filter((id) => !inner.includes(id));
-    boundary = { id: `boundary:${boundaryId}`, _boundary: M.els.get(boundaryId), layoutOptions: { ...spacing(profile.structure), 'elk.padding': '[top=48,left=20,bottom=20,right=20]', ...pinOpts(spec, boundaryId) }, children: inner.map(nodeOf) };
+    // Structure views lay the parts out as a grid inside the boundary (rectpacking), not as layers.
+    const inside = structure ? { ...profile.structure_grid } : { ...spacing(profile.structure), 'elk.padding': '[top=48,left=20,bottom=20,right=20]' };
+    boundary = { id: `boundary:${boundaryId}`, _boundary: M.els.get(boundaryId), layoutOptions: inside, children: inner.map(nodeOf) };
     children = [...outer.map(nodeOf)];
     // Keep neighbors and the zoomed function where the L2 view put them (views.md rule 5).
     if (view.level === 'L3' && priorLayout) {
@@ -154,12 +178,33 @@ function buildStructureGraph(M, view, spec, priorLayout) {
     } else children.push(boundary);
   }
   const edges = rels.map((r, i) => {
-    const ls = labelSize(r.verb);
+    // Merged relationships show one verb and a count ("file into +3"); the full list is in the tooltip
+    // and the map panel.
+    const text = r.verbs.length > 1 ? `${r.verbs[0]} +${r.verbs.length - 1}` : r.verb;
+    const ls = labelSize(text);
     const end = (id) => (boundary && id === view.scope ? boundary.id : id);
-    return { id: `e${i}`, sources: [end(r.from)], targets: [end(r.to)], _label: { text: r.verb, width: ls.w, height: ls.h, _lines: ls.lines }, _rel: r };
+    return { id: `e${i}`, sources: [end(r.from)], targets: [end(r.to)], _label: { text, width: ls.w, height: ls.h, _lines: ls.lines }, _rel: r };
   });
-  const map = (n) => (n.id.startsWith('boundary:') ? n.id : n.id);
-  return { graph: { id: 'root', layoutOptions: { ...opts, 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' }, children, edges }, els, rels, map };
+  // A structure view has no edges, so each level is laid out on its own (the grid needs its own algorithm).
+  const rootOpts = { ...opts, 'elk.hierarchyHandling': structure ? 'SEPARATE_CHILDREN' : 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' };
+  // Pins (ported from trial run 1): ELK ignores layerChoiceConstraint in a nested layout, so pins use
+  // partitioning. Each pinned top-level node's partition is its layer; unpinned top-level nodes and the
+  // boundary go in the row after the last pinned one. Within a row, pins order the model order. Pins on
+  // parts inside a boundary are not supported (check-design notes them).
+  const pins = spec?.pins || [];
+  const topId = (c) => (c._boundary ? c._boundary.id : c.id);
+  const pinOf = (c) => pins.find((x) => x.target === topId(c));
+  if (children.some(pinOf)) {
+    rootOpts['elk.partitioning.activate'] = 'true';
+    const after = Math.max(...pins.map((x) => x.layer)) + 1;
+    for (const c of children) {
+      const pin = pinOf(c);
+      c.layoutOptions = { ...(c.layoutOptions || {}), 'elk.partitioning.partition': String(pin ? pin.layer : after) };
+    }
+    const key = (c) => { const pin = pinOf(c); return pin ? pin.layer * 1000 + pin.order : after * 1000 + 999; };
+    children.sort((a, b) => key(a) - key(b));
+  }
+  return { graph: { id: 'root', layoutOptions: rootOpts, children, edges }, els, rels };
 }
 // Nested graphs (boundaries, lanes) take the same spacing as the root.
 function spacing(opts) { return Object.fromEntries(Object.entries(opts).filter(([k]) => k.includes('spacing'))); }
@@ -225,7 +270,8 @@ function emit(view, spec, laid, tokens, M) {
       parts.nodes.push(`<g class="node el t-${e.type}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(e.type, b.w, b.h)}`
         + textLines(b.name, b.w / 2, cy + (e.type === 'store' ? 8 : 0), FONT.name, 'name')
         + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${e.type}]</text>`
-        + textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp')
+        + (b.bullets ? bulletLines(b.bullets, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 10 + LINE(FONT.responsibility))
+          : textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp'))
         + (ex ? expandMark(b.w) : '')
         + `<title>${esc(shownName(e))} [${e.type}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
@@ -256,16 +302,33 @@ function emit(view, spec, laid, tokens, M) {
     for (const c of n.children || []) addBlock(c);
   };
   for (const c of laid.children) addBlock(c);
-  const hit = (r) => blocked.some((b) => r.x < b.x + b.w && r.x + r.w > b.x && r.y < b.y + b.h && r.y + r.h > b.y);
-  for (const e of laid.edges) {
+  const overlaps = (r, b) => r.x < b.x + b.w && r.x + r.w > b.x && r.y < b.y + b.h && r.y + r.h > b.y;
+  const hit = (r) => blocked.some((b) => overlaps(r, b));
+  // Every routed line segment is an obstacle for every other edge's label.
+  const segRects = laid.edges.map((e) => {
     const s = e.sections?.[0];
-    if (!s) continue;
+    if (!s) return [];
+    const raw = [s.startPoint, ...(s.bendPoints || []), s.endPoint];
+    const out = [];
+    for (let k = 0; k < raw.length - 1; k++) {
+      const p = raw[k], q = raw[k + 1];
+      out.push({ x: Math.min(p.x, q.x) - 3, y: Math.min(p.y, q.y) - 3, w: Math.abs(q.x - p.x) + 6, h: Math.abs(q.y - p.y) + 6 });
+    }
+    return out;
+  });
+  const crossesLine = (r, own) => segRects.some((rs, j) => j !== own && rs.some((b) => overlaps(r, b)));
+  const inside = (r) => r.x >= -PADX + 4 && r.y >= -TOP + 50;
+  let labelRight = 0, labelBottom = 0; // labels count toward the diagram's bounds (ported from trial run 1)
+  laid.edges.forEach((e, ei) => {
+    const s = e.sections?.[0];
+    if (!s) return;
     const pts = [s.startPoint, ...(s.bendPoints || []), s.endPoint].map((p) => `${f1(p.x + PADX)} ${f1(p.y + TOP)}`);
     const kind = e._rel ? e._rel.kind : e._fedge.kind;
     edgeKinds.add(kind);
     const attrs = e._rel ? `data-rel="${esc(e._rel.ids.join(' '))}" data-edge="${esc(e._rel.from)}--${esc(e._rel.to)}"` : `data-edge="${esc(e._fedge.from)}--${esc(e._fedge.to)}"`;
-    // Labels are placed here, not by the layout: centered on the edge's longest segment, over a
-    // background patch, so they never add a layer of height.
+    // Labels are placed here, not by the layout, so they never add a layer of height. In order: on the
+    // line (longest segment first), then to either side of it, avoiding boxes, other labels, and other
+    // lines; failing that, beside the line's start with a leader, never over a box.
     const L = e._label;
     let label = '';
     if (L) {
@@ -273,45 +336,71 @@ function emit(view, spec, laid, tokens, M) {
       const segs = [];
       for (let k = 0; k < raw.length - 1; k++) segs.push({ a: raw[k], b: raw[k + 1], len: Math.hypot(raw[k + 1].x - raw[k].x, raw[k + 1].y - raw[k].y) });
       segs.sort((p, q) => q.len - p.len);
-      const cands = [];
+      const on = [], side = [];
       for (const g of segs) for (const t of [0.5, 0.35, 0.65, 0.2, 0.8]) {
         const mx = g.a.x + (g.b.x - g.a.x) * t, my = g.a.y + (g.b.y - g.a.y) * t;
-        cands.push({ x: mx - L.width / 2, y: my - L.height / 2, w: L.width, h: L.height });
-        if (Math.abs(g.a.x - g.b.x) < 1) { cands.push({ x: mx + 6, y: my - L.height / 2, w: L.width, h: L.height }); cands.push({ x: mx - 6 - L.width, y: my - L.height / 2, w: L.width, h: L.height }); }
+        on.push({ x: mx - L.width / 2, y: my - L.height / 2, w: L.width, h: L.height });
+        if (Math.abs(g.a.x - g.b.x) < 1) { side.push({ x: mx + 8, y: my - L.height / 2, w: L.width, h: L.height }); side.push({ x: mx - 8 - L.width, y: my - L.height / 2, w: L.width, h: L.height }); }
+        else { side.push({ x: mx - L.width / 2, y: my - 8 - L.height, w: L.width, h: L.height }); side.push({ x: mx - L.width / 2, y: my + 8, w: L.width, h: L.height }); }
       }
-      const pick = cands.find((r) => !hit(r)) || cands[0];
+      let pick = [...on, ...side].find((r) => inside(r) && !hit(r) && !crossesLine(r, ei));
+      let leader = '';
+      if (!pick) {
+        const p0 = raw[0], p1 = raw[1];
+        const dx = Math.sign(p1.x - p0.x), dy = Math.sign(p1.y - p0.y);
+        const ax = p0.x + dx * 20, ay = p0.y + dy * 20;
+        const around = [];
+        for (const d of [24, 48, 80, 120, 170]) for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const cx = ax + ox * d, cy = ay + oy * d;
+          around.push({ x: cx - (ox < 0 ? L.width : ox > 0 ? 0 : L.width / 2), y: cy - (oy < 0 ? L.height : oy > 0 ? 0 : L.height / 2), w: L.width, h: L.height });
+        }
+        pick = around.find((r) => inside(r) && !hit(r) && !crossesLine(r, ei)) || around.find((r) => inside(r) && !hit(r));
+        if (pick) {
+          const bx = Math.max(pick.x, Math.min(ax, pick.x + pick.w)), by = Math.max(pick.y, Math.min(ay, pick.y + pick.h));
+          leader = `<path class="leader" d="M${f1(bx + PADX)} ${f1(by + TOP)} L${f1(ax + PADX)} ${f1(ay + TOP)}"/>`;
+        } else pick = on[0];
+      }
       blocked.push(pick);
       const lx = pick.x + PADX, ly = pick.y + TOP;
-      label = `<rect class="lblbg" x="${f1(lx)}" y="${f1(ly)}" width="${f1(L.width)}" height="${f1(L.height)}"/>` + L._lines.map((l, i) => `<text x="${f1(lx + L.width / 2)}" y="${f1(ly + 3 + (i + 0.78) * LINE(FONT.edge_label))}" text-anchor="middle">${esc(l)}</text>`).join('');
+      labelRight = Math.max(labelRight, lx + L.width); labelBottom = Math.max(labelBottom, ly + L.height);
+      label = leader + `<rect class="lblbg" x="${f1(lx)}" y="${f1(ly)}" width="${f1(L.width)}" height="${f1(L.height)}"/>` + L._lines.map((l, i) => `<text x="${f1(lx + L.width / 2)}" y="${f1(ly + 3 + (i + 0.78) * LINE(FONT.edge_label))}" text-anchor="middle">${esc(l)}</text>`).join('');
     }
-    parts.edges.push(`<g class="edge k-${kind}" ${attrs}><path class="line" d="M${pts.join(' L')}" marker-end="url(#se-arrow-${kind})"/>${label}</g>`);
-  }
+    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : '';
+    parts.edges.push(`<g class="edge k-${kind}" ${attrs}>${tip}<path class="line" d="M${pts.join(' L')}" marker-end="url(#se-arrow-${kind})"/>${label}</g>`);
+  });
 
   // Legend (views.md rule 2): generated from what is present.
   const order = ['actor', 'system', 'external', 'function', 'component', 'store', 'trigger', 'step', 'gate', 'decision', 'output'];
   const present = order.filter((t) => legendTypes.has(t));
-  const contentW = laid.width + PADX * 2;
-  const contentH = laid.height + TOP;
+  const contentW = Math.max(laid.width + PADX * 2, labelRight + PADX);
+  const contentH = Math.max(laid.height + TOP, labelBottom + 8);
   const lg = [];
   let lx = PADX, ly = contentH + 34;
   lg.push(`<text class="lgtitle" x="${lx}" y="${ly}">Legend</text>`);
   lx += 84;
   const isFlow = view.level === 'flow';
-  const wrapAt = Math.max(contentW, 640);
+  // A tall, narrow diagram is limited by height on screen, so its legend may run wider than the content
+  // rather than wrap to a second row.
+  // The width it may use follows the on-screen frame's proportions beside text (about 1.2:1 at 1440x900,
+  // the narrower of the two viewports).
+  const wrapAt = Math.max(contentW, 640, Math.round((contentH + 60) * 1.2));
+  let lgRight = 0;
   for (const t of present) {
     const w = 44, h = 26;
     if (lx + w + 8 + t.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
     const cls = isFlow ? `n-${t}` : `t-${t}`;
     lg.push(`<g class="${cls}" transform="translate(${lx},${ly - 19})">${shape(t === 'external' ? 'external' : t, w, h)}</g><text x="${lx + w + 8}" y="${ly}">${t}</text>`);
+    lgRight = Math.max(lgRight, lx + w + 8 + t.length * 16 * CHAR);
     lx += w + 8 + t.length * 16 * CHAR + 28;
   }
   for (const k of ['control', 'data', 'human'].filter((k) => edgeKinds.has(k))) {
     if (lx + 52 + k.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
     lg.push(`<g class="edge k-${k}"><path class="line" d="M${lx} ${ly - 6} L${lx + 44} ${ly - 6}" marker-end="url(#se-arrow-${k})"/></g><text x="${lx + 52}" y="${ly}">${k}</text>`);
+    lgRight = Math.max(lgRight, lx + 52 + k.length * 16 * CHAR);
     lx += 52 + k.length * 16 * CHAR + 28;
   }
   const badgeW = Math.ceil(BADGE[view.level].length * 16 * 0.62 + 24);
-  const W = Math.ceil(Math.max(contentW, 640, PADX * 2 + badgeW + 14 + spec.title.length * 22 * CHAR));
+  const W = Math.ceil(Math.max(contentW, 640, lgRight + PADX, PADX * 2 + badgeW + 14 + spec.title.length * 22 * CHAR));
   const H = Math.ceil(ly + 16);
   const defs = `<defs>${['control', 'data', 'human'].map((k) => `<marker id="se-arrow-${k}" class="m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 ${k === 'data' ? 'L4 6 ' : ''}Z"/></marker>`).join('')}</defs>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="diagram" data-view="${esc(view.id)}" data-level="${view.level}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="se-title-${esc(view.id)}">`
@@ -366,7 +455,7 @@ if (process.argv[1]?.endsWith('render-diagrams.mjs')) {
     const layouts = await renderAll(dir);
     console.log(`Rendered ${Object.keys(layouts).length} view(s) into ${rel(dir)}`);
     // Predicted label size on a 1920x1080 screen, per scene layout (build-rules.md: labels >= 16px).
-    const FIG = { 'diagram-with-text': { w: 1265, h: 968 }, diagram: { w: 1824, h: 898 }, 'diagram-wide': { w: 1824, h: 820 } };
+    const FIG = { 'diagram-with-text': { w: 1338, h: 968 }, diagram: { w: 1824, h: 898 }, 'diagram-wide': { w: 1824, h: 820 } };
     let SS = null;
     try { SS = (await import('./lib/common.mjs')).readYaml(P.sceneSpecs); } catch { /* no scene specs yet */ }
     const S = readJson(P.scenes);

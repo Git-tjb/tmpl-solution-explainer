@@ -31,7 +31,8 @@ A run never edits this file. Changes are made in the template.
   its L2-level ancestor.
 - **Relationships:** every relationship between included elements. A relationship to a hidden element is
   drawn to that element's nearest visible ancestor. Two relationships that end up with the same ends are
-  drawn as one, their verbs joined with "; ".
+  drawn as one line labelled with the first verb and a count ("file into +3"); the full list is in the
+  line's tooltip and the map panel.
 
 A view spec may narrow the element list. It may not add an element of the wrong level.
 
@@ -40,7 +41,8 @@ A view spec may narrow the element list. It may not add an element of the wrong 
 A view is `wired` (the default) or `structure`.
 
 - **Wired:** elements and the relationship lines between them (how the parts reference each other).
-- **Structure:** elements only, as a grid, each showing its `what_it_does` bullets; no lines. Only L2 and L3
+- **Structure:** elements only, as a grid inside the boundary, each showing its `what_it_does` bullets (or
+  its responsibility when it has none); no lines. Only L2 and L3
   views can be structure views. Structure comes before wiring: a run shows a structure view of the
   functions (what each does) before it shows the wired view of how they connect.
 
@@ -56,6 +58,7 @@ A view is `wired` (the default) or `structure`.
 6. **Highlighting** selects a subset of elements, relationships, or flow steps, as named states in the view
    spec. It never changes the layout.
 7. **Pins** (positions or ordering constraints) are recorded in the view spec only, never hand-edited into a
-   rendered diagram.
+   rendered diagram. Pins work on top-level nodes (neighbors, and the boundary itself); a pin on a part
+   inside a boundary or a lane has no effect, and `check-design` notes it.
 8. **Mode.** `mode: structure` is allowed on L2 and L3 views only, and a structure view has no `pins` and no
    relationship highlights in its states.

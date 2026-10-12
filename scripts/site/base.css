@@ -22,7 +22,7 @@ a { color: var(--c-highlight); }
 .deck { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) 5.9vh var(--frame-left, 0px); }
 .scene { position: absolute; inset: 0; display: none; padding: 2.2vh calc(var(--space, 24px) * 2); }
 .scene.current { display: grid; }
-.scene[data-layout="diagram-with-text"] { grid-template-columns: minmax(360px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
+.scene[data-layout="diagram-with-text"] { grid-template-columns: minmax(340px, 24%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
 .scene[data-layout="diagram-with-text"] header { grid-column: 1; grid-row: 1; flex-direction: column; gap: 6px; align-self: end; }
 .scene[data-layout="diagram-with-text"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
 .scene[data-layout="diagram-with-text"] .figure { grid-column: 2; grid-row: 1 / span 2; }

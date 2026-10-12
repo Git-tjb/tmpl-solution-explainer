@@ -78,7 +78,13 @@ export function checkDesign(report) {
       report.check(!(spec.pins || []).length, `view "${v.id}": a structure view has no pins`);
       for (const [name, st] of Object.entries(spec.states || {})) report.check(!(st.relationships || []).length, `view "${v.id}" state "${name}": a structure view has no relationship highlights`);
     }
-    for (const p of spec.pins || []) report.check(ids.has(p.target), `view "${v.id}": pin target "${p.target}" is not in the view`);
+    for (const p of spec.pins || []) {
+      const isScope = (v.level === 'L2' || v.level === 'L3') && p.target === v.scope; // the boundary itself can be pinned
+      report.check(ids.has(p.target) || isScope, `view "${v.id}": pin target "${p.target}" is not in the view`);
+      // Pins work on top-level nodes only (the layout engine ignores them on parts inside a boundary or lane).
+      const inBoundary = (v.level === 'L2' || v.level === 'L3') && M.els.get(p.target)?.parent === v.scope;
+      if (inBoundary || (v.level === 'flow' && spec.lanes)) report.note(`view "${v.id}": pin on "${p.target}" has no effect (pins inside a boundary or lane are not supported)`);
+    }
   }
 
   // Scene specs

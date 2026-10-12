@@ -4,3 +4,4 @@ level: L3
 scope: instances
 title: "Components: Instances"
 inherit_from: functions
+elements: [operator, stage-runs, outputs]
