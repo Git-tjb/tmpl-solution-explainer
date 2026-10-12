@@ -32,7 +32,8 @@ scenes:
     steps:
       - { step: 1, actions: [{ do: state, state: split, duration_ms: 600 }] }
       - { step: 2, actions: [{ do: trace, targets: [templates-create], duration_ms: 1200 }] }
-    end_state: Templates and instances highlighted; the create relationship traced.
+      - { step: 3, actions: [{ do: expand, targets: [templates], duration_ms: 400 }] }
+    end_state: Templates and instances highlighted; the create relationship traced; what templates do is open beside them.
   S06:
     layout: diagram-with-text
     enter: { kind: zoom-in, from_view: functions, target: templates }
@@ -46,7 +47,7 @@ scenes:
       - { step: 1, actions: [{ do: highlight, targets: [stage-runs, outputs], duration_ms: 600 }] }
     end_state: Stage runs and outputs highlighted inside the run boundary.
   S08:
-    layout: diagram
+    layout: diagram-wide
     enter: { kind: fade }
     steps:
       - { step: 1, actions: [{ do: show, targets: [step-1, step-2, step-3, start--load, load--execute], duration_ms: 700 }] }

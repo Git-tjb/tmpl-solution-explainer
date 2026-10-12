@@ -103,8 +103,18 @@ export function checkDesign(report) {
       }
       s.text.forEach((_, i) => targets.add(`text-${i + 1}`));
       let moving = false;
+      // expand / collapse targets: elements in this view with what_it_does (a flow's bound elements).
+      const canExpand = (id) => (M.els.get(id)?.what_it_does || []).length > 0;
+      const expandable = new Set(v?.level === 'flow' ? (flows.get(v.scope)?.nodes || []).map((n) => n.on).filter(canExpand)
+        : vs?.mode === 'structure' ? [] : [...targets].filter(canExpand));
       for (const st of spec.steps) for (const a of st.actions) {
         if (a.duration_ms) moving = true;
+        if (a.do === 'expand' || a.do === 'collapse') {
+          moving = true; // an open popover is part of the end state
+          report.check((a.targets || []).length > 0, `${s.id} step ${st.step}: "${a.do}" needs targets`);
+          for (const t of a.targets || []) report.check(expandable.has(t), `${s.id} step ${st.step}: "${a.do}" target "${t}" is not an element with what_it_does in view "${s.view}"${vs?.mode === 'structure' ? ' (a structure view shows it already)' : ''}`);
+          continue;
+        }
         if (a.do === 'state') report.check(!!vs?.states?.[a.state], `${s.id} step ${st.step}: state "${a.state}" is not defined in views/${s.view}.yaml`);
         else report.check((a.targets || []).length > 0 || a.do === 'clear-highlight', `${s.id} step ${st.step}: "${a.do}" needs targets`);
         for (const t of a.targets || []) report.check(targets.has(t), `${s.id} step ${st.step}: target "${t}" is not in view "${s.view}" or the scene's text`);

@@ -29,6 +29,8 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | `.chrome` and its buttons | the control bar at the bottom |
 | `.scene header`, `.scene h2`, `.scene .sid` | the scene title row |
 | `.scene .text p` | the on-screen text lines |
+| `.level-indicator` (and its `.rungs li`, `.lv-tag`, `.lv-scope`) | the level indicator; a theme may restyle it but not hide it |
+| `.popover` | the "what it does" popover |
 | `.map`, `.map .panel` | the map and its detail panel |
 
 - Space a theme reserves for its frame shrinks the scene area, so keep it small: diagram labels must still
@@ -48,15 +50,33 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
   system (`prefers-reduced-motion`) or toggled by the presenter (R), every step jumps straight to its end
   state.
 - Only these actions exist (`scene-spec.schema.json`): `show`, `hide`, `highlight`, `clear-highlight`,
-  `state`, `trace` (a dot travels along a relationship or flow edge), `show-text`; and on scene entry
-  `cut`, `fade`, `zoom-in`, `zoom-out` (a function's region expands into its L3 view in place, or back).
+  `state`, `trace` (a dot travels along a relationship or flow edge), `show-text`, `expand` and `collapse`
+  (open or close an element's "what it does" popover; targets are element IDs with `what_it_does`); and on
+  scene entry `cut`, `fade`, `zoom-in`, `zoom-out` (a function's region expands into its L3 view in place,
+  or back). An open popover is part of a step's end state.
+
+## Scene layouts
+| Layout | Use |
+| --- | --- |
+| `diagram-with-text` | the diagram beside a column of on-screen text (the default) |
+| `diagram-wide` | the diagram across the full width, with the text in one row below it; for wide views |
+| `diagram` | the diagram alone, no text |
+| `statement` | text only |
+| `orientation` | the orientation scene only: the level ladder, drawn from data |
+
+## Expanding an element
+In any wired or flow view, an element with `what_it_does` carries a small expand marker. Clicking it, or
+pressing Enter on it, opens a popover beside the element with its bullets; Escape or a second click closes
+it. The popover is HTML over the diagram, so the layout never moves. A flow node opens its bound element's
+bullets. A structure view shows the bullets inside the boxes, so it has no markers. The map panel lists
+them under "What it does".
 
 ## Screen-share legibility
 - Body text at least 20px at 1920x1080; diagram labels at least 16px as rendered (after the diagram is
   scaled to fit). At 1440x900 both minimums scale with the viewport height (x0.83).
 - A tall view will not fit at full size: five layers top to bottom is about the limit beside text.
   `render-diagrams --preview` warns per scene; narrow or split the view, or give the scene the
-  `diagram` layout.
+  `diagram-wide` or `diagram` layout.
 - No hairline strokes: every stroke at least 2px.
 - Text contrast at least 7:1 against its background; dimmed diagram text at least 3:1.
 
@@ -66,6 +86,8 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | Right arrow, Space | next reveal step, then next scene |
 | Left arrow | previous reveal step, then previous scene |
 | M | open or close the map |
+| Enter (on a focused element) | open or close its "what it does" popover |
+| Escape | close open popovers, then the map |
 | Home | first scene |
 | 1-9, 0 | jump to scene 1-10 (scenes 11-12 from the map) |
 | R | toggle reduced motion |

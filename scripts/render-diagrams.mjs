@@ -86,6 +86,10 @@ function styleBlock(tokens) {
 .diagram{font-family:var(--font-sans, 'IBM Plex Sans', sans-serif);}
 .diagram .bg{fill:${v('--bg')};}
 .diagram .title{fill:${v('--text')};font-size:22px;font-weight:600;}
+.diagram .badge rect{fill:none;stroke:${v('--text-muted')};stroke-width:2px;}
+.diagram .badge text{fill:${v('--text')};font-size:16px;font-weight:600;letter-spacing:.06em;}
+.diagram .expand-mark circle{fill:${v('--surface')};stroke:${v('--c-highlight')};stroke-width:2px;}
+.diagram .expand-mark path{stroke:${v('--c-highlight')};stroke-width:2px;}
 .diagram .name{fill:${v('--text')};font-size:${FONT.name}px;font-weight:600;}
 .diagram .type{fill:${v('--text-muted')};font-size:${FONT.type_label}px;font-variant:small-caps;letter-spacing:.04em;}
 .diagram .resp,.diagram .lbl{fill:${v('--text')};font-size:${FONT.responsibility}px;}
@@ -191,8 +195,15 @@ function buildFlowGraph(M, view, spec, flow) {
 }
 
 // ---------- SVG emit ----------
+// Level badge in every diagram's title row (notation.md, Level indicator).
+const BADGE = { L1: 'L1 · CONTEXT', L2: 'L2 · FUNCTIONS', L3: 'L3 · COMPONENTS', flow: 'FLOW' };
+// The expand marker: a drawn plus in a circle at the box's top-right (no text, so it never counts as a label).
+const expandMark = (w) => `<g class="expand-mark" aria-hidden="true" transform="translate(${f1(w - 18)},18)"><circle r="11"/><path d="M-6 0 H6 M0 -6 V6"/></g>`;
+
 function emit(view, spec, laid, tokens, M) {
   const PADX = 24, TOP = 52;
+  // A structure view shows what_it_does inside the box, so nothing there needs expanding.
+  const canExpand = (e) => spec.mode !== 'structure' && (e?.what_it_does || []).length > 0;
   const legendTypes = new Set();
   const edgeKinds = new Set();
   const parts = { boundaries: [], nodes: [], edges: [] };
@@ -210,10 +221,12 @@ function emit(view, spec, laid, tokens, M) {
       const e = n._el, b = n._box;
       legendTypes.add(e.type);
       const cy = 16 + LINE(FONT.name) * 0.8;
-      parts.nodes.push(`<g class="node el t-${e.type}" data-el="${esc(e.id)}" transform="translate(${f1(x)},${f1(y)})">${shape(e.type, b.w, b.h)}`
+      const ex = canExpand(e);
+      parts.nodes.push(`<g class="node el t-${e.type}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(e.type, b.w, b.h)}`
         + textLines(b.name, b.w / 2, cy + (e.type === 'store' ? 8 : 0), FONT.name, 'name')
         + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${e.type}]</text>`
         + textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp')
+        + (ex ? expandMark(b.w) : '')
         + `<title>${esc(shownName(e))} [${e.type}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
@@ -222,10 +235,12 @@ function emit(view, spec, laid, tokens, M) {
       legendTypes.add(fnode.type);
       const onType = fnode.on ? M.els.get(fnode.on)?.type : null;
       const dy = fnode.type === 'store' ? 10 : 0;
-      parts.nodes.push(`<g class="node fn n-${fnode.type}${onType ? ` on-${onType}` : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(fnode.type === 'external' ? 'external' : fnode.type, b.w, b.h)}`
+      const ex = fnode.on && canExpand(M.els.get(fnode.on));
+      parts.nodes.push(`<g class="node fn n-${fnode.type}${onType ? ` on-${onType}` : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''}${ex ? ` data-expand="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(fnode.type === 'external' ? 'external' : fnode.type, b.w, b.h)}`
         + `<g class="stepno"><circle cx="0" cy="0" r="15"/><text x="0" y="6" text-anchor="middle">${fnode.step}</text></g>`
         + `<text class="type" x="${f1(b.w / 2)}" y="${30 + dy}" text-anchor="middle">[${fnode.type}]${fnode.on ? `<tspan class="onname"> ${esc(M.els.get(fnode.on)?.name || fnode.on)}</tspan>` : ''}</text>`
         + textLines(b.label, b.w / 2, 30 + dy + LINE(FONT.name - 2), FONT.name - 2, 'lbl')
+        + (ex ? expandMark(b.w) : '')
         + `<title>Step ${fnode.step} [${fnode.type}]: ${esc(fnode.label)}</title></g>`);
       positions[fnode.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
@@ -295,13 +310,15 @@ function emit(view, spec, laid, tokens, M) {
     lg.push(`<g class="edge k-${k}"><path class="line" d="M${lx} ${ly - 6} L${lx + 44} ${ly - 6}" marker-end="url(#se-arrow-${k})"/></g><text x="${lx + 52}" y="${ly}">${k}</text>`);
     lx += 52 + k.length * 16 * CHAR + 28;
   }
-  const W = Math.ceil(Math.max(contentW, 640));
+  const badgeW = Math.ceil(BADGE[view.level].length * 16 * 0.62 + 24);
+  const W = Math.ceil(Math.max(contentW, 640, PADX * 2 + badgeW + 14 + spec.title.length * 22 * CHAR));
   const H = Math.ceil(ly + 16);
   const defs = `<defs>${['control', 'data', 'human'].map((k) => `<marker id="se-arrow-${k}" class="m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 ${k === 'data' ? 'L4 6 ' : ''}Z"/></marker>`).join('')}</defs>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="diagram" data-view="${esc(view.id)}" data-level="${view.level}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="se-title-${esc(view.id)}">`
     + `<title id="se-title-${esc(view.id)}">${esc(spec.title)}</title>${styleBlock(tokens)}${defs}`
     + `<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`
-    + `<text class="title" x="${PADX}" y="36">${esc(spec.title)}</text>`
+    + `<g class="badge"><rect x="${PADX}" y="14" width="${badgeW}" height="30" rx="4"/><text x="${PADX + 12}" y="35">${BADGE[view.level]}</text></g>`
+    + `<text class="title" x="${PADX + badgeW + 14}" y="36">${esc(spec.title)}</text>`
     + `<g class="boundaries">${parts.boundaries.join('')}</g><g class="edges">${parts.edges.join('')}</g><g class="nodes">${parts.nodes.join('')}</g>`
     + `<g class="legend">${lg.join('')}</g></svg>\n`;
   return { svg, layout: { w: W, h: H, nodes: positions } };
@@ -349,7 +366,7 @@ if (process.argv[1]?.endsWith('render-diagrams.mjs')) {
     const layouts = await renderAll(dir);
     console.log(`Rendered ${Object.keys(layouts).length} view(s) into ${rel(dir)}`);
     // Predicted label size on a 1920x1080 screen, per scene layout (build-rules.md: labels >= 16px).
-    const FIG = { 'diagram-with-text': { w: 1265, h: 968 }, diagram: { w: 1824, h: 898 } };
+    const FIG = { 'diagram-with-text': { w: 1265, h: 968 }, diagram: { w: 1824, h: 898 }, 'diagram-wide': { w: 1824, h: 820 } };
     let SS = null;
     try { SS = (await import('./lib/common.mjs')).readYaml(P.sceneSpecs); } catch { /* no scene specs yet */ }
     const S = readJson(P.scenes);

@@ -21,7 +21,7 @@
       "required": ["layout", "enter", "steps"],
       "additionalProperties": false,
       "properties": {
-        "layout": { "enum": ["diagram", "diagram-with-text", "statement", "orientation"] },
+        "layout": { "enum": ["diagram", "diagram-with-text", "diagram-wide", "statement", "orientation"] },
         "enter": {
           "type": "object",
           "required": ["kind"],
@@ -49,8 +49,8 @@
                   "required": ["do"],
                   "additionalProperties": false,
                   "properties": {
-                    "do": { "enum": ["show", "hide", "highlight", "clear-highlight", "trace", "show-text", "state"] },
-                    "targets": { "type": "array", "items": { "type": "string" }, "description": "Element, relationship, or step IDs ('step-3'); text line indexes ('text-1')" },
+                    "do": { "enum": ["show", "hide", "highlight", "clear-highlight", "trace", "show-text", "state", "expand", "collapse"] },
+                    "targets": { "type": "array", "items": { "type": "string" }, "description": "Element, relationship, or step IDs ('step-3'); text line indexes ('text-1'); for expand and collapse, element IDs with what_it_does" },
                     "state": { "$ref": "#/$defs/id", "description": "do: state - a named state from the view spec" },
                     "duration_ms": { "type": "integer", "minimum": 0, "maximum": 4000 }
                   }

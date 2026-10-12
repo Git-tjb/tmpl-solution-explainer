@@ -38,6 +38,69 @@
     return a;
   }
 
+  // ---------- expand: "what it does" popovers (HTML over the diagram, so the layout never moves) ----------
+  function expandTargets(sceneEl, id) {
+    var svg = sceneEl.querySelector('svg.diagram');
+    return svg ? svg.querySelectorAll('[data-expand="' + id + '"]') : [];
+  }
+  function openIds(sceneEl) {
+    return Array.prototype.map.call(sceneEl.querySelectorAll('.popover'), function (p) { return p.getAttribute('data-for'); });
+  }
+  function expand(sceneEl, id, ms) {
+    var data = D.els[id], node = expandTargets(sceneEl, id)[0], box = sceneEl.querySelector('.popovers');
+    if (!data || !node || !box || sceneEl.querySelector('.popover[data-for="' + id + '"]')) return;
+    var p = document.createElement('div');
+    p.className = 'popover';
+    p.setAttribute('data-for', id);
+    p.setAttribute('role', 'note');
+    p.setAttribute('aria-label', data.name + ': what it does');
+    var h = document.createElement('h3'); h.textContent = data.name; p.appendChild(h);
+    var ul = document.createElement('ul');
+    data.items.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    p.appendChild(ul);
+    p.style.visibility = 'hidden';
+    box.appendChild(p);
+    place(sceneEl, node, p);
+    p.style.visibility = '';
+    each(expandTargets(sceneEl, id), function (n) { n.setAttribute('aria-expanded', 'true'); n.classList.add('expanded'); });
+    animate(p, [{ opacity: 0 }, { opacity: 1 }], ms);
+  }
+  function place(sceneEl, node, p) {
+    var sr = sceneEl.getBoundingClientRect(), r = node.getBoundingClientRect(), pw = p.offsetWidth, ph = p.offsetHeight, gap = 14;
+    var left = r.right - sr.left + gap;
+    if (left + pw > sr.width - gap) left = r.left - sr.left - gap - pw;
+    if (left < gap) left = Math.max(gap, Math.min(sr.width - pw - gap, r.left - sr.left));
+    var top = Math.max(gap, Math.min(sr.height - ph - gap, r.top - sr.top));
+    p.style.left = left + 'px';
+    p.style.top = top + 'px';
+  }
+  function collapse(sceneEl, id) {
+    each(sceneEl.querySelectorAll('.popover' + (id ? '[data-for="' + id + '"]' : '')), function (p) { p.remove(); });
+    each(sceneEl.querySelectorAll(id ? '[data-expand="' + id + '"]' : '[data-expand].expanded'), function (n) { n.setAttribute('aria-expanded', 'false'); n.classList.remove('expanded'); });
+  }
+  function toggle(id) {
+    var sceneEl = scenes[state.si];
+    if (sceneEl.querySelector('.popover[data-for="' + id + '"]')) collapse(sceneEl, id); else expand(sceneEl, id, 300);
+  }
+
+  // ---------- level indicator (notation.md): one element in the chrome, updated per scene ----------
+  var lvEl = document.querySelector('.chrome .level-indicator');
+  var RUNG_NAME = { L1: 'Context', L2: 'Functions', L3: 'Components', L4: 'Code' };
+  function indicate(si) {
+    if (!lvEl) return;
+    var lv = spec(si).lv || { level: '', rungs: [], scope: '', tag: null };
+    lvEl.setAttribute('data-level', lv.level);
+    each(lvEl.querySelectorAll('[data-rung]'), function (r) {
+      var on = lv.rungs.indexOf(r.getAttribute('data-rung')) >= 0;
+      r.classList.toggle('on', on);
+      if (on) r.setAttribute('aria-current', 'true'); else r.removeAttribute('aria-current');
+    });
+    lvEl.querySelector('.lv-tag').textContent = lv.tag || '';
+    lvEl.querySelector('.lv-scope').textContent = lv.scope ? '· ' + lv.scope : '';
+    var names = lv.rungs.map(function (x) { return RUNG_NAME[x]; }).join(', ');
+    lvEl.setAttribute('aria-label', 'Level: ' + (lv.tag ? lv.tag + (names ? ' (' + names + ')' : '') : names) + (lv.scope ? ', ' + lv.scope : ''));
+  }
+
   // ---------- state ----------
   function highlight(sceneEl, ids, ms) {
     var svg = sceneEl.querySelector('svg.diagram');
@@ -58,6 +121,8 @@
       var st = (D.states[spec(si).view] || {})[a.state] || {};
       highlight(sceneEl, [].concat(st.elements || [], st.relationships || [], (st.steps || []).map(function (n) { return 'step-' + n; })), ms);
     } else if (a.do === 'trace') targets.forEach(function (t) { each(find(sceneEl, t), function (edge) { trace(edge, ms); }); });
+    else if (a.do === 'expand') targets.forEach(function (t) { expand(sceneEl, t, ms); });
+    else if (a.do === 'collapse') targets.forEach(function (t) { collapse(sceneEl, t); });
   }
   function trace(edge, ms) {
     edge.classList.add('traced');
@@ -76,6 +141,7 @@
     var s = spec(si);
     each(sceneEl.querySelectorAll('.is-hidden, .hl, .traced'), function (el) { el.classList.remove('is-hidden', 'hl', 'traced'); });
     each(sceneEl.querySelectorAll('.tracer'), function (el) { el.remove(); });
+    collapse(sceneEl);
     var svg = sceneEl.querySelector('svg.diagram');
     if (svg) svg.classList.remove('has-hl');
     s.steps.forEach(function (st) { st.actions.forEach(function (a) {
@@ -106,8 +172,9 @@
     running.slice().forEach(function (a) { try { a.finish(); } catch (e) { /* already done */ } });
     var sceneEl = scenes[si];
     if (si !== state.si) {
-      if (state.si >= 0) scenes[state.si].classList.remove('current');
+      if (state.si >= 0) { collapse(scenes[state.si]); scenes[state.si].classList.remove('current'); }
       sceneEl.classList.add('current');
+      indicate(si);
       reset(sceneEl, si);
       for (var k = 1; k <= step; k++) runStep(sceneEl, si, k, false);
       if (how === 'forward') enter(sceneEl, si);
@@ -185,13 +252,21 @@
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
     var k = ev.key;
     if (k === 'm' || k === 'M') { if (mapEl.classList.contains('open')) closeMap(); else openMap(); ev.preventDefault(); return; }
-    if (k === 'Escape') { closeMap(); return; }
+    if (k === 'Escape') {
+      if (!mapEl.classList.contains('open') && state.si >= 0 && scenes[state.si].querySelector('.popover')) { collapse(scenes[state.si]); return; }
+      closeMap(); return;
+    }
     if (k === 'r' || k === 'R') { setReduced(!reducedToggle); return; }
     if (mapEl.classList.contains('open')) return;
     if (k === 'ArrowRight' || k === ' ' || k === 'PageDown') { ev.preventDefault(); next(); }
     else if (k === 'ArrowLeft' || k === 'PageUp') { ev.preventDefault(); prev(); }
     else if (k === 'Home') { ev.preventDefault(); go(0, 0, 'jump'); }
     else if (/^[0-9]$/.test(k)) { var n = k === '0' ? 9 : parseInt(k, 10) - 1; if (n < scenes.length) go(n, 0, 'forward'); }
+  });
+  each(document.querySelectorAll('.scene svg.diagram [data-expand][role="button"]'), function (el) {
+    var id = el.getAttribute('data-expand');
+    el.addEventListener('click', function (ev) { ev.stopPropagation(); toggle(id); });
+    el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); toggle(id); } });
   });
   document.querySelector('.chrome .next').addEventListener('click', next);
   document.querySelector('.chrome .prev').addEventListener('click', prev);
@@ -204,6 +279,7 @@
     state: function () { return { scene: spec(state.si).id, step: state.step }; },
     maxStep: function (i) { return maxStep(i); },
     running: function () { return running.length; },
+    popovers: function () { return state.si >= 0 ? openIds(scenes[state.si]) : []; },
     sceneCount: scenes.length,
   };
 

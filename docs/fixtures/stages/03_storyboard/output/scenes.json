@@ -171,6 +171,10 @@
         {
           "step": 2,
           "shows": "the create relationship traced"
+        },
+        {
+          "step": 3,
+          "shows": "what templates do, expanded"
         }
       ],
       "animation": {

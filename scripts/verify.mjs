@@ -6,7 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
-import { P, out, main, readJson, readText, loadTokens, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
+import { P, out, main, readJson, readText, loadTokens, loadModel, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
+import { loadViewSpecs } from './check-design.mjs';
 import { checkModel } from './check-model.mjs';
 import { checkStoryboard } from './check-storyboard.mjs';
 import { renderAll } from './render-diagrams.mjs';
@@ -50,6 +51,13 @@ async function endStateProblems(page) {
     for (const step of sc.steps) {
       if (step.step > s.step) continue;
       for (const a of step.actions) for (const t of a.targets || []) {
+        if (a.do === 'expand' || a.do === 'collapse') {
+          const later = (what) => sc.steps.some((x) => x.step > step.step && x.step <= s.step && x.actions.some((y) => y.do === what && (y.targets || []).includes(t)));
+          const open = window.__explainer.popovers().includes(t);
+          if (a.do === 'expand' && !open && !later('collapse')) probs.push(`${s.scene}.${step.step}: "${t}" popover not open`);
+          if (a.do === 'collapse' && open && !later('expand')) probs.push(`${s.scene}.${step.step}: "${t}" popover still open`);
+          continue;
+        }
         const nodes = find(t);
         if (!nodes.length) { probs.push(`${s.scene}.${step.step}: target "${t}" not found`); continue; }
         for (const n of nodes) {
@@ -63,6 +71,54 @@ async function endStateProblems(page) {
     if (el.querySelector('.tracer')) probs.push(`${s.scene}: a trace dot is still on screen`);
     return probs;
   });
+}
+
+// AC-16: the level indicator is on screen, in the one form notation.md defines, for the current scene.
+async function indicatorProblems(page, scene) {
+  return page.evaluate((scene) => {
+    const el = document.querySelector('.chrome .level-indicator');
+    if (!el) return ['no level indicator in the chrome'];
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+    const probs = [];
+    if (cs.display === 'none' || cs.visibility !== 'visible' || parseFloat(cs.opacity) < 0.5 || r.width < 40 || r.height < 10) probs.push('level indicator is hidden');
+    if (r.right > innerWidth + 1 || r.bottom > innerHeight + 1 || r.left < -1) probs.push('level indicator is off screen');
+    const want = scene.section === 'orientation' ? 'key' : scene.level;
+    if (el.getAttribute('data-level') !== want) probs.push(`level indicator shows "${el.getAttribute('data-level')}", expected "${want}"`);
+    const rungs = el.querySelectorAll('[data-rung]').length, on = el.querySelectorAll('[data-rung].on').length;
+    if (rungs !== 4) probs.push(`level indicator has ${rungs} rungs (4)`);
+    if (want === 'key' ? on !== 0 : want === 'flow' ? on < 1 : on !== 1) probs.push(`level indicator fills ${on} rung(s)`);
+    return probs;
+  }, scene);
+}
+
+// AC-17: every expandable element in the current scene opens its popover with its bullets, and closes.
+async function expandProblems(page, sceneId) {
+  const ids = await page.$$eval(`.scene[data-scene="${sceneId}"] svg.diagram [data-expand][role="button"]`, (els) => [...new Set(els.map((e) => e.getAttribute('data-expand')))]);
+  const probs = [];
+  for (const id of ids) {
+    await page.keyboard.press('Escape');
+    await page.locator(`.scene[data-scene="${sceneId}"] svg.diagram [data-expand="${id}"]`).first().click({ timeout: 3000 });
+    await settle(page);
+    const got = await page.evaluate((id) => {
+      const p = document.querySelector(`.scene.current .popover[data-for="${id}"]`);
+      if (!p) return null;
+      const r = p.getBoundingClientRect();
+      return { items: [...p.querySelectorAll('li')].map((l) => l.textContent), want: window.EXPLAINER.els[id]?.items || [],
+        inView: r.left >= 0 && r.top >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1 };
+    }, id);
+    if (!got) { probs.push(`${sceneId}: "${id}" did not open its popover`); continue; }
+    if (got.items.join('|') !== got.want.join('|')) probs.push(`${sceneId}: "${id}" popover shows different bullets than the model`);
+    if (!got.inView) probs.push(`${sceneId}: "${id}" popover extends past the viewport`);
+    await page.keyboard.press('Escape');
+    if ((await page.evaluate(() => window.__explainer.popovers().length)) !== 0) probs.push(`${sceneId}: Escape did not close "${id}"`);
+  }
+  if (ids.length) {
+    await page.locator(`.scene[data-scene="${sceneId}"] svg.diagram [data-expand="${ids[0]}"]`).first().focus();
+    await page.keyboard.press('Enter');
+    if (!(await page.evaluate((id) => window.__explainer.popovers().includes(id), ids[0]))) probs.push(`${sceneId}: Enter did not open "${ids[0]}"`);
+    await page.keyboard.press('Escape');
+  }
+  return { probs, count: ids.length };
 }
 
 async function traverse(page, label, expected, { reduced = false } = {}) {
@@ -124,7 +180,7 @@ async function legibility(page, label, tokens) {
     const rgb = (c) => (c.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
     const sc = document.querySelector('.scene.current');
     const out = { small: [], colors: [], overflow: [] };
-    for (const el of sc.querySelectorAll('h2, .text p')) {
+    for (const el of sc.querySelectorAll('h2, .text p, .popover h3, .popover li')) {
       if (px(el) < 20 * k - 0.05) out.small.push(`text "${el.textContent.slice(0, 30)}" is ${px(el)}px (min ${(20 * k).toFixed(1)})`);
       out.colors.push({ what: el.textContent.slice(0, 30), c: rgb(getComputedStyle(el).color) });
       if (el.scrollWidth > el.clientWidth + 1) out.overflow.push(`"${el.textContent.slice(0, 30)}" overflows its box`);
@@ -167,7 +223,8 @@ main(async () => {
   fs.rmSync(shots, { recursive: true, force: true });
   fs.mkdirSync(shots, { recursive: true });
   const browsersRun = [];
-  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13']) crit(id);
+  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17']) crit(id);
+  let expandCount = 0;
 
   for (const B of BROWSERS) {
     let browser;
@@ -213,11 +270,15 @@ main(async () => {
         await page.waitForFunction(() => !!window.__explainer);
         await settle(page);
         await legibility(page, `${label} ${s.id}`, tokens);
+        for (const p of await indicatorProblems(page, s)) fail('AC-16', `${label} ${s.id}: ${p}`);
         if (B.name === 'chromium') {
           await page.screenshot({ path: path.join(shots, `${s.id}-${vp.width}x${vp.height}.png`) });
           if (first) {
             const r = await new AxeBuilder({ page }).options({ preload: false }).include('.scene.current').include('.chrome').analyze();
             for (const v of r.violations) if (['critical', 'serious'].includes(v.impact)) fail('AC-13', `${s.id}: ${v.id} (${v.impact}): ${v.help} [${v.nodes.length} node(s)]`);
+            const ex = await expandProblems(page, s.id);
+            expandCount += ex.count;
+            for (const p of ex.probs) fail('AC-17', `${label} ${p}`);
           }
         }
       }
@@ -274,6 +335,35 @@ main(async () => {
     const typed = [...svg.matchAll(/<g class="node el [^"]*"[^>]*>(.*?)<\/g>/g)].every((m) => /class="type"/.test(m[1]));
     if (!typed) fail('AC-9', `${id}: an element has no type label`);
   }
+  // AC-16 level shown in the one defined form (the chrome part ran in the browsers above)
+  crit('AC-16');
+  for (const id of declared) if (!/<g class="badge"><rect /.test(readText(path.join(P.site, 'assets', 'diagrams', `${id}.svg`)))) fail('AC-16', `${id}.svg has no level badge in its title row`);
+  const orientAt = S.scenes.findIndex((s) => s.section === 'orientation');
+  const firstDeep = S.scenes.findIndex((s) => s.level === 'L2' || s.level === 'L3');
+  if (orientAt < 0) fail('AC-16', 'no orientation scene');
+  else if (firstDeep >= 0 && orientAt > firstDeep) fail('AC-16', `the orientation scene comes after ${S.scenes[firstDeep].id}`);
+
+  // AC-17 every element with what_it_does can be expanded (the browser part ran in Chromium above)
+  crit('AC-17');
+  const M = loadModel();
+  const vspecs = loadViewSpecs();
+  const viewOf = new Map(S.views.map((v) => [v.id, v]));
+  for (const s of S.scenes) {
+    const v = viewOf.get(s.view);
+    if (!v || vspecs.get(v.id)?.mode === 'structure') continue;
+    const svg = readText(path.join(P.site, 'assets', 'diagrams', `${v.id}.svg`));
+    const shown = v.level === 'flow' ? [...svg.matchAll(/data-on="([^"]+)"/g)].map((m) => m[1]) : [...svg.matchAll(/<g class="node el [^"]*" data-el="([^"]+)"/g)].map((m) => m[1]);
+    for (const id of new Set(shown)) if ((M.els.get(id)?.what_it_does || []).length && !svg.includes(`data-expand="${id}"`)) fail('AC-17', `${s.id}: "${id}" has what_it_does but no expand marker in ${v.id}.svg`);
+  }
+  note('AC-17', `${expandCount} popover(s) opened and closed in Chromium; the bullets' facts are checked by check-model (AC-8).`);
+
+  // AC-18 structure before any flow
+  crit('AC-18');
+  const firstStruct = S.scenes.findIndex((s) => vspecs.get(s.view)?.mode === 'structure');
+  const firstFlowScene = S.scenes.findIndex((s) => s.level === 'flow');
+  if (firstStruct < 0) fail('AC-18', 'no scene shows a structure view');
+  else if (firstFlowScene >= 0 && firstFlowScene < firstStruct) fail('AC-18', `${S.scenes[firstFlowScene].id} shows a flow before the first structure scene ${S.scenes[firstStruct].id}`);
+
   crit('AC-11');
   const domIds = [...html.matchAll(/<section class="scene" id="(S\d\d)"/g)].map((m) => m[1]);
   if (domIds.join() !== S.scenes.map((s) => s.id).join()) fail('AC-11', `page scenes ${domIds.join(',')} differ from scenes.json`);
@@ -294,7 +384,7 @@ main(async () => {
 
   crit('AC-12').result = 'review'; note('AC-12', 'Review the screenshots against _config/banned-patterns.md.');
   crit('AC-15').result = 'review'; note('AC-15', "Recorded once in the template's docs/design.md.");
-  if (!browsersRun.length) for (const id of ['AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13']) fail(id, 'no browser ran');
+  if (!browsersRun.length) for (const id of ['AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17']) fail(id, 'no browser ran');
 
   const order = Object.keys(C).sort((x, y) => parseInt(x.slice(3)) - parseInt(y.slice(3)));
   const result = { browsers: browsersRun, viewports: VIEWPORTS.map((v) => `${v.width}x${v.height}`), criteria: Object.fromEntries(order.map((k) => [k, C[k]])) };

@@ -90,6 +90,31 @@ export function buildSite(siteDir) {
     return `<li data-level="${lvl}"><strong>${name}</strong> <span class="line">${esc(line)}</span> <span class="uses">${used.length ? used.map((x) => `<a href="#${x.id}">${x.id}</a>`).join(' ') : 'Map only'}</span></li>`;
   }).join('')}</ol>`;
 
+  // The level indicator for each scene (notation.md, Level indicator): which rungs are filled, the scope
+  // beside it, and a tag on flow and orientation scenes. A flow fills the rungs its steps come from.
+  const rungOf = (id) => {
+    const e = M.els.get(id);
+    if (!e) return null;
+    if (e.type === 'function' || (e.type === 'store' && e.parent === M.system?.id)) return 'L2';
+    if (e.type === 'component' || e.type === 'store') return 'L3';
+    return 'L1';
+  };
+  const levelOf = (s) => {
+    if (s.section === 'orientation') return { level: 'key', rungs: [], scope: 'All levels', tag: 'Key' };
+    const v = views.get(s.view);
+    if (v.level === 'flow') {
+      const f = flows.get(v.scope);
+      return { level: 'flow', rungs: [...new Set(f.nodes.map((n) => rungOf(n.on)).filter(Boolean))].sort(), scope: f.title, tag: 'Flow' };
+    }
+    return { level: v.level, rungs: [v.level], scope: shownName(M.els.get(v.scope)) || v.scope, tag: null };
+  };
+
+  // Elements that can be expanded to show what they do (D4): the page data and the scene diagrams' markup.
+  const els = {};
+  for (const e of M.els.values()) if ((e.what_it_does || []).length) els[e.id] = { name: shownName(e), items: e.what_it_does.map((w) => w.text) };
+  const expandable = (svg) => (!/ data-expand="/.test(svg) ? svg : svg.replace(' role="img" ', ' role="group" ')
+    .replace(/ data-expand="([^"]+)"/g, (m, id) => `${m} tabindex="0" role="button" aria-expanded="false" aria-label="${esc((els[id]?.name || id) + ': what it does')}"`));
+
   // Scenes
   const sceneHtml = S.scenes.map((s) => {
     const spec = SS.scenes[s.id];
@@ -97,7 +122,8 @@ export function buildSite(siteDir) {
     return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
       + `<header><h2>${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
       + `<div class="text">${text}</div>`
-      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>` : `<div class="figure">${inlineSvg(svgOf(s.view), s.id.toLowerCase())}</div>`)
+      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>` : `<div class="figure">${expandable(inlineSvg(svgOf(s.view), s.id.toLowerCase()))}</div>`)
+      + `<div class="popovers"></div>`
       + `</section>`;
   }).join('\n');
 
@@ -115,6 +141,7 @@ export function buildSite(siteDir) {
     return `<section data-panel="${esc(e.id)}" hidden>`
       + `<h3>${esc(shownName(e))}</h3><div class="type">[${e.type}]${e.tech ? ` · ${esc(e.tech)}` : ''}</div>`
       + `<h4>Responsibility</h4><p>${esc(e.responsibility)}</p>`
+      + ((e.what_it_does || []).length ? `<h4>What it does</h4><ul>${e.what_it_does.map((w) => `<li>${esc(w.text)}</li>`).join('')}</ul>` : '')
       + `<h4>Why it is separate</h4><p>${esc(e.why_separate)}</p>`
       + (kids.length ? `<h4>Contains</h4><ul>${kids.join('')}</ul>` : '')
       + (relsOut.length + relsIn.length ? `<h4>Relationships</h4><ul>${[...relsOut, ...relsIn].join('')}</ul>` : '')
@@ -125,7 +152,8 @@ export function buildSite(siteDir) {
   }).join('\n');
 
   const data = {
-    scenes: S.scenes.map((s) => ({ id: s.id, title: s.title, view: s.view, highlight: s.highlight || {}, enter: SS.scenes[s.id].enter, steps: SS.scenes[s.id].steps })),
+    scenes: S.scenes.map((s) => ({ id: s.id, title: s.title, view: s.view, lv: levelOf(s), highlight: s.highlight || {}, enter: SS.scenes[s.id].enter, steps: SS.scenes[s.id].steps })),
+    els,
     states: Object.fromEntries(S.views.map((v) => [v.id, specs.get(v.id)?.states || {}])),
     layouts,
   };
@@ -157,6 +185,7 @@ ${panels}
 <button class="prev" type="button" aria-label="Previous step">&#8592;</button>
 <span class="where" aria-live="polite"></span>
 <span class="title"></span>
+<div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li data-rung="L1">Context</li><li data-rung="L2">Functions</li><li data-rung="L3">Components</li><li data-rung="L4">Code</li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
 <button class="maptoggle" type="button">Map (M)</button>
 <button class="rm" type="button" aria-pressed="false">Reduced motion (R)</button>
 <button class="next" type="button" aria-label="Next step">&#8594;</button>
