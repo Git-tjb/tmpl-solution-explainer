@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { ROOT, P, out, main, shownName, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
-  writeText, readTokens, UserError, rel } from './lib/common.mjs';
+  writeText, loadTokens, UserError, rel } from './lib/common.mjs';
 import { loadViewSpecs, REQUIRED_TOKENS } from './check-design.mjs';
 
 const profile = readJson(path.join(P.standards, 'layout-profile.json'));
@@ -312,7 +312,7 @@ export async function renderAll(outDir) {
   const M = loadModel();
   const { flows } = loadFlows();
   const specs = loadViewSpecs();
-  const tokens = readTokens(readText(P.tokens));
+  const tokens = loadTokens();
   for (const t of REQUIRED_TOKENS) if (!tokens[t]) throw new UserError(`tokens.css is missing ${t}; run check-design.`);
   const elk = new ELK();
   const layouts = {};

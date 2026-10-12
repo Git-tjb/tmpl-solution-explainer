@@ -14,7 +14,7 @@ Run the commands from the workspace root.
 | 3 | `../../_config/visual-direction.md` | the default look and token values |
 | 3 | `../../_config/banned-patterns.md` | what never appears |
 | 3 | `../../_config/build-rules.md` | legibility, motion vocabulary, navigation |
-| 3 | `../../_config/run.md` | `visual_references`, `avoid`, `animation` |
+| 3 | `../../_config/run.md` | `visual`, `visual_references`, `avoid`, `animation` |
 | 3 | `../../_config/standards/notation.md` | type-to-shape mapping and color token meanings |
 | 3 | `../../_config/standards/views.md` | per-view rules |
 | 3 | `../../_config/standards/view.schema.json`, `scene-spec.schema.json` | output shapes |
@@ -23,7 +23,9 @@ Run the commands from the workspace root.
 
 ## Process
 1. Set the run's visual system in `tokens.css`: color token values (hex), type scale, spacing, motion durations.
-   Start from `visual-direction.md`; change it only for `visual_references` or `avoid` in `run.md`.
+   Start from `visual-direction.md`. If `visual` in `run.md` is `default`, stop at tokens within that
+   direction. If it describes a look, build a run theme in `theme/` (`theme.css`, fonts, licences) over the
+   hooks in `build-rules.md`; keep `tokens.css` valid and put the themed values in `theme.css` `:root`.
 2. Write a view spec for every view in `scenes.json` (`views/<view-id>.yaml`): title, element list if
    narrowed, `mode` (`structure` for the structure view, default `wired`), named highlight states, pins, and
    `inherit_from` for L3 views.
@@ -32,7 +34,7 @@ Run the commands from the workspace root.
    it) uses the `orientation` layout; its step reveals text lines only, since the page draws the levels from data. With `animation: false` in
    `run.md`, use `cut` entries and actions with `duration_ms: 0` only.
 4. Write `design-spec.md`: the visual system and why, the map and navigation chrome, any departure from
-   the defaults, any runtime library and its justification, and a self-check against each banned pattern.
+   the defaults, the theme and each approved exception to the banned list (a heading "Approved exceptions"), any runtime library and its justification, and a self-check against each banned pattern.
 5. Run `node scripts/check-design.mjs` and fix what it reports.
 6. Run `node scripts/render-diagrams.mjs --preview` to draw every view into `output/preview/` for review.
    Act on every WARN: a view too tall or wide to show labels at 16px must be narrowed, split, or given the
@@ -43,6 +45,7 @@ Run the commands from the workspace root.
 | File | Destination |
 | --- | --- |
 | `tokens.css` | `output/` |
+| `theme/` (only when `visual` is not `default`) | `output/` |
 | `views/<view-id>.yaml` | `output/` |
 | `scene-specs.yaml` | `output/` |
 | `design-spec.md` | `output/` |
@@ -52,7 +55,8 @@ Run the commands from the workspace root.
 - [ ] `check-design` passes: every view has a title, a single level, at most 9 elements; every scene and
       reveal step has a spec; every action is in the vocabulary; every text token pair meets 7:1
 - [ ] Every animation has an end state
-- [ ] The banned-pattern self-check is filled in
+- [ ] The banned-pattern self-check is filled in, and a theme's exceptions are listed in `design-spec.md`
+- [ ] With a theme: `theme/` holds only `theme.css`, fonts, and licences, with no remote URLs
 
 ## Human Check
 Open the previews and read `design-spec.md`. This is where visual quality is set: expect the most

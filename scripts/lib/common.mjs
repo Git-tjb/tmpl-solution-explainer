@@ -37,6 +37,7 @@ export const P = {
   views: out('04', 'views'),
   sceneSpecs: out('04', 'scene-specs.yaml'),
   tokens: out('04', 'tokens.css'),
+  theme: out('04', 'theme'),
   site: out('05', 'site'),
 };
 
@@ -250,9 +251,17 @@ export function viewElements(M, view, spec) {
 }
 
 // ---------- tokens ----------
-export function readTokens(cssText) {
+export function readTokens(cssText, { rootOnly = false } = {}) {
   const tokens = {};
-  for (const m of cssText.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) tokens[m[1]] = m[2].trim();
+  const text = rootOnly ? [...cssText.matchAll(/:root\s*\{([^}]*)\}/g)].map((m) => m[1]).join(' ') : cssText;
+  for (const m of text.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) tokens[m[1]] = m[2].trim();
+  return tokens;
+}
+// The run's tokens: tokens.css, then the :root values in theme/theme.css (a run theme's values win).
+export function loadTokens() {
+  const tokens = readTokens(readText(P.tokens));
+  const themeCss = path.join(P.theme, 'theme.css');
+  if (fs.existsSync(themeCss)) Object.assign(tokens, readTokens(readText(themeCss), { rootOnly: true }));
   return tokens;
 }
 export function hexToRgb(hex) {

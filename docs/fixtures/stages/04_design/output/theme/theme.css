@@ -1,0 +1,8 @@
+/* Fixture run theme: exercises the theme hook. Made up; real themes are built in stage 04 of a run. */
+:root {
+  --c-highlight: #86d6c0;
+  --frame-top: 6px;
+  --frame-left: 6px;
+}
+.frame-top { display: block; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--c-internal); }
+.frame-side { display: block; position: absolute; top: 0; left: 0; bottom: 0; width: 6px; background: var(--c-actor); }

@@ -24,7 +24,8 @@ Run the commands from the workspace root.
    viewports, writes `output/verify-results.json`, and captures every scene at its final step into
    `output/screenshots/`.
 3. Review content fidelity: every line of on-screen text in `scenes.json` against the fact IDs it cites.
-4. Review the screenshots against `banned-patterns.md` and the IA rules marked as review in
+4. Review the screenshots against `banned-patterns.md` (accepting only the exceptions listed in
+   `design-spec.md`, if the run has a theme) and the IA rules marked as review in
    `acceptance-criteria.md`.
 5. Write `verify-report.md`: pass or fail per criterion; each failure with its scene or element ID and the
    stage that should be re-run.

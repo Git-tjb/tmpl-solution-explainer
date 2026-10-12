@@ -1,8 +1,10 @@
 # Visual Direction (default, dark mode)
 
-The starting look for every run. Stage 04 sets token values within it; it replaces this direction only when
-`_config/run.md` lists visual references, and records the change in `design-spec.md`. Notation semantics
-come from `standards/notation.md` and are not redefined here.
+The starting look for every run, and the only look the template ships. Stage 04 sets token values within it.
+When `visual` in `_config/run.md` is `default`, the run uses this look. When `visual` describes a look for
+the run, stage 04 builds it as a run theme (`theme/`, see `build-rules.md`) from that description and its
+references, and records the theme and any exceptions to the banned list in `design-spec.md`. Notation
+semantics come from `standards/notation.md` and are not redefined by either.
 
 ## Tone
 Clear, technical, editorial: closer to an engineering schematic or a technical publication than a SaaS

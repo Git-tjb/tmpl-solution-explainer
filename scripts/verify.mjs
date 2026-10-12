@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
-import { P, out, main, readJson, readText, readTokens, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
+import { P, out, main, readJson, readText, loadTokens, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
 import { checkModel } from './check-model.mjs';
 import { checkStoryboard } from './check-storyboard.mjs';
 import { renderAll } from './render-diagrams.mjs';
@@ -157,7 +157,7 @@ async function legibility(page, label, tokens) {
 
 main(async () => {
   const S = readJson(P.scenes);
-  const tokens = readTokens(readText(P.tokens));
+  const tokens = loadTokens();
   const indexFile = path.join(P.site, 'index.html');
   if (!fs.existsSync(indexFile)) throw new Error('No site. Run stage 05 first.');
   const url = pathToFileURL(indexFile).href;

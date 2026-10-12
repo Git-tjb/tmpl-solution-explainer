@@ -129,6 +129,7 @@ export function buildSite(siteDir) {
     states: Object.fromEntries(S.views.map((v) => [v.id, specs.get(v.id)?.states || {}])),
     layouts,
   };
+  const hasTheme = fs.existsSync(path.join(P.theme, 'theme.css'));
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -137,8 +138,10 @@ export function buildSite(siteDir) {
 <title>${esc(run.solution || 'Solution')}: explainer</title>
 <link rel="stylesheet" href="assets/css/tokens.css">
 <link rel="stylesheet" href="assets/css/base.css">
+${hasTheme ? '<link rel="stylesheet" href="assets/theme/theme.css">' : ''}
 </head>
 <body>
+<div class="frame" aria-hidden="true"><div class="frame-top"></div><div class="frame-side"></div></div>
 <main class="deck" aria-live="polite">
 ${sceneHtml}
 </main>
@@ -170,6 +173,11 @@ ${panels}
   writeText(path.join(siteDir, 'assets', 'css', 'base.css'), readText(path.join(siteSrc, 'base.css')));
   writeText(path.join(siteDir, 'assets', 'js', 'runtime.js'), readText(path.join(siteSrc, 'runtime.js')));
   writeText(path.join(siteDir, 'assets', 'css', 'tokens.css'), readText(P.tokens));
+  if (hasTheme) for (const f of walk(P.theme)) {
+    const dest = path.join(siteDir, 'assets', 'theme', path.relative(P.theme, f));
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(f, dest);
+  }
   const fontDir = path.join(siteDir, 'assets', 'fonts');
   fs.mkdirSync(fontDir, { recursive: true });
   for (const [pkg, file] of FONTS) {

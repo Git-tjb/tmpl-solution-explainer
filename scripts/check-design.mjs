@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loadFlows, runAnswers,
-  defaultViewElements, viewElements, viewRelationships, readTokens, hexToRgb, contrast } from './lib/common.mjs';
+  defaultViewElements, viewElements, viewRelationships, loadTokens, hexToRgb, contrast, walk } from './lib/common.mjs';
 
 const TITLE = { L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
 export const REQUIRED_TOKENS = ['--bg', '--surface', '--text', '--text-muted', '--c-system', '--c-internal', '--c-actor',
@@ -14,6 +14,29 @@ export function loadViewSpecs() {
   if (!fs.existsSync(P.views)) return specs;
   for (const f of fs.readdirSync(P.views).filter((f) => /\.ya?ml$/.test(f)).sort()) specs.set(f.replace(/\.ya?ml$/, ''), readYaml(path.join(P.views, f)));
   return specs;
+}
+
+// A run theme (build-rules.md, Run theme): theme/theme.css plus fonts and their licences, nothing else.
+const THEME_FILES = /\.(css|woff2?|ttf|otf)$|(^|\/)(licen[cs]e|ofl|copying)[^/]*$/i;
+const FONT_FILE = /\.(woff2?|ttf|otf)$/i;
+export function checkTheme(report, run) {
+  if (!fs.existsSync(P.theme)) return;
+  const files = walk(P.theme).map((f) => path.relative(P.theme, f).split(path.sep).join('/'));
+  const css = files.includes('theme.css') ? readText(path.join(P.theme, 'theme.css')) : null;
+  report.check(css !== null, 'theme/ exists but has no theme.css');
+  report.check(!!run.visual && run.visual !== 'default', 'theme/ exists but run.md sets visual: default; describe the run\'s look in run.md');
+  for (const f of files) report.check(THEME_FILES.test(f), `theme/${f}: a theme holds theme.css, fonts, and their licences only (no scripts, markup, or images)`);
+  if (files.some((f) => FONT_FILE.test(f))) report.check(files.some((f) => /(^|\/)(licen[cs]e|ofl|copying)/i.test(f)), 'theme/ has font files but no licence file');
+  if (css === null) return;
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  report.check(!/@import/i.test(bare), 'theme.css: @import is not allowed (zero network requests; bundle everything)');
+  report.check(!/https?:\/\/|(^|[\s(:"'])\/\/[a-z]/i.test(bare), 'theme.css: no remote or protocol-relative URLs');
+  for (const m of bare.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/gi)) {
+    const u = m[2].trim();
+    if (u.startsWith('data:')) continue;
+    if (!report.check(!/^([a-z]+:|\/)/i.test(u), `theme.css: url(${u}) must be a relative path inside theme/`)) continue;
+    report.check(fs.existsSync(path.join(P.theme, u.split(/[?#]/)[0])), `theme.css: url(${u}) points to a file that is not in theme/`);
+  }
 }
 
 export function checkDesign(report) {
@@ -96,8 +119,10 @@ export function checkDesign(report) {
     }
   }
 
-  // Tokens and contrast (build-rules.md)
-  const tokens = readTokens(readText(P.tokens));
+  checkTheme(report, run);
+
+  // Tokens and contrast (build-rules.md); a run theme's :root values win over tokens.css
+  const tokens = loadTokens();
   for (const t of REQUIRED_TOKENS) report.check(!!tokens[t], `tokens.css is missing ${t}`);
   const rgb = (t) => (tokens[t] ? hexToRgb(tokens[t]) : null);
   const pairs = [['--text', '--bg', 7], ['--text-muted', '--bg', 7], ['--text', '--surface', 7], ['--text-muted', '--surface', 7]];

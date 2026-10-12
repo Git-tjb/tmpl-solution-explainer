@@ -21,7 +21,7 @@ sources:
 usage_examples:
   - "Run one stage and review its output"
 animation: true
-visual: default
+visual: "Fixture theme: thin accent frame bars"
 visual_references: []
 avoid: []
 must_include: []

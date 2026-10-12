@@ -1,7 +1,8 @@
 # Banned Patterns
 
 The "generic AI look". Stage 04 self-checks its design against this list, and stage 06 reviews the
-screenshots against it. A run adds to it through `avoid` in `_config/run.md`; it never removes an entry.
+screenshots against it. A run adds to it through `avoid` in `_config/run.md`; it never removes an entry. A run theme may need an
+exception (a gradient, a glow); each one is listed in `design-spec.md` with the reason, and only those pass.
 
 1. Purple, indigo, or violet-to-blue gradients; gradient text; glowing or blurred "orb" backgrounds
 2. A centered hero with a big headline, a subhead, and a pill button
