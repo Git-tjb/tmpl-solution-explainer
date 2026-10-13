@@ -4,6 +4,10 @@ Improvement ideas for this template, captured between iterations. A seed is not 
 chooses the scope of an iteration from the seeds and the trial-run retros, and the iteration's requirements are
 written then, in `docs/iterations/<nnn>-<slug>/requirements-prompt.md`.
 
+This file holds open ideas only. When an iteration addresses a seed, or the operator decides to drop it, the
+seed is removed from here. When the last seed is removed, delete this file; it is created again with the next
+seed.
+
 ## S1. Single-file export as a standard end-of-run output
 
 Raised 2026-10-13, after trial run 2 was archived.
