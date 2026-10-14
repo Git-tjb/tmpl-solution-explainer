@@ -5,8 +5,7 @@ How the template changes to meet `requirements-prompt.md` (rev 1, agreed 2026-10
 `docs/seeds.md`; O and A = trial run 2's stage 04 gate feedback).
 
 The build follows the workstreams (W1-W6) in order, on branch `claude/iteration-002`, one gate with the
-operator after each. Each workstream ends with the dry run passing. This design is reviewed and approved before
-W1 starts.
+operator after each. Each workstream ends with the dry run passing. Approved by the operator 2026-10-14.
 
 ## Root causes found in 0.1.0
 
