@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { ROOT, P, out, main, shownName, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
+import { ROOT, P, out, main, shownName, elementLevel, elementKind, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
   writeText, loadTokens, UserError, rel } from './lib/common.mjs';
 import { loadViewSpecs, REQUIRED_TOKENS } from './check-design.mjs';
 
@@ -68,6 +68,10 @@ function shape(kind, w, h) {
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}"/><rect class="shape inner" x="5" y="5" width="${w - 10}" height="${h - 10}"/>`;
     case 'component': case 'step':
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}" rx="6"/>`;
+    case 'file': { // a store that is one file: a page with a folded corner
+      const k = 16;
+      return `<path class="shape" d="M0 0 H${w - k} L${w} ${k} V${h} H0 Z"/><path class="shape rim" d="M${w - k} 0 V${k} H${w}"/>`;
+    }
     case 'store': {
       const ry = 10;
       return `<path class="shape" d="M0 ${ry} A${f1(w / 2)} ${ry} 0 0 1 ${w} ${ry} V${h - ry} A${f1(w / 2)} ${ry} 0 0 1 0 ${h - ry} Z"/><path class="shape rim" d="M0 ${ry} A${f1(w / 2)} ${ry} 0 0 0 ${w} ${ry}"/>`;
@@ -116,7 +120,7 @@ function styleBlock(tokens) {
 .diagram .shape{fill:${v('--surface')};stroke-width:2px;}
 .diagram .t-system .shape{stroke:${v('--c-system')};}
 .diagram .t-function .shape{stroke:${v('--c-internal')};stroke-width:3px;}
-.diagram .t-component .shape,.diagram .t-store .shape,.diagram .n-decision .shape,.diagram .n-store .shape{stroke:${v('--c-internal')};}
+.diagram .t-component .shape,.diagram .t-store .shape,.diagram .t-file .shape,.diagram .n-decision .shape,.diagram .n-store .shape,.diagram .n-file .shape{stroke:${v('--c-internal')};}
 .diagram .t-actor .shape,.diagram .on-actor .shape{stroke:${v('--c-actor')};}
 .diagram .t-external .shape,.diagram .n-external .shape{stroke:${v('--c-external')};stroke-dasharray:8 6;}
 .diagram .on-function .shape,.diagram .on-component .shape,.diagram .on-store .shape{stroke:${v('--c-internal')};}
@@ -141,6 +145,11 @@ function styleBlock(tokens) {
 .diagram .stepno text{fill:${v('--text')};font-size:${FONT.step_number}px;font-weight:600;}
 .diagram .legend text{fill:${v('--text-muted')};font-size:16px;}
 .diagram .legend .lgtitle{font-weight:600;}
+.diagram .focus-swatch .shape{fill:none;stroke:${v('--c-highlight')};stroke-width:3px;}
+.diagram .lvkey .shape{fill:none;stroke-width:3px;}
+.diagram .node.lv-L1 .shape,.diagram .lvkey.lv-L1 .shape{stroke:${v('--lv-1')};}
+.diagram .node.lv-L2 .shape,.diagram .lvkey.lv-L2 .shape{stroke:${v('--lv-2')};}
+.diagram .node.lv-L3 .shape,.diagram .lvkey.lv-L3 .shape{stroke:${v('--lv-3')};}
 .diagram marker path{fill:${v('--c-edge')};}
 .diagram marker.m-human path{fill:${v('--c-human')};}
 </style>`;
@@ -245,8 +254,22 @@ const BADGE = { L1: 'L1 · CONTEXT', L2: 'L2 · FUNCTIONS', L3: 'L3 · COMPONENT
 // The expand marker: a drawn plus in a circle at the box's top-right (no text, so it never counts as a label).
 const expandMark = (w) => `<g class="expand-mark" aria-hidden="true" transform="translate(${f1(w - 18)},18)"><circle r="11"/><path d="M-6 0 H6 M0 -6 V6"/></g>`;
 
+const LEVEL_NAME = { L1: 'Context', L2: 'Functions', L3: 'Components' };
+
 function emit(view, spec, laid, tokens, M) {
   const PADX = 24, TOP = 52;
+  // A view whose nodes come from more than one level (usually a flow) outlines each node in its level's
+  // colour and adds a level key to the legend; a single-level view needs neither (notation.md, Level key).
+  const nodeLevels = new Set();
+  const collect = (n) => {
+    if (n._el) nodeLevels.add(elementLevel(M, n._el));
+    if (n._node?.on) nodeLevels.add(elementLevel(M, M.els.get(n._node.on)));
+    for (const c of n.children || []) collect(c);
+  };
+  for (const c of laid.children) collect(c);
+  nodeLevels.delete(null);
+  const mixed = nodeLevels.size > 1;
+  const lvClass = (e) => (mixed && elementLevel(M, e) ? ` lv-${elementLevel(M, e)}` : '');
   // A structure view shows what_it_does inside the box, so nothing there needs expanding.
   const canExpand = (e) => spec.mode !== 'structure' && (e?.what_it_does || []).length > 0;
   const legendTypes = new Set();
@@ -264,27 +287,30 @@ function emit(view, spec, laid, tokens, M) {
     }
     if (n._el) {
       const e = n._el, b = n._box;
-      legendTypes.add(e.type);
+      const kind = elementKind(e);
+      legendTypes.add(kind);
       const cy = 16 + LINE(FONT.name) * 0.8;
       const ex = canExpand(e);
-      parts.nodes.push(`<g class="node el t-${e.type}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(e.type, b.w, b.h)}`
+      parts.nodes.push(`<g class="node el t-${kind}${lvClass(e)}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(kind, b.w, b.h)}`
         + textLines(b.name, b.w / 2, cy + (e.type === 'store' ? 8 : 0), FONT.name, 'name')
-        + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${e.type}]</text>`
+        + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${kind}]</text>`
         + (b.bullets ? bulletLines(b.bullets, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 10 + LINE(FONT.responsibility))
           : textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp'))
         + (ex ? expandMark(b.w) : '')
-        + `<title>${esc(shownName(e))} [${e.type}]: ${esc(e.responsibility)}</title></g>`);
+        + `<title>${esc(shownName(e))} [${kind}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
     if (n._node) {
       const fnode = n._node, b = n._box;
-      legendTypes.add(fnode.type);
+      const bound = fnode.on ? M.els.get(fnode.on) : null;
+      const fkind = fnode.type === 'store' && elementKind(bound) === 'file' ? 'file' : fnode.type;
+      legendTypes.add(fkind);
       const onType = fnode.on ? M.els.get(fnode.on)?.type : null;
       const dy = fnode.type === 'store' ? 10 : 0;
       const ex = fnode.on && canExpand(M.els.get(fnode.on));
-      parts.nodes.push(`<g class="node fn n-${fnode.type}${onType ? ` on-${onType}` : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''}${ex ? ` data-expand="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(fnode.type === 'external' ? 'external' : fnode.type, b.w, b.h)}`
+      parts.nodes.push(`<g class="node fn n-${fkind}${onType ? ` on-${onType}` : ''}${bound ? lvClass(bound) : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''}${ex ? ` data-expand="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(fkind, b.w, b.h)}`
         + `<g class="stepno"><circle cx="0" cy="0" r="15"/><text x="0" y="6" text-anchor="middle">${fnode.step}</text></g>`
-        + `<text class="type" x="${f1(b.w / 2)}" y="${30 + dy}" text-anchor="middle">[${fnode.type}]${fnode.on ? `<tspan class="onname"> ${esc(M.els.get(fnode.on)?.name || fnode.on)}</tspan>` : ''}</text>`
+        + `<text class="type" x="${f1(b.w / 2)}" y="${30 + dy}" text-anchor="middle">[${fkind}]${fnode.on ? `<tspan class="onname"> ${esc(M.els.get(fnode.on)?.name || fnode.on)}</tspan>` : ''}</text>`
         + textLines(b.label, b.w / 2, 30 + dy + LINE(FONT.name - 2), FONT.name - 2, 'lbl')
         + (ex ? expandMark(b.w) : '')
         + `<title>Step ${fnode.step} [${fnode.type}]: ${esc(fnode.label)}</title></g>`);
@@ -370,7 +396,7 @@ function emit(view, spec, laid, tokens, M) {
   });
 
   // Legend (views.md rule 2): generated from what is present.
-  const order = ['actor', 'system', 'external', 'function', 'component', 'store', 'trigger', 'step', 'gate', 'decision', 'output'];
+  const order = ['actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
   const present = order.filter((t) => legendTypes.has(t));
   const contentW = Math.max(laid.width + PADX * 2, labelRight + PADX);
   const contentH = Math.max(laid.height + TOP, labelBottom + 8);
@@ -392,6 +418,21 @@ function emit(view, spec, laid, tokens, M) {
     lg.push(`<g class="${cls}" transform="translate(${lx},${ly - 19})">${shape(t === 'external' ? 'external' : t, w, h)}</g><text x="${lx + w + 8}" y="${ly}">${t}</text>`);
     lgRight = Math.max(lgRight, lx + w + 8 + t.length * 16 * CHAR);
     lx += w + 8 + t.length * 16 * CHAR + 28;
+  }
+  // A focus swatch wherever a highlight can appear (not in structure views), so the legend matches the
+  // picture (O8); then the level key in a mixed-level view.
+  if (spec.mode !== 'structure') {
+    if (lx + 52 + 5 * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
+    lg.push(`<g class="focus-swatch" transform="translate(${lx},${ly - 19})"><rect class="shape" x="0" y="0" width="44" height="26"/></g><text x="${lx + 52}" y="${ly}">focus</text>`);
+    lgRight = Math.max(lgRight, lx + 52 + 5 * 16 * CHAR);
+    lx += 52 + 5 * 16 * CHAR + 28;
+  }
+  if (mixed) for (const L of ['L1', 'L2', 'L3'].filter((x) => nodeLevels.has(x))) {
+    const label = LEVEL_NAME[L];
+    if (lx + 52 + label.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
+    lg.push(`<g class="lvkey lv-${L}" transform="translate(${lx},${ly - 19})"><rect class="shape" x="0" y="0" width="44" height="26"/></g><text x="${lx + 52}" y="${ly}">${label}</text>`);
+    lgRight = Math.max(lgRight, lx + 52 + label.length * 16 * CHAR);
+    lx += 52 + label.length * 16 * CHAR + 28;
   }
   for (const k of ['control', 'data', 'human'].filter((k) => edgeKinds.has(k))) {
     if (lx + 52 + k.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }

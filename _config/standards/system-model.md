@@ -21,6 +21,9 @@ Stage 01 shows the operator this section at its first gate, so the words mean th
 | `component` | A logical part inside a function | A file or folder (those are L4 detail) |
 | `store` | A place where data or knowledge persists | A service that does work; a store has no behavior of its own |
 
+A store that is a single file (a config file, a data file) sets `form: file`; it is drawn as a file, not a
+cylinder, and labelled `[file]`. A folder of files, a database, or a vault stays a plain store.
+
 A `function` is the type most likely to be ambiguous outside software. Use it for anything that is kept,
 versioned, or located separately and that does something (a repo, a folder tree with its own lifecycle, a
 service, a vault). Record the case in the retro when the call was hard.
@@ -59,6 +62,7 @@ with the operator and decomposes them.
 | `exact_name` | no | The real name (repo, folder, or product name). `check-model` notes a `function` without one. |
 | `type` | yes | One of the six types above |
 | `parent` | per table | The parent element's `id` |
+| `form` | no | `file`, on a `store` only: the store is one file |
 | `responsibility` | yes | One line, at most 12 words |
 | `why_separate` | yes | One line: why this is its own element and not part of its parent or a sibling |
 | `what_it_does` | no | A list of 3 to 5 items, each `text` (one line, at most 12 words) and `sources` (fact IDs, at least one). Read by structure views, the expand popover, and map panels. |

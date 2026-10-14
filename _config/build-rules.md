@@ -29,6 +29,7 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | `.chrome` and its buttons | the control bar at the bottom |
 | `.scene header`, `.scene h2`, `.scene .sid` | the scene title row |
 | `.scene .text p` | the on-screen text lines |
+| `.scene .text p.point` | the scene's message, under the title (P hides it); `--lv` is the scene's level colour |
 | `.level-indicator` (and its `.rungs li`, `.lv-tag`, `.lv-scope`) | the level indicator; a theme may restyle it but not hide it |
 | `.popover` | the "what it does" popover |
 | `.map`, `.map .panel` | the map and its detail panel |
@@ -91,6 +92,7 @@ them under "What it does".
 | Home | first scene |
 | 1-9, 0 | jump to scene 1-10 (scenes 11-12 from the map) |
 | R | toggle reduced motion |
+| P | show or hide the scene's message |
 
 - The URL hash is the current scene and step (`#S04` or `#S04.2`); opening a hash lands there.
 - On-screen controls do the same as the keys, and show the scene number and step.

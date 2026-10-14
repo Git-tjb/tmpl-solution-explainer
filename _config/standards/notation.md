@@ -23,6 +23,7 @@ outline, so it survives screen-share compression and color-vision differences.
 | `--c-highlight` | the highlighted subset in the current state |
 | `--c-dim` | everything not highlighted, when a highlight is active |
 | `--c-edge` | relationship and flow-edge lines and labels |
+| `--lv-1`, `--lv-2`, `--lv-3`, `--lv-flow` | the level (Context, Functions, Components, Flow): the scene's message rule, and level outlines in a mixed-level view |
 
 ## Element types
 
@@ -34,6 +35,7 @@ outline, so it survives screen-share compression and color-vision differences.
 | `function` | rectangle, square corners | solid 3px, `--c-internal` | none |
 | `component` | rectangle, 6px corner radius | solid 2px, `--c-internal` | none |
 | `store` | cylinder | solid 2px, `--c-internal` | none |
+| `store` with `form: file` | page with a folded top-right corner, labelled `[file]` | solid 2px, `--c-internal` | none |
 
 Inside every element, top to bottom: `name (exact_name)` (bold; just `name` when there is no `exact_name`),
 `[type]` label (small caps), `responsibility`.
@@ -54,6 +56,17 @@ Functions, Components, Code** (L1 to L4), top to bottom or left to right.
   diagram (`L2 · FUNCTIONS`), so a standalone diagram carries it too.
 - A theme may restyle the indicator but may not remove it. Its colors come from the tokens above; filled
   versus outlined is the signal, not color.
+
+## Level key
+
+A view whose elements, or whose flow nodes' bound elements, come from more than one level outlines each node
+in its level's colour (`--lv-1` to `--lv-3`) and adds the levels present to its legend. A view at one level does
+neither: the badge and the level indicator already say the level.
+
+## Legend
+
+Generated from what is drawn: the element or node types present, a "focus" swatch in any view that can carry a
+highlight (every view except a structure view), the level key in a mixed-level view, and the line kinds present.
 
 ## Structure mode
 
@@ -82,7 +95,7 @@ never over a box or another line; when neither fits, it sits near the line's sta
 | `step` | rectangle, 6px radius | solid 2px, color of its `on:` element's type |
 | `gate` | hexagon | solid 3px, `--c-human` |
 | `decision` | diamond | solid 2px, `--c-internal` |
-| `store` | cylinder | solid 2px, `--c-internal` |
+| `store` | cylinder, or a file shape when its element has `form: file` | solid 2px, `--c-internal` |
 | `external` | rectangle | dashed 2px, `--c-external` |
 | `output` | rectangle with a doubled bottom edge | solid 2px, `--c-system` |
 

@@ -247,6 +247,10 @@
   window.addEventListener('hashchange', function () { if (location.hash === lastSet) return; fromHash(); });
 
   // ---------- keys and buttons ----------
+  // The scene's message: shown by default; P or the Message button hides or shows it.
+  var pointBtn = document.querySelector('.chrome .pointtoggle');
+  function setPoints(on) { root.classList.toggle('hide-points', !on); if (pointBtn) pointBtn.setAttribute('aria-pressed', String(on)); }
+  if (pointBtn) pointBtn.addEventListener('click', function () { setPoints(root.classList.contains('hide-points')); });
   function setReduced(on) { reducedToggle = on; root.classList.toggle('reduced', reduced()); rmBtn.setAttribute('aria-pressed', String(reducedToggle)); }
   document.addEventListener('keydown', function (ev) {
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
@@ -257,6 +261,7 @@
       closeMap(); return;
     }
     if (k === 'r' || k === 'R') { setReduced(!reducedToggle); return; }
+    if (k === 'p' || k === 'P') { setPoints(root.classList.contains('hide-points')); return; }
     if (mapEl.classList.contains('open')) return;
     if (k === 'ArrowRight' || k === ' ' || k === 'PageDown') { ev.preventDefault(); next(); }
     else if (k === 'ArrowLeft' || k === 'PageUp') { ev.preventDefault(); prev(); }
@@ -281,6 +286,7 @@
     running: function () { return running.length; },
     popovers: function () { return state.si >= 0 ? openIds(scenes[state.si]) : []; },
     sceneCount: scenes.length,
+    pointsShown: function () { return !root.classList.contains('hide-points'); },
   };
 
   root.classList.toggle('reduced', reduced());

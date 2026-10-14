@@ -121,7 +121,7 @@ export function buildSite(siteDir) {
     const text = s.text.map((t, i) => `<p data-text="${i + 1}">${esc(t)}</p>`).join('');
     return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
       + `<header><h2>${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
-      + `<div class="text">${text}</div>`
+      + `<div class="text"><p class="point" role="note" aria-label="Message">${esc(s.point)}</p>${text}</div>`
       + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>` : `<div class="figure">${expandable(inlineSvg(svgOf(s.view), s.id.toLowerCase()))}</div>`)
       + `<div class="popovers"></div>`
       + `</section>`;
@@ -186,6 +186,7 @@ ${panels}
 <span class="where" aria-live="polite"></span>
 <span class="title"></span>
 <div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li data-rung="L1">Context</li><li data-rung="L2">Functions</li><li data-rung="L3">Components</li><li data-rung="L4">Code</li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
+<button class="pointtoggle" type="button" aria-pressed="true">Message (P)</button>
 <button class="maptoggle" type="button">Map (M)</button>
 <button class="rm" type="button" aria-pressed="false">Reduced motion (R)</button>
 <button class="next" type="button" aria-label="Next step">&#8594;</button>

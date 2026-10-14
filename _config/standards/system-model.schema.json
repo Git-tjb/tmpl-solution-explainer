@@ -29,6 +29,7 @@
         "exact_name": { "$ref": "#/$defs/line", "description": "The real name, shown in parentheses after name (\"aiso-ops\")" },
         "type": { "enum": ["actor", "system", "external", "function", "component", "store"] },
         "parent": { "$ref": "#/$defs/id" },
+        "form": { "enum": ["file"], "description": "A store that is one file (a config or data file); drawn as a file, not a cylinder" },
         "responsibility": { "$ref": "#/$defs/line" },
         "why_separate": { "$ref": "#/$defs/line" },
         "sources": { "$ref": "#/$defs/sources" },
@@ -57,6 +58,10 @@
         {
           "if": { "properties": { "type": { "enum": ["actor", "system", "external"] } } },
           "then": { "not": { "required": ["parent"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "store" } } } },
+          "then": { "not": { "required": ["form"] } }
         }
       ]
     },

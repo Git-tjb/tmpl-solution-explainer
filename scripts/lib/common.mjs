@@ -282,4 +282,16 @@ export function contrast(a, b) {
 export const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
 
 // How an element's name is shown everywhere: "name (exact_name)", or just the name (system-model.md).
+// The level an element belongs to, from the model's hierarchy (system-model.md, Levels): actors, externals,
+// and the system are L1; functions, and stores held by the system, are L2; components, and stores held by a
+// function, are L3.
+export function elementLevel(M, e) {
+  if (!e) return null;
+  if (['actor', 'external', 'system'].includes(e.type)) return 'L1';
+  if (e.type === 'function') return 'L2';
+  if (e.type === 'component') return 'L3';
+  return M.els.get(e.parent)?.type === 'system' ? 'L2' : 'L3';
+}
+// The drawn kind of an element: its type, or `file` for a store that is one file.
+export const elementKind = (e) => (e?.type === 'store' && e.form === 'file' ? 'file' : e?.type);
 export const shownName = (e) => (e?.exact_name ? `${e.name} (${e.exact_name})` : e?.name);

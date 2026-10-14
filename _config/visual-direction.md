@@ -31,6 +31,10 @@ Default values (stage 04 may adjust; every text pair must still meet 7:1, see `b
 | `--c-highlight` | `#7fd1b9` | notation |
 | `--c-dim` | `#5d6068` | notation |
 | `--c-edge` | `#c9c6be` | notation |
+| `--lv-1` | `#e8b06a` | level: Context |
+| `--lv-2` | `#8fb8de` | level: Functions |
+| `--lv-3` | `#c49be0` | level: Components |
+| `--lv-flow` | `#e88f8f` | level: Flow |
 
 ## Type
 - One readable sans for content and one monospace for paths, file names, and IDs, both bundled with the

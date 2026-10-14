@@ -342,6 +342,9 @@
       },
       {
         "element": "outputs"
+      },
+      {
+        "element": "run-status"
       }
     ]
   }

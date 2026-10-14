@@ -58,6 +58,18 @@ a { color: var(--c-highlight); }
 .scene .figure svg.diagram { max-width: 100%; max-height: 100%; height: auto; width: auto; }
 .scene[data-layout="diagram"] .text { display: none; }
 
+/* The scene's message: a marked statement under the title, with a thin rule in the scene's level colour
+   (notation.md). P or the Message button hides it. */
+.scene { --lv: var(--text-muted); }
+.scene[data-level="L1"] { --lv: var(--lv-1); }
+.scene[data-level="L2"] { --lv: var(--lv-2); }
+.scene[data-level="L3"] { --lv: var(--lv-3); }
+.scene[data-level="flow"] { --lv: var(--lv-flow); }
+.scene .text p.point { font-size: var(--size-point, 28px); line-height: 1.3; margin: 0 0 22px; padding: 4px 0 4px 16px;
+  border-left: 4px solid var(--lv); color: var(--text); font-weight: 600; }
+.hide-points .scene .text p.point { display: none; }
+.chrome .pointtoggle[aria-pressed="true"] { border-color: var(--text-muted); }
+
 /* Diagram states (notation.md, Highlight states) */
 svg.diagram .is-hidden, .text p.is-hidden { opacity: 0; }
 svg.diagram.has-hl .node:not(.hl), svg.diagram.has-hl .edge:not(.hl), svg.diagram.has-hl .boundary:not(.hl) { opacity: 0.35; }
