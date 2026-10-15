@@ -300,9 +300,14 @@ export const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length
 // Derived from scripts/site/base.css (scene padding, text column, control bar, header); keep the two in step.
 // render-diagrams uses it to choose a layout and to predict label size (iteration 002, D4).
 export const FIGURE = {
-  '1920x1080': { 'diagram-with-text': { w: 1338, h: 928 }, diagram: { w: 1824, h: 858 }, 'diagram-wide': { w: 1824, h: 780 } },
-  '1440x900': { 'diagram-with-text': { w: 956, h: 767 }, diagram: { w: 1344, h: 697 }, 'diagram-wide': { w: 1344, h: 619 } },
+  '1920x1080': { 'diagram-with-text': { w: 1265, h: 922 }, diagram: { w: 1824, h: 852 }, 'diagram-wide': { w: 1824, h: 774 } },
+  '1440x900': { 'diagram-with-text': { w: 896, h: 761 }, diagram: { w: 1344, h: 691 }, 'diagram-wide': { w: 1344, h: 613 } },
 };
+// The width a scene's title and message get at 1440x900, the tighter viewport, per layout (base.css), and the
+// size steps build-site may use to fit each in two lines (R18). Sizes are fractions of --size-title and
+// --size-point.
+export const TEXT_COLUMN = { 'diagram-with-text': 400, orientation: 400, diagram: 1260, 'diagram-wide': 1260, statement: 1260 };
+export const FIT_STEPS = [1, 0.86, 0.78];
 // Diagram labels must render at 16px at 1080p, scaled with viewport height below it (build-rules.md).
 export const LABEL_FLOOR = { '1920x1080': 16, '1440x900': 16 * (900 / 1080) };
 // A small diagram scales up to fill its figure, but no more than this (iteration 002, D4).

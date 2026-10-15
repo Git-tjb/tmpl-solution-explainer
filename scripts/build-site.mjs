@@ -5,8 +5,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, P, main, shownName, readJson, readYaml, readText, loadModel, loadFlows, runAnswers, viewElements,
-  writeText, walk, UserError, rel, UPSCALE_CAP } from './lib/common.mjs';
+  writeText, walk, UserError, rel, UPSCALE_CAP, TEXT_COLUMN, FIT_STEPS, readTokens } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
+import { wrap } from './render-diagrams.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const TEXT_EXT = new Set(['.md', '.txt', '.yml', '.yaml', '.json', '.ps1', '.psm1', '.js', '.mjs', '.ts', '.py', '.sh', '.toml', '.ini', '.cfg', '.css', '.xml', '.csv', '']);
@@ -128,18 +129,36 @@ export function buildSite(siteDir) {
   const expandable = (svg) => (!/ data-expand="/.test(svg) ? svg : svg.replace(' role="img" ', ' role="group" ')
     .replace(/ data-expand="([^"]+)"/g, (m, id) => `${m} tabindex="0" role="button" aria-expanded="false" aria-label="${esc((els[id]?.name || id) + ': what it does')}"`));
 
+  // Titles and messages fit in two lines at 1440x900 (R18): the largest size step that does, measured with
+  // the bundled fonts; none fails the build, naming the scene, so stage 03 shortens it.
+  const tok = { ...readTokens(readText(P.tokens)), ...(fs.existsSync(path.join(P.theme, 'theme.css')) ? readTokens(readText(path.join(P.theme, 'theme.css')), { rootOnly: true }) : {}) };
+  const px = (t, d) => parseFloat(tok[t]) || d;
+  const unfit = [];
+  // `inset` is what the element's own padding and rule take from the column (the message has a 4px rule and
+  // 16px padding); 2% is kept back for rounding between the measured and the drawn text.
+  const fit = (text, layout, base, face, what, sid, inset = 0) => {
+    const w = ((TEXT_COLUMN[layout] || TEXT_COLUMN.statement) - inset) * 0.98;
+    const i = FIT_STEPS.findIndex((k) => wrap(text, w, base * k, face).length <= 2);
+    if (i < 0) unfit.push(`${sid}: the ${what} needs more than two lines at ${Math.round(base * FIT_STEPS.at(-1))}px in the ${w}px column at 1440x900; shorten it in stage 03 (scenes.json)`);
+    return i <= 0 ? '' : ` fit-${i + 1}`;
+  };
+
   // Scenes
   const sceneHtml = S.scenes.map((s) => {
     const spec = SS.scenes[s.id];
     const text = s.text.map((t, i) => `<p data-text="${i + 1}">${esc(t)}</p>`).join('');
+    const tf = fit(s.title, spec.layout, px('--size-title', 44), 600, 'title', s.id);
+    const pf = spec.layout === 'diagram' ? '' : fit(s.point, spec.layout, px('--size-point', 28), 600, 'message', s.id, 20);
     return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
-      + `<header><h2>${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
-      + `<div class="text"><p class="point" role="note" aria-label="Message">${esc(s.point)}</p>${text}</div>`
+      + `<header><h2 class="title${tf}">${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
+      + `<div class="text"><p class="point${pf}" role="note" aria-label="Message">${esc(s.point)}</p>${text}</div>`
       + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>`
         : `<div class="figure"><div class="art">${expandable(inlineSvg(sceneSvg(svgOf(s.view), layouts[s.view]), s.id.toLowerCase()))}</div>${legendRow(layouts[s.view])}</div>`)
       + `<div class="popovers"></div>`
       + `</section>`;
   }).join('\n');
+
+  if (unfit.length) throw new UserError(`build-site: ${unfit.length} title or message(s) do not fit:\n  - ${unfit.join('\n  - ')}`);
 
   // Map: overview views plus a panel per element
   const panelIds = new Set(S.map.panels.map((p) => p.element));
@@ -195,14 +214,16 @@ ${overview}
 ${panels}
 </aside>
 </div>
+<p class="hint" role="note" hidden>&#8594; or Space to advance &#183; M for the map &#183; &#8853; on a box for what it does</p>
+<ol class="progress" aria-hidden="true">${S.scenes.map((s) => `<li data-scene="${s.id}" data-level="${s.level}" title="${esc(s.id + ': ' + s.title)}"></li>`).join('')}</ol>
 <nav class="chrome" aria-label="Presentation controls">
-<button class="prev" type="button" aria-label="Previous step">&#8592;</button>
+<button class="prev" type="button" aria-label="Previous step" title="Previous (&#8592;)">&#8592;</button>
 <span class="where" aria-live="polite"></span>
 <div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li data-rung="L1">Context</li><li data-rung="L2">Functions</li><li data-rung="L3">Components</li><li data-rung="L4">Code</li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
-<button class="pointtoggle" type="button" aria-pressed="true">Message (P)</button>
-<button class="maptoggle" type="button">Map (M)</button>
-<button class="rm" type="button" aria-pressed="false">Reduced motion (R)</button>
-<button class="next" type="button" aria-label="Next step">&#8594;</button>
+<button class="pointtoggle quiet" type="button" aria-pressed="true" aria-keyshortcuts="P" title="Show or hide the message (P)">Message</button>
+<button class="maptoggle quiet" type="button" aria-keyshortcuts="M" title="Open the map (M)">Map</button>
+<button class="rm quiet small" type="button" aria-pressed="false" aria-keyshortcuts="R" title="Reduced motion (R)">Less motion</button>
+<button class="next" type="button" aria-label="Next step" title="Next (&#8594; or Space)">&#8594;</button>
 </nav>
 <script>window.EXPLAINER = ${JSON.stringify(data)};</script>
 <script src="assets/js/runtime.js"></script>

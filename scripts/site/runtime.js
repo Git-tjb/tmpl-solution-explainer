@@ -95,7 +95,9 @@
       if (on) r.setAttribute('aria-current', 'true'); else r.removeAttribute('aria-current');
     });
     lvEl.querySelector('.lv-tag').textContent = lv.tag || '';
-    lvEl.querySelector('.lv-scope').textContent = lv.scope ? '· ' + lv.scope : '';
+    var scopeEl = lvEl.querySelector('.lv-scope');
+    scopeEl.textContent = lv.scope ? '· ' + lv.scope : '';
+    scopeEl.title = lv.scope || ''; // the full scope when the bar shortens it (R6)
     var names = lv.rungs.map(function (x) { return RUNG_NAME[x]; }).join(', ');
     lvEl.setAttribute('aria-label', 'Level: ' + (lv.tag ? lv.tag + (names ? ' (' + names + ')' : '') : names) + (lv.scope ? ', ' + lv.scope : ''));
   }
@@ -184,6 +186,12 @@
   // Text widths change when the bundled fonts arrive, so measure again then.
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (state.si >= 0) fitLegend(scenes[state.si]); });
 
+  // ---------- position strip and first-screen hint (R21) ----------
+  var progress = document.querySelectorAll('.progress li');
+  var hint = document.querySelector('.hint');
+  var hintDone = false;
+  function hideHint() { hintDone = true; if (hint) hint.hidden = true; }
+
   // ---------- navigation ----------
   function go(si, step, how) {
     si = Math.max(0, Math.min(scenes.length - 1, si));
@@ -207,7 +215,10 @@
     var id = spec(si).id;
     root.setAttribute('data-scene', id);
     root.setAttribute('data-step', String(step));
-    where.textContent = id + ' · ' + step + '/' + maxStep(si);
+    // Position in the explainer (R21): scene of total, then the step when the scene has steps.
+    where.textContent = (si + 1) + ' / ' + scenes.length + (maxStep(si) ? ' · step ' + step + ' of ' + maxStep(si) : '');
+    each(progress, function (li, i) { li.classList.toggle('current', i === si); li.classList.toggle('done', i < si); });
+    if (how === 'forward' && (si > 0 || step > 0)) hideHint();
     fitLegend(sceneEl);
     var h = '#' + id + (step ? '.' + step : '');
     lastSet = h;
@@ -305,6 +316,7 @@
     running: function () { return running.length; },
     popovers: function () { return state.si >= 0 ? openIds(scenes[state.si]) : []; },
     sceneCount: scenes.length,
+    hintShown: function () { return !!hint && !hint.hidden; },
     pointsShown: function () { return !root.classList.contains('hide-points'); },
   };
 
@@ -312,4 +324,6 @@
   closeMap();
   if (location.hash) fromHash();
   if (state.si < 0) go(0, 0, 'jump');
+  // The hint shows once, on the first scene, until the first advance.
+  if (hint && !hintDone && state.si === 0 && state.step === 0) hint.hidden = false;
 })();

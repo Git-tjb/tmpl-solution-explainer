@@ -19,10 +19,10 @@ a { color: var(--c-highlight); }
    their space with --frame-top, --frame-right, --frame-left on :root. It never receives clicks. */
 .frame { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .frame-top, .frame-side { display: none; }
-.deck { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) 5.9vh var(--frame-left, 0px); }
+.deck { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) calc(5.9vh + 6px) var(--frame-left, 0px); }
 .scene { position: absolute; inset: 0; display: none; padding: 2.2vh calc(var(--space, 24px) * 2); }
 .scene.current { display: grid; }
-.scene[data-layout="diagram-with-text"] { grid-template-columns: minmax(340px, 24%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
+.scene[data-layout="diagram-with-text"] { grid-template-columns: minmax(400px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
 .scene[data-layout="diagram-with-text"] header { grid-column: 1; grid-row: 1; flex-direction: column; gap: 6px; align-self: end; }
 .scene[data-layout="diagram-with-text"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
 .scene[data-layout="diagram-with-text"] .figure { grid-column: 2; grid-row: 1 / span 2; }
@@ -36,7 +36,7 @@ a { color: var(--c-highlight); }
 
 /* Orientation: the level ladder drawn large, from data (build-site.mjs). The same four rungs as the
    level indicator, top to bottom, joined by a rail. */
-.scene[data-layout="orientation"] { grid-template-columns: minmax(360px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
+.scene[data-layout="orientation"] { grid-template-columns: minmax(400px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
 .scene[data-layout="orientation"] header { grid-column: 1; grid-row: 1; flex-direction: column; gap: 6px; align-self: end; }
 .scene[data-layout="orientation"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
 .scene[data-layout="orientation"] .figure { grid-column: 2; grid-row: 1 / span 2; }
@@ -50,7 +50,10 @@ a { color: var(--c-highlight); }
 .ladder .uses a { margin-right: 12px; }
 .scene[data-layout="statement"] { align-content: center; justify-items: start; }
 .scene header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 20px; margin-bottom: 12px; }
-.scene h2 { font-size: var(--size-title, 44px); font-weight: 600; margin: 0; line-height: 1.15; }
+.scene h2 { font-size: var(--size-title, 44px); font-weight: 600; margin: 0; line-height: 1.15; text-wrap: balance; }
+/* build-site picks a smaller step when a title or message would need more than two lines (R18). */
+.scene h2.fit-2 { font-size: calc(var(--size-title, 44px) * 0.86); }
+.scene h2.fit-3 { font-size: calc(var(--size-title, 44px) * 0.78); }
 .scene .sid { font-family: var(--font-mono); color: var(--text-muted); font-size: 18px; }
 .scene .text { align-self: center; }
 .scene .text p { margin: 0 0 18px; font-size: var(--size-point, 28px); }
@@ -80,9 +83,11 @@ a { color: var(--c-highlight); }
 .scene[data-level="L3"] { --lv: var(--lv-3); }
 .scene[data-level="flow"] { --lv: var(--lv-flow); }
 .scene .text p.point { font-size: var(--size-point, 28px); line-height: 1.3; margin: 0 0 22px; padding: 4px 0 4px 16px;
-  border-left: 4px solid var(--lv); color: var(--text); font-weight: 600; }
+  border-left: 4px solid var(--lv); color: var(--text); font-weight: 600; text-wrap: balance; }
+.scene .text p.point.fit-2 { font-size: calc(var(--size-point, 28px) * 0.86); }
+.scene .text p.point.fit-3 { font-size: calc(var(--size-point, 28px) * 0.78); }
 .hide-points .scene .text p.point { display: none; }
-.chrome .pointtoggle[aria-pressed="true"] { border-color: var(--text-muted); }
+
 
 /* Diagram states (notation.md, Highlight states) */
 svg.diagram .is-hidden, .text p.is-hidden { opacity: 0; }
@@ -116,25 +121,48 @@ svg.diagram .node.has-link { cursor: pointer; }
 .scene svg.diagram [data-expand].expanded .shape { stroke: var(--c-highlight); }
 .map .expand-mark { display: none; }
 
-/* Chrome */
-.chrome { position: absolute; left: 0; right: 0; bottom: 0; height: 5.9vh; min-height: 48px; display: flex; align-items: center; gap: 16px;
-  padding: 0 24px; border-top: 2px solid var(--surface); background: var(--bg); font-size: 18px; color: var(--text-muted); }
-.chrome button { font: inherit; color: var(--text); background: var(--surface); border: 2px solid var(--c-dim); padding: 6px 14px; cursor: pointer; }
-.chrome .where { font-family: var(--font-mono); min-width: 120px; }
-.chrome .rm[aria-pressed="true"] { border-color: var(--c-highlight); }
+/* Chrome: one row that never wraps (R6). Prev and next are the only filled controls; Message, Map, and
+   motion are quiet; the scope label shortens first, with its full text in a tooltip. */
+.chrome { position: absolute; left: 0; right: 0; bottom: 0; height: 5.9vh; min-height: 48px; display: flex; align-items: center; gap: 14px;
+  padding: 0 24px; background: var(--bg); font-size: 18px; color: var(--text-muted); flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.chrome > * { flex: none; }
+.chrome button { font: inherit; line-height: 1.2; color: var(--text); background: var(--surface); border: 2px solid var(--c-dim); padding: 6px 14px; cursor: pointer; white-space: nowrap; }
+.chrome .prev, .chrome .next { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; min-width: 56px; }
+.chrome button.quiet { background: transparent; color: var(--text-muted); }
+.chrome button.quiet[aria-pressed="true"] { color: var(--text); border-color: var(--text-muted); }
+.chrome button.small { font-size: 16px; padding: 4px 10px; }
+.chrome .next { margin-left: auto; }
+.chrome .where { font-family: var(--font-mono); }
+
+/* Position strip above the bar (R21): one segment per scene, in its level's colour; the current one marked. */
+.progress { position: absolute; left: 0; right: 0; bottom: 5.9vh; height: 6px; margin: 0; padding: 0 24px; list-style: none; display: flex; gap: 3px; }
+.progress li { flex: 1; background: var(--c-dim); }
+.progress li[data-level="L1"] { background: var(--lv-1); }
+.progress li[data-level="L2"] { background: var(--lv-2); }
+.progress li[data-level="L3"] { background: var(--lv-3); }
+.progress li[data-level="flow"] { background: var(--lv-flow); }
+.progress li:not(.current):not(.done) { opacity: 0.35; }
+.progress li.current { box-shadow: 0 -4px 0 var(--text); }
+
+/* First-screen hint (R21): once, until the first advance. */
+.hint { position: absolute; right: 48px; bottom: calc(5.9vh + 18px); margin: 0; padding: 8px 14px; background: var(--surface); color: var(--text);
+  border: 2px solid var(--c-dim); font-size: 18px; z-index: 6; }
+.hint[hidden] { display: none; }
 
 /* Level indicator (notation.md): four rungs, the current one filled, the scope beside it. A theme may
    restyle it but not remove it. Filled versus outlined is the signal, not color. */
+.chrome .level-indicator { flex: 1 1 auto; min-width: 0; }
 .level-indicator { display: flex; align-items: center; gap: 10px; color: var(--text); white-space: nowrap; }
+.level-indicator .rungs, .level-indicator .lv-tag { flex: none; }
 .level-indicator .rungs { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
 .level-indicator .rungs li { border: 2px solid var(--text-muted); color: var(--text-muted); padding: 2px 8px; font-size: 16px; }
 .level-indicator .rungs li.on { background: var(--text); border-color: var(--text); color: var(--bg); font-weight: 600; }
 .level-indicator .lv-tag { font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .level-indicator .lv-tag:empty { display: none; }
-.level-indicator .lv-scope { max-width: 22vw; overflow: hidden; text-overflow: ellipsis; }
+.level-indicator .lv-scope { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* Map: the reference layer */
-.map { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) 5.9vh var(--frame-left, 0px); background: var(--bg); display: none; grid-template-columns: 1fr minmax(420px, 34%); }
+.map { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) calc(5.9vh + 6px) var(--frame-left, 0px); background: var(--bg); display: none; grid-template-columns: 1fr minmax(420px, 34%); }
 .map.open { display: grid; }
 .map .views { overflow: auto; padding: 24px 32px; }
 .map .views h2 { margin: 0 0 8px; font-size: 32px; }

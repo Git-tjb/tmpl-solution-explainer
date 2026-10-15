@@ -106,7 +106,17 @@ with these limits, in OKLCH:
 | P | show or hide the scene's message |
 
 - The URL hash is the current scene and step (`#S04` or `#S04.2`); opening a hash lands there.
-- On-screen controls do the same as the keys, and show the scene number and step.
+- On-screen controls do the same as the keys, in one row that never wraps: prev and next (the only filled
+  controls), the position ("3 / 13 · step 2 of 4"), the level indicator, then Message, Map, and a small
+  reduced-motion toggle as quiet buttons. The scope label shortens first, with its full text in a tooltip.
+- A thin strip above the bar shows one segment per scene in its level's colour, the current one marked.
+- The first scene shows a one-line hint (how to advance, the map, expanding a box) until the first advance.
+
+## Scene text
+- A scene's title and its message each fit in two lines at 1440x900 (`text-wrap: balance`). `build-site`
+  steps the size down (to 0.86 and 0.78 of `--size-title` or `--size-point`) to fit, and fails naming the
+  scene when even the smallest needs three lines.
+- Step 0 of every scene shows at least one element of its diagram (`check-design`).
 
 ## Targets
 - Viewports: 1920x1080 and 1440x900. No mobile layout.

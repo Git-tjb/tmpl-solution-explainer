@@ -4,8 +4,8 @@ scenes:
     layout: diagram-with-text
     enter: { kind: fade }
     steps:
-      - { step: 1, actions: [{ do: show, targets: [kit], duration_ms: 800 }] }
-      - { step: 2, actions: [{ do: show, targets: [operator, hosted-model, operator-runs, runs-call-model], duration_ms: 800 }] }
+      - { step: 1, actions: [{ do: show, targets: [operator, operator-runs], duration_ms: 800 }] }
+      - { step: 2, actions: [{ do: show, targets: [hosted-model, runs-call-model], duration_ms: 800 }] }
     end_state: The system with its operator and the model provider.
   S02:
     layout: orientation
@@ -24,7 +24,7 @@ scenes:
     layout: diagram-with-text
     enter: { kind: cut }
     steps:
-      - { step: 1, actions: [{ do: show, targets: [templates, instances, library], duration_ms: 700 }] }
+      - { step: 1, actions: [{ do: show, targets: [instances, library], duration_ms: 700 }] }
     end_state: All three parts inside the system boundary.
   S05:
     layout: diagram-with-text
@@ -50,7 +50,7 @@ scenes:
     layout: diagram-wide
     enter: { kind: fade }
     steps:
-      - { step: 1, actions: [{ do: show, targets: [step-1, step-2, step-3, start--load, load--execute], duration_ms: 700 }] }
+      - { step: 1, actions: [{ do: show, targets: [step-2, step-3, start--load, load--execute], duration_ms: 700 }] }
       - { step: 2, actions: [{ do: show, targets: [step-4, step-5, execute--ask-model, ask-model--write], duration_ms: 700 }, { do: trace, targets: [ask-model--write], duration_ms: 1000 }] }
       - { step: 3, actions: [{ do: show, targets: [step-6, step-7, write--review, review--done], duration_ms: 700 }, { do: highlight, targets: [review], duration_ms: 500 }] }
     end_state: All seven steps shown; the review gate highlighted.

@@ -102,6 +102,15 @@ export function checkDesign(report) {
       const spec = SS.scenes[s.id];
       if (!report.check(!!spec, `scene-specs.yaml: no spec for ${s.id}`)) continue;
       report.check((spec.layout === 'orientation') === (s.section === 'orientation'), `${s.id}: layout "orientation" is for the orientation scene, and only for it`);
+      // The first frame has content (R9): step 0 must not hide every element of the scene's view.
+      const v0 = views.get(s.view);
+      if (v0) {
+        const shown = new Set(spec.steps.flatMap((x) => x.actions.filter((a) => a.do === 'show').flatMap((a) => a.targets || [])));
+        let all;
+        if (v0.level === 'flow') { const f = flows.get(v0.scope); all = (f?.nodes || []).map((n) => [n.id, `step-${n.step}`]); }
+        else all = viewElements(M, v0, specs.get(v0.id)).map((id) => [id]);
+        if (all.length && all.every((alts) => alts.some((t) => shown.has(t)))) report.fail(`${s.id}: step 0 shows an empty diagram (every element appears later); show at least one element from the start`);
+      }
       const want = s.reveals.map((r) => r.step).join(',');
       const got = spec.steps.map((x) => x.step).join(',');
       report.check(want === got, `${s.id}: scene-spec steps (${got}) must match the storyboard's reveal steps (${want})`);
