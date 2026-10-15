@@ -4,10 +4,11 @@
   "title": "Scene specs",
   "description": "Structure of stages/04_design/output/scene-specs.yaml: layout, entry, and the actions of each reveal step, in the motion vocabulary of _config/build-rules.md. Read by scripts/build-site.mjs.",
   "type": "object",
-  "required": ["schema_version", "scenes"],
+  "required": ["schema_version", "text_reveal", "scenes"],
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": 1 },
+    "text_reveal": { "enum": ["per-step", "with-scene"], "description": "One reveal behaviour for on-screen lines across the explainer: per-step (line n has its own show-text step, in order) or with-scene (every line visible from step 0, no show-text)" },
     "scenes": {
       "type": "object",
       "propertyNames": { "pattern": "^S[0-9]{2}$" },
@@ -21,7 +22,7 @@
       "required": ["layout", "enter", "steps"],
       "additionalProperties": false,
       "properties": {
-        "layout": { "enum": ["diagram", "diagram-with-text", "diagram-wide", "statement", "orientation"] },
+        "layout": { "enum": ["title", "diagram", "diagram-with-text", "diagram-wide", "statement"] },
         "enter": {
           "type": "object",
           "required": ["kind"],

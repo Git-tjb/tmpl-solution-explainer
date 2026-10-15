@@ -9,10 +9,10 @@
   "properties": {
     "schema_version": { "const": 1 },
     "id": { "$ref": "#/$defs/id" },
-    "level": { "enum": ["L1", "L2", "L3", "flow"] },
-    "scope": { "$ref": "#/$defs/id", "description": "The system (L1, L2), a function (L3), or a flow ID (flow)" },
+    "level": { "enum": ["before", "L1", "L2", "L3", "flow"] },
+    "scope": { "$ref": "#/$defs/id", "description": "The word before (before), the system (L1, L2), a function (L3), or a flow ID (flow)" },
     "mode": { "enum": ["wired", "structure"], "default": "wired", "description": "structure: a grid of elements with their what-it-does bullets and no lines (L2 and L3 only)" },
-    "title": { "type": "string", "pattern": "^(Context|Functions|Components|Flow): .+$" },
+    "title": { "type": "string", "pattern": "^(Before|Context|Functions|Components|Flow): .+$" },
     "elements": {
       "type": "array",
       "maxItems": 9,

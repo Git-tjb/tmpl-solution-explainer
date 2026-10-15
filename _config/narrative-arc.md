@@ -1,23 +1,40 @@
 # Narrative Arc
 
-The default sequence of sections on the linear path. Stage 02 turns the opening order from `_config/run.md`
-into `outcome-first` or `story-first` and may reorder section 3's parts to match; with two intents it gives
-each intent its own run of sections 4-6. Stage 03 sequences scenes within this arc. A run that needs a
-different arc says why in `scope.md`.
+The default sequence of sections on the linear path. The explainer opens on the solution's name and a picture
+of it, then the user and the problem, then the solution as the answer to that problem. Stage 02 turns the
+opening order from `_config/run.md` into `outcome-first` or `story-first`, which sets how much the `problem`
+scenes tell as a story and whether `why` follows the answer; with two intents it gives each intent its own run
+of sections 5-8. Stage 03 sequences scenes within this arc. A run that needs a different arc says why in
+`scope.md`.
 
 | # | Section (`section` in scenes.json) | What it does | Mode | Level |
 | --- | --- | --- | --- | --- |
-| 1 | `answer` | The whole system in one sentence (the core message) and its picture | explanation | L1 |
-| 2 | `orientation` | The four levels (Context, Functions, Components, Code) and which scenes use each, so the audience can place every later picture. Exactly one scene, drawn from data, no view. | explanation | key |
-| 3 | `why` | The problem baseline, why the solution was built, and the outcomes it produces. Outcome-first or story-first per `scope.md`. | explanation | L1 |
-| 4 | `structure` | The functions and what each does, as a structure view: no lines yet | explanation | L2 (structure) |
-| 5 | `segmentation` | The naive alternative first, then each function as the fix for a specific problem in it, from `why_separate`, on the wired view | explanation | L2 (wired) |
-| 6 | `build` | Zoom into each in-scope function, one at a time, returning to L2 between them | explanation | L3 |
-| 7 | `in-use` | One or two usage-example flows, walked step by step through elements already shown | how-to | flow |
-| 8 | `close` | Return to the first scene's picture and core message, now understood | explanation | L1 |
+| 1 | `title` | The solution's name, its purpose line (`scope.md` `purpose_line`), and the title visual. Exactly one scene, no view. | explanation | title |
+| 2 | `problem` | Who the user is, what they were doing, and what hurt, on before views (the before model): no part of the solution. One or two scenes, right after the title. | explanation | before |
+| 3 | `answer` | The whole system in one sentence (the core message) and its picture, as the answer to the problem. Exactly one scene. | explanation | L1 |
+| 4 | `why` | The outcomes, each one the answer to a pain from section 2. Optional; folded into `answer` when time is short. | explanation | L1 or before |
+| 5 | `structure` | The functions and what each does, as a structure view: no lines yet | explanation | L2 (structure) |
+| 6 | `segmentation` | The naive alternative first (it may use a before view), then each function as the fix for a specific problem in it, from `why_separate`, on the wired view | explanation | L2 (wired) |
+| 7 | `build` | Zoom into each in-scope function, one at a time, returning to L2 between them | explanation | L3 |
+| 8 | `in-use` | One or two usage-example flows, walked step by step through elements already shown | how-to | flow |
+| 9 | `close` | The core message again, over a picture the opening did not show, so the audience sees what they learned (for example the wired L2 view with the example's path, or the before view with each pain answered) | explanation | any |
 
 Structure comes before wiring: the first L2 scene is a structure view, and no flow scene comes before the
-first structure scene. The orientation scene comes after the answer and before the first L2 or L3 scene.
+first structure scene.
+
+How to read the levels is not a scene: the page's Levels control explains the four levels on demand, on every
+scene.
+
+## Every scene earns its picture
+
+- No two scenes show the same picture (a view and its highlight) unless the later one adds something the earlier
+  did not: a highlight, a reveal, a zoom. A scene that shows a view an earlier scene used says what it adds in
+  `adds`.
+- A scene about a problem shows the problem: a before view, never the finished solution with parts outlined.
+  Outside the `problem` section, such a scene sets `about: problem`.
+- Every on-screen line adds something the scene's message does not, and cites the facts that carry it.
+- On-screen lines appear the same way in every scene: one per step, or all from the start
+  (`text_reveal` in `scene-specs.yaml`).
 
 The map is available on every scene and is the reference layer. L4 detail lives only there.
 
@@ -47,23 +64,27 @@ than the table allows:
 
 - put the extra functions in `map_only` (they stay in every view and the map, but no scene highlights or
   zooms into them);
-- keep `answer`, `orientation`, and `close`; they are never cut;
-- fold `why` into one scene, and merge `structure` into `segmentation` only if every function's reason for
+- keep `title`, `problem`, `answer`, and `close`; they are never cut (`problem` may drop to one scene);
+- fold `why` into `answer`, and merge `structure` into `segmentation` only if every function's reason for
   being separate fits one structure scene;
 - never cut a zoom the core message depends on; cut a different one.
 
 ## Budget
 
-8-14 scenes in at most 15 minutes. A typical split for 15 minutes and 11 scenes:
+8-14 scenes in at most 15 minutes; the title and problem scenes count. Stage 03 allocates the minutes and
+scenes per section first (`budget` in `scenes.json`), then writes the scenes within it; `check-storyboard`
+fails a section that runs more than a quarter-minute over its allocation. A typical split for 15 minutes and
+13 scenes:
 
 | Section | Scenes | Minutes |
 | --- | --- | --- |
+| title | 1 | 0.5 |
+| problem | 2 | 1.5 |
 | answer | 1 | 1 |
-| orientation | 1 | 1 |
-| why | 1 | 1.5 |
+| why | 1 | 1 |
 | structure | 1 | 1.5 |
 | segmentation | 2 | 3 |
-| build | 2 | 4 |
+| build | 2 | 3.5 |
 | in-use | 2 | 2.5 |
 | close | 1 | 0.5 |
 

@@ -11,6 +11,7 @@ A run never edits this file. Changes are made in the template.
 
 | Level | View | Shows | Question it answers | Scope |
 | --- | --- | --- | --- | --- |
+| before | Before | The user, what they were doing, what they did it with, and what hurt, from the before model; no part of the solution | Who had what problem, before this existed? | `before` |
 | L1 | Context | The system as one box, with its actors and externals | What is it, and who or what does it touch? | the system |
 | L2 | Functions | The functions and stores inside the system, and how they relate | What are the major pieces, and why split this way? | the system |
 | L3 | Components | The components and stores inside one function | How does this piece work? | one function |
@@ -18,6 +19,8 @@ A run never edits this file. Changes are made in the template.
 | flow | Flow | One flow from `flows.yaml` | What happens, in what order? | one flow |
 
 - One view, one level. Never mix levels.
+- Before views draw the before model (`system-model.md`, The before model), never the system model. A run has
+  at least one; the problem scenes show them. A spec may narrow the elements but keeps the user.
 - L1 and L2 views are mandatory in every run. The L2 views come as a pair: a structure view first, then a wired view.
 - L3 views exist only for functions that are in scope (`02_scope`).
 - L4 is not a diagram. It appears only in a map panel, built from the source snapshot, never on the linear
@@ -48,7 +51,7 @@ A view is `wired` (the default) or `structure`.
 
 ## Per-view rules (checked by `check-design`)
 
-1. **Title** has the form `<Level name>: <scope name>`: "Context: Example System", "Functions: Example
+1. **Title** has the form `<Level name>: <scope name>`: "Before: the weekly report", "Context: Example System", "Functions: Example
    System", "Components: Workflow templates", "Flow: Run one stage".
 2. **Legend** on every view, generated from what is drawn (notation.md, Legend). Never written by hand. In a
    scene it is one quiet row under the diagram, behind a "Legend" control when the row does not fit.

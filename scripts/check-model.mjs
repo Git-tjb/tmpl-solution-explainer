@@ -138,10 +138,11 @@ export function checkScope(report) {
   const M = loadModel();
   const { flows } = loadFlows();
   const { data } = frontmatter(P.scope);
-  for (const k of ['core_message', 'opening', 'intents', 'in_scope', 'example_flows', 'excluded', 'target_scenes']) {
+  for (const k of ['core_message', 'purpose_line', 'opening', 'intents', 'in_scope', 'example_flows', 'excluded', 'target_scenes']) {
     report.check(data[k] !== undefined, `scope.md frontmatter is missing "${k}"`);
   }
   report.check(typeof data.core_message === 'string' && !/\n/.test(data.core_message), 'core_message must be one line');
+  report.check(typeof data.purpose_line === 'string' && !/\n/.test(data.purpose_line), 'purpose_line must be one line: what the solution is for, shown on the title scene');
   report.check(['outcome-first', 'story-first'].includes(data.opening), 'opening must be outcome-first or story-first (the operator words stay in run.md)');
   report.check(Array.isArray(data.intents) && data.intents.length >= 1 && data.intents.length <= 2
     && data.intents.every((i) => ['educate', 'how-to', 'persuade'].includes(i)), 'intents: one or two of educate, how-to, persuade');

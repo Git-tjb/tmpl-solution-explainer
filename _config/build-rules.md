@@ -63,7 +63,7 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | `diagram-wide` | the diagram across the full width, with the text in one row below it; for wide views |
 | `diagram` | the diagram alone, no text |
 | `statement` | text only |
-| `orientation` | the orientation scene only: the level ladder, drawn from data |
+| `title` | the title scene only: the solution's name, its purpose line, and the title visual |
 
 ## Expanding an element
 In any wired or flow view, an element with `what_it_does` carries a small expand marker. Clicking it, or

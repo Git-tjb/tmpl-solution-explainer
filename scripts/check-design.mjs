@@ -2,10 +2,26 @@
 // build-rules.md, notation.md, and the schemas.
 import fs from 'node:fs';
 import path from 'node:path';
-import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loadFlows, runAnswers,
+import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loadFlows, loadBefore, runAnswers,
   defaultViewElements, viewElements, viewRelationships, loadTokens, hexToRgb, contrast, oklch, hueGap, walk } from './lib/common.mjs';
 
-const TITLE = { L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
+const TITLE = { before: 'Before', L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
+
+// The elements a before view draws: the spec's list, or the whole before model (system-model.md).
+export function beforeViewElements(B, spec) {
+  return spec?.elements?.length ? spec.elements.filter((id) => B.els.has(id)) : [...B.els.keys()];
+}
+// The relationships and pain lines among them, as highlight targets.
+export function beforeViewRelationships(B, els) {
+  const has = new Set(els);
+  return B.rels.filter((r) => has.has(r.from) && has.has(r.to)).map((r) => r.id);
+}
+// What a scene does to its picture, for the repeat rule (R4): its highlight and its reveal actions.
+function pictureActions(s, spec) {
+  const h = s.highlight || {};
+  const acts = (spec?.steps || []).flatMap((st) => st.actions.map((a) => `${a.do}:${[...(a.targets || [])].sort()}:${a.state || ''}`)).sort();
+  return JSON.stringify([s.view, [...(h.elements || [])].sort(), [...(h.relationships || [])].sort(), [...(h.steps || [])].sort(), acts]);
+}
 export const REQUIRED_TOKENS = ['--bg', '--surface', '--text', '--text-muted', '--c-system', '--c-internal', '--c-actor',
   '--c-external', '--c-human', '--c-highlight', '--c-dim', '--c-edge', '--lv-1', '--lv-2', '--lv-3', '--lv-flow', '--text-dim'];
 // Colour roles (notation.md, Colour): structure tokens are neutral; each role colour reads as its own hue.
@@ -50,6 +66,7 @@ export function checkDesign(report) {
   const run = runAnswers();
   const specs = loadViewSpecs();
   const views = new Map(S.views.map((v) => [v.id, v]));
+  const B = fs.existsSync(P.before) ? loadBefore() : null;
 
   for (const v of S.views) {
     const spec = specs.get(v.id);
@@ -58,7 +75,22 @@ export function checkDesign(report) {
     report.check(spec.id === v.id && spec.level === v.level && spec.scope === v.scope, `views/${v.id}.yaml: id, level, and scope must match scenes.json`);
     report.check(spec.title.startsWith(`${TITLE[v.level]}: `), `views/${v.id}.yaml: title must start "${TITLE[v.level]}: "`);
     let ids;
-    if (v.level === 'flow') {
+    if (v.level === 'before') {
+      if (!report.check(!!B, `view "${v.id}": before-model.yaml is missing (stage 01)`)) continue;
+      for (const id of spec.elements || []) report.check(B.els.has(id), `view "${v.id}": "${id}" is not in the before model`);
+      const els = beforeViewElements(B, spec);
+      report.check(els.length <= 9, `view "${v.id}": ${els.length} elements (max 9)`);
+      report.check(els.includes(B.data.user), `view "${v.id}": the before picture leads with the user ("${B.data.user}"); keep it in the view`);
+      ids = new Set(els);
+      const relIds = new Set(beforeViewRelationships(B, els));
+      for (const [name, st] of Object.entries(spec.states || {})) {
+        for (const id of st.elements || []) report.check(ids.has(id), `view "${v.id}" state "${name}": "${id}" is not in the view`);
+        for (const id of st.relationships || []) report.check(relIds.has(id), `view "${v.id}" state "${name}": relationship "${id}" is not in the view`);
+        report.check(!(st.steps || []).length, `view "${v.id}" state "${name}": a before view has no steps`);
+      }
+      report.check(!spec.mode || spec.mode === 'wired', `view "${v.id}": a before view is wired`);
+      report.check(!spec.lanes && !spec.inherit_from, `view "${v.id}": lanes and inherit_from are not for before views`);
+    } else if (v.level === 'flow') {
       const f = flows.get(v.scope);
       ids = new Set(f ? f.nodes.map((n) => n.id) : []);
       report.check((f?.nodes.length || 0) <= 12, `view "${v.id}": flow has more than 12 nodes`);
@@ -101,13 +133,14 @@ export function checkDesign(report) {
     for (const s of S.scenes) {
       const spec = SS.scenes[s.id];
       if (!report.check(!!spec, `scene-specs.yaml: no spec for ${s.id}`)) continue;
-      report.check((spec.layout === 'orientation') === (s.section === 'orientation'), `${s.id}: layout "orientation" is for the orientation scene, and only for it`);
+      report.check((spec.layout === 'title') === (s.section === 'title'), `${s.id}: layout "title" is for the title scene, and only for it`);
       // The first frame has content (R9): step 0 must not hide every element of the scene's view.
       const v0 = views.get(s.view);
       if (v0) {
         const shown = new Set(spec.steps.flatMap((x) => x.actions.filter((a) => a.do === 'show').flatMap((a) => a.targets || [])));
         let all;
         if (v0.level === 'flow') { const f = flows.get(v0.scope); all = (f?.nodes || []).map((n) => [n.id, `step-${n.step}`]); }
+        else if (v0.level === 'before') all = B ? beforeViewElements(B, specs.get(v0.id)).map((id) => [id]) : [];
         else all = viewElements(M, v0, specs.get(v0.id)).map((id) => [id]);
         if (all.length && all.every((alts) => alts.some((t) => shown.has(t)))) report.fail(`${s.id}: step 0 shows an empty diagram (every element appears later); show at least one element from the start`);
       }
@@ -118,7 +151,9 @@ export function checkDesign(report) {
       const vs = specs.get(s.view);
       const targets = new Set();
       if (v?.level === 'flow') { const f = flows.get(v.scope); f?.nodes.forEach((n) => { targets.add(n.id); targets.add(`step-${n.step}`); }); f?.edges.forEach((e) => targets.add(`${e.from}--${e.to}`)); }
-      else if (v) {
+      else if (v?.level === 'before') {
+        if (B) { const els = beforeViewElements(B, vs); els.forEach((e) => targets.add(e)); beforeViewRelationships(B, els).forEach((r) => targets.add(r)); }
+      } else if (v) {
         const els = viewElements(M, v, vs);
         els.forEach((e) => targets.add(e));
         if (v.level === 'L3') targets.add(v.scope);
@@ -146,9 +181,28 @@ export function checkDesign(report) {
         report.check(!!spec.enter.from_view && views.has(spec.enter.from_view), `${s.id}: ${spec.enter.kind} needs from_view naming a declared view`);
         report.check(!!spec.enter.target, `${s.id}: ${spec.enter.kind} needs a target function`);
       }
+      // One reveal behaviour for on-screen lines (R8): per-step shows line n in its own step, in order;
+      // with-scene shows every line from step 0.
+      const textSteps = spec.steps.map((st) => ({ step: st.step, lines: st.actions.filter((a) => a.do === 'show-text').flatMap((a) => a.targets || []) }))
+        .filter((x) => x.lines.length);
+      if (SS.text_reveal === 'with-scene') report.check(!textSteps.length, `${s.id}: text_reveal is with-scene, so on-screen lines show from step 0 (no show-text)`);
+      else if (s.text.length) {
+        const order = textSteps.map((x) => x.lines.join('+')).join(',');
+        const want = s.text.map((_, i) => `text-${i + 1}`).join(',');
+        report.check(order === want, `${s.id}: text_reveal is per-step, so each line shows in its own step, in order (want ${want}, got ${order || 'none'})`);
+      }
       if (spec.enter.kind !== 'cut') moving = true;
       if (moving) report.check(!!spec.end_state, `${s.id}: has motion, so it needs end_state`);
       if (run.animation === false) report.check(!moving, `${s.id}: run.md sets animation: false, so use cut entries and duration_ms: 0`);
+    }
+    // A repeated picture must add something (R4): the same view, highlight, and reveal actions as an earlier
+    // scene is the same picture twice, whatever "adds" says.
+    const seen = new Map();
+    for (const s of S.scenes) {
+      if (!s.view || !SS.scenes[s.id]) continue;
+      const key = pictureActions(s, SS.scenes[s.id]);
+      if (seen.has(key)) report.fail(`${s.id}: shows the same picture as ${seen.get(key)} (same view, highlight, and reveals); make it add what "adds" says`);
+      else seen.set(key, s.id);
     }
   }
 

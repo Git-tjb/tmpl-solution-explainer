@@ -1,0 +1,6 @@
+schema_version: 1
+id: before-work
+level: before
+scope: before
+title: "Before: the weekly work"
+elements: [operator, weekly-work, old-notes, fresh-chat]

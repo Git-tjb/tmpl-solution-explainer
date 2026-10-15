@@ -127,6 +127,13 @@ export function factIds() {
   return ids;
 }
 
+// Each fact's claim text, so a line can be read beside the facts it cites (lines.md).
+export function factClaims() {
+  const map = new Map();
+  for (const m of readText(P.factSheet).matchAll(/^\|\s*(F\d{3,})\s*\|([^|]*)\|/gm)) map.set(m[1], m[2].trim());
+  return map;
+}
+
 // Snapshot-relative path each fact cites (the first `backticked` path in its Source cell, without the
 // "sources/" prefix and the section). Used to refuse map detail under an excluded element.
 export function factPaths() {

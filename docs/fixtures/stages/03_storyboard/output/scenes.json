@@ -1,43 +1,83 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "core_message": "The kit turns recurring work into staged runs that a person reviews at every step.",
   "target_minutes": 12,
+  "budget": [
+    { "section": "title", "scenes": 1, "minutes": 0.5 },
+    { "section": "problem", "scenes": 2, "minutes": 1.5 },
+    { "section": "answer", "scenes": 1, "minutes": 1 },
+    { "section": "structure", "scenes": 1, "minutes": 1.5 },
+    { "section": "segmentation", "scenes": 1, "minutes": 1.5 },
+    { "section": "build", "scenes": 2, "minutes": 3 },
+    { "section": "in-use", "scenes": 1, "minutes": 2 },
+    { "section": "close", "scenes": 1, "minutes": 1 }
+  ],
   "views": [
-    {
-      "id": "context",
-      "level": "L1",
-      "scope": "kit"
-    },
-    {
-      "id": "functions",
-      "level": "L2",
-      "scope": "kit"
-    },
-    {
-      "id": "functions-structure",
-      "level": "L2",
-      "scope": "kit",
-      "mode": "structure"
-    },
-    {
-      "id": "templates-components",
-      "level": "L3",
-      "scope": "templates"
-    },
-    {
-      "id": "instances-components",
-      "level": "L3",
-      "scope": "instances"
-    },
-    {
-      "id": "run-a-stage-flow",
-      "level": "flow",
-      "scope": "run-a-stage"
-    }
+    { "id": "before-work", "level": "before", "scope": "before" },
+    { "id": "before-pains", "level": "before", "scope": "before" },
+    { "id": "context", "level": "L1", "scope": "kit" },
+    { "id": "functions", "level": "L2", "scope": "kit" },
+    { "id": "functions-structure", "level": "L2", "scope": "kit", "mode": "structure" },
+    { "id": "templates-components", "level": "L3", "scope": "templates" },
+    { "id": "instances-components", "level": "L3", "scope": "instances" },
+    { "id": "run-a-stage-flow", "level": "flow", "scope": "run-a-stage" }
   ],
   "scenes": [
     {
       "id": "S01",
+      "section": "title",
+      "title": "Example Pipeline Kit",
+      "point": "Recurring work, run in stages a person reviews.",
+      "mode": "explanation",
+      "level": "title",
+      "text": [
+        { "line": "Built for one person repeating the same work", "facts": ["F019"] }
+      ],
+      "reveals": [
+        { "step": 1, "shows": "who it is for" }
+      ],
+      "animation": { "explains": "the kit's structure assembling" },
+      "facts": ["F001"],
+      "minutes": 0.5
+    },
+    {
+      "id": "S02",
+      "section": "problem",
+      "title": "The same work, every week",
+      "point": "An operator redid the weekly work by hand each time.",
+      "mode": "explanation",
+      "level": "before",
+      "view": "before-work",
+      "highlight": { "elements": ["operator"] },
+      "text": [
+        { "line": "Old notes, copied files, a fresh chat", "facts": ["F021", "F022"] }
+      ],
+      "reveals": [
+        { "step": 1, "shows": "what the work ran on" }
+      ],
+      "facts": ["F019", "F020"],
+      "minutes": 0.75
+    },
+    {
+      "id": "S03",
+      "section": "problem",
+      "title": "What hurt",
+      "point": "Each run started over, drifted, and went unchecked.",
+      "mode": "explanation",
+      "level": "before",
+      "view": "before-pains",
+      "highlight": { "elements": ["pain-from-nothing", "pain-drift", "pain-unchecked"] },
+      "text": [
+        { "line": "Nothing carried from one run to the next", "facts": ["F023", "F024"] }
+      ],
+      "reveals": [
+        { "step": 1, "shows": "what it cost" }
+      ],
+      "facts": ["F023", "F024", "F025"],
+      "minutes": 0.75
+    },
+    {
+      "id": "S04",
       "section": "answer",
       "title": "Reviewed runs, every step",
       "point": "The kit turns recurring work into staged runs a person reviews.",
@@ -45,83 +85,19 @@
       "level": "L1",
       "view": "context",
       "text": [
-        "Recurring work, run in reviewed stages"
+        { "line": "Recurring work, run in reviewed stages", "facts": ["F001"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "the operator who runs it"
-        },
-        {
-          "step": 2,
-          "shows": "the model provider"
-        }
+        { "step": 1, "shows": "the operator who runs it" },
+        { "step": 2, "shows": "the model provider" },
+        { "step": 3, "shows": "the line" }
       ],
-      "animation": {
-        "explains": "the system's boundary forming"
-      },
-      "facts": [
-        "F001",
-        "F002"
-      ],
+      "animation": { "explains": "the system's boundary forming" },
+      "facts": ["F001", "F002"],
       "minutes": 1
     },
     {
-      "id": "S02",
-      "section": "orientation",
-      "title": "How to read this",
-      "point": "Four levels take you from the whole solution down to its parts.",
-      "mode": "explanation",
-      "level": "key",
-      "text": [
-        "Context, Functions, Components, Code"
-      ],
-      "reveals": [
-        {
-          "step": 1,
-          "shows": "the four levels"
-        }
-      ],
-      "facts": [
-        "F001"
-      ],
-      "minutes": 1
-    },
-    {
-      "id": "S03",
-      "section": "why",
-      "title": "Why it exists",
-      "point": "Every stage gets a human review before the next starts.",
-      "mode": "explanation",
-      "level": "L1",
-      "view": "context",
-      "highlight": {
-        "elements": [
-          "operator"
-        ]
-      },
-      "text": [
-        "A person reviews every stage",
-        "Nothing advances without that review"
-      ],
-      "reveals": [
-        {
-          "step": 1,
-          "shows": "the review line"
-        },
-        {
-          "step": 2,
-          "shows": "second line of text"
-        }
-      ],
-      "facts": [
-        "F002",
-        "F012"
-      ],
-      "minutes": 1
-    },
-    {
-      "id": "S04",
+      "id": "S05",
       "section": "structure",
       "title": "What each part does",
       "point": "Templates, instances, and a library make up the kit.",
@@ -129,64 +105,39 @@
       "level": "L2",
       "view": "functions-structure",
       "text": [
-        "Templates define; instances run; the library keeps"
+        { "line": "Templates define; instances run; the library keeps", "facts": ["F013", "F016", "F005"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "instances and the library beside templates"
-        }
+        { "step": 1, "shows": "instances and the library beside templates" },
+        { "step": 2, "shows": "the line" }
       ],
-      "facts": [
-        "F003",
-        "F004",
-        "F005",
-        "F013",
-        "F016"
-      ],
+      "facts": ["F003", "F004", "F005", "F013", "F016"],
       "minutes": 1.5
     },
     {
-      "id": "S05",
+      "id": "S06",
       "section": "segmentation",
       "title": "Templates apart from runs",
       "point": "Templates are separate so runs can never change them.",
       "mode": "explanation",
       "level": "L2",
       "view": "functions",
-      "highlight": {
-        "elements": [
-          "templates",
-          "instances"
-        ]
-      },
+      "highlight": { "elements": ["templates", "instances"] },
       "text": [
-        "Runs never edit their template"
+        { "line": "Each run is disposable once archived", "facts": ["F018"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "templates and instances highlighted"
-        },
-        {
-          "step": 2,
-          "shows": "the create relationship traced"
-        },
-        {
-          "step": 3,
-          "shows": "what templates do, expanded"
-        }
+        { "step": 1, "shows": "templates and instances highlighted" },
+        { "step": 2, "shows": "the create relationship traced" },
+        { "step": 3, "shows": "what templates do, expanded" },
+        { "step": 4, "shows": "the line" }
       ],
-      "animation": {
-        "explains": "a template creating a run"
-      },
-      "facts": [
-        "F007"
-      ],
+      "animation": { "explains": "a template creating a run" },
+      "facts": ["F007"],
       "minutes": 1.5
     },
     {
-      "id": "S06",
+      "id": "S07",
       "section": "build",
       "title": "Inside a template: contracts and standards",
       "point": "Contracts direct each stage; standards constrain the contracts.",
@@ -194,25 +145,18 @@
       "level": "L3",
       "view": "templates-components",
       "text": [
-        "One contract per stage"
+        { "line": "One file per stage: inputs, process, outputs", "facts": ["F008"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "contracts and standards"
-        }
+        { "step": 1, "shows": "contracts and standards" },
+        { "step": 2, "shows": "the line" }
       ],
-      "animation": {
-        "explains": "zooming into the template"
-      },
-      "facts": [
-        "F003",
-        "F008"
-      ],
+      "animation": { "explains": "zooming into the template" },
+      "facts": ["F003", "F008"],
       "minutes": 1.5
     },
     {
-      "id": "S07",
+      "id": "S08",
       "section": "build",
       "title": "Inside a run",
       "point": "A run executes stages and writes reviewed outputs.",
@@ -220,25 +164,18 @@
       "level": "L3",
       "view": "instances-components",
       "text": [
-        "Outputs are the edit surface between stages"
+        { "line": "Outputs are the edit surface between stages", "facts": ["F011", "F012"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "stage runs and outputs"
-        }
+        { "step": 1, "shows": "stage runs and outputs" },
+        { "step": 2, "shows": "the line" }
       ],
-      "animation": {
-        "explains": "zooming into a run"
-      },
-      "facts": [
-        "F004",
-        "F011"
-      ],
+      "animation": { "explains": "zooming into a run" },
+      "facts": ["F004", "F011"],
       "minutes": 1.5
     },
     {
-      "id": "S08",
+      "id": "S09",
       "section": "in-use",
       "title": "Running one stage",
       "point": "One stage runs, writes output, and waits for review.",
@@ -246,106 +183,53 @@
       "level": "flow",
       "view": "run-a-stage-flow",
       "text": [
-        "Nine steps, one check, one human gate"
+        { "line": "Nine steps, one check, one human gate", "facts": ["F010", "F011", "F012"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "steps 2-3, after the trigger"
-        },
-        {
-          "step": 2,
-          "shows": "steps 4-5"
-        },
-        {
-          "step": 3,
-          "shows": "the check, the gate, and the output"
-        }
+        { "step": 1, "shows": "steps 2-3, after the trigger" },
+        { "step": 2, "shows": "steps 4-5" },
+        { "step": 3, "shows": "the check, the gate, and the output" },
+        { "step": 4, "shows": "the line" }
       ],
-      "animation": {
-        "explains": "work moving through the stage"
-      },
-      "facts": [
-        "F010",
-        "F011",
-        "F012"
-      ],
+      "animation": { "explains": "work moving through the stage" },
+      "facts": ["F010", "F011", "F012"],
       "minutes": 2
     },
     {
-      "id": "S09",
+      "id": "S10",
       "section": "close",
       "title": "Reviewed runs, every step",
-      "point": "The same picture, now understood.",
+      "point": "Recurring work now runs in stages a person reviews.",
       "mode": "explanation",
-      "level": "L1",
-      "view": "context",
-      "returns_to": "S01",
+      "level": "L2",
+      "view": "functions",
+      "adds": "The whole kit at once, with a template creating a run traced",
+      "returns_to": "S04",
       "text": [
-        "Recurring work, run in reviewed stages"
+        { "line": "Templates define it; runs do it; a person checks it", "facts": ["F003", "F011", "F012"] }
       ],
       "reveals": [
-        {
-          "step": 1,
-          "shows": "the full picture"
-        }
+        { "step": 1, "shows": "a template creating a run, traced" },
+        { "step": 2, "shows": "the line" }
       ],
-      "facts": [
-        "F001"
-      ],
+      "facts": ["F001"],
       "minutes": 1
     }
   ],
   "map": {
-    "overview": [
-      "context",
-      "functions"
-    ],
+    "overview": ["context", "functions"],
     "panels": [
-      {
-        "element": "kit",
-        "detail": [
-          "01-example-kit"
-        ]
-      },
-      {
-        "element": "operator"
-      },
-      {
-        "element": "hosted-model"
-      },
-      {
-        "element": "templates",
-        "view": "templates-components",
-        "detail": [
-          "01-example-kit/templates"
-        ]
-      },
-      {
-        "element": "instances",
-        "view": "instances-components"
-      },
-      {
-        "element": "library"
-      },
-      {
-        "element": "contracts",
-        "detail": [
-          "01-example-kit/templates/demo/stages/01_draft/CONTEXT.md"
-        ]
-      },
-      {
-        "element": "standards"
-      },
-      {
-        "element": "stage-runs"
-      },
-      {
-        "element": "outputs"
-      },
-      {
-        "element": "run-status"
-      }
+      { "element": "kit", "detail": ["01-example-kit"] },
+      { "element": "operator" },
+      { "element": "hosted-model" },
+      { "element": "templates", "view": "templates-components", "detail": ["01-example-kit/templates"] },
+      { "element": "instances", "view": "instances-components" },
+      { "element": "library" },
+      { "element": "contracts", "detail": ["01-example-kit/templates/demo/stages/01_draft/CONTEXT.md"] },
+      { "element": "standards" },
+      { "element": "stage-runs" },
+      { "element": "outputs" },
+      { "element": "run-status" }
     ]
   }
 }
