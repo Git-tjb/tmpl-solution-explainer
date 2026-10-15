@@ -7,7 +7,6 @@
   var scenes = Array.prototype.slice.call(document.querySelectorAll('.scene'));
   var mapEl = document.getElementById('map');
   var where = document.querySelector('.chrome .where');
-  var titleEl = document.querySelector('.chrome .title');
   var rmBtn = document.querySelector('.chrome .rm');
   var state = { si: -1, step: 0 };
   var running = [];
@@ -157,14 +156,33 @@
     var fig = sceneEl.querySelector('.figure') || sceneEl;
     if (e.kind === 'fade') animate(sceneEl, [{ opacity: 0 }, { opacity: 1 }], 600);
     else if ((e.kind === 'zoom-in' || e.kind === 'zoom-out') && D.layouts[e.from_view]) {
-      var L = D.layouts[e.from_view], n = L.nodes[e.target];
+      // Positions are in the full diagram's coordinates; the scene shows its content box (layout.json).
+      var L = D.layouts[e.from_view], n = L.nodes[e.target], c = L.content;
       if (!n) return;
-      var s = Math.max(0.15, n.w / L.w);
-      var origin = ((n.x + n.w / 2) / L.w * 100).toFixed(1) + '% ' + ((n.y + n.h / 2) / L.h * 100).toFixed(1) + '%';
+      var s = Math.max(0.15, n.w / c.w);
+      var origin = ((n.x + n.w / 2 - c.x) / c.w * 100).toFixed(1) + '% ' + ((n.y + n.h / 2 - c.y) / c.h * 100).toFixed(1) + '%';
       var from = e.kind === 'zoom-in' ? 'scale(' + s.toFixed(3) + ')' : 'scale(' + (1 / s).toFixed(3) + ')';
       animate(fig, [{ transformOrigin: origin, transform: from, opacity: 0.2 }, { transformOrigin: origin, transform: 'scale(1)', opacity: 1 }], 1000);
     }
   }
+
+  // ---------- legend: one row; behind a "Legend" control when it would not fit (D4) ----------
+  function fitLegend(sceneEl) {
+    var lg = sceneEl.querySelector('.figure div.legend');
+    if (!lg) return;
+    lg.classList.remove('collapsed', 'open');
+    if (lg.scrollWidth > lg.clientWidth + 1) lg.classList.add('collapsed');
+  }
+  each(document.querySelectorAll('.figure div.legend'), function (lg) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'lgtoggle'; b.textContent = 'Legend';
+    b.setAttribute('aria-expanded', 'false');
+    b.addEventListener('click', function () { var on = !lg.classList.contains('open'); lg.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
+    lg.insertBefore(b, lg.firstChild);
+  });
+  window.addEventListener('resize', function () { if (state.si >= 0) fitLegend(scenes[state.si]); });
+  // Text widths change when the bundled fonts arrive, so measure again then.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (state.si >= 0) fitLegend(scenes[state.si]); });
 
   // ---------- navigation ----------
   function go(si, step, how) {
@@ -190,7 +208,7 @@
     root.setAttribute('data-scene', id);
     root.setAttribute('data-step', String(step));
     where.textContent = id + ' · ' + step + '/' + maxStep(si);
-    titleEl.textContent = spec(si).title;
+    fitLegend(sceneEl);
     var h = '#' + id + (step ? '.' + step : '');
     lastSet = h;
     if (location.hash !== h) location.hash = h;

@@ -54,8 +54,22 @@ a { color: var(--c-highlight); }
 .scene .sid { font-family: var(--font-mono); color: var(--text-muted); font-size: 18px; }
 .scene .text { align-self: center; }
 .scene .text p { margin: 0 0 18px; font-size: var(--size-point, 28px); }
-.scene .figure { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-.scene .figure svg.diagram { max-width: 100%; max-height: 100%; height: auto; width: auto; }
+/* The figure: the diagram fills the area above a one-row legend, scaled up to a cap (D4). */
+.scene .figure { min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.scene .figure .art { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.scene .figure .art svg.diagram { width: 100%; height: 100%; }
+/* The page header is the scene's one title, and the legend is the row below (D4). */
+.scene .figure .art svg.diagram > .badge, .scene .figure .art svg.diagram > .title, .scene .figure .art svg.diagram > .legend { display: none; }
+.scene .figure.orientation { justify-content: center; }
+.scene .figure .legend { flex: none; display: flex; align-items: center; gap: 6px 22px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap;
+  min-height: 34px; padding-top: 6px; font-size: 16px; color: var(--text-muted); }
+.scene .figure .legend .lg { display: inline-flex; align-items: center; gap: 8px; }
+.scene .figure .legend .lg[data-lg="focus"] { display: none; }
+.scene .figure:has(svg.has-hl) .legend .lg[data-lg="focus"] { display: inline-flex; }
+.scene .figure .legend .lgtoggle { display: none; font: inherit; color: var(--text-muted); background: none; border: 2px solid var(--c-dim); padding: 2px 10px; cursor: pointer; }
+.scene .figure .legend.collapsed .lgtoggle { display: inline-block; }
+.scene .figure .legend.collapsed:not(.open) .lg { display: none !important; }
+.scene .figure .legend.collapsed.open { flex-wrap: wrap; overflow: visible; position: absolute; bottom: 0; left: 0; right: 0; background: var(--bg); padding: 8px 0; z-index: 4; }
 .scene[data-layout="diagram"] .text { display: none; }
 
 /* The scene's message: a marked statement under the title, with a thin rule in the scene's level colour
@@ -107,7 +121,6 @@ svg.diagram .node.has-link { cursor: pointer; }
   padding: 0 24px; border-top: 2px solid var(--surface); background: var(--bg); font-size: 18px; color: var(--text-muted); }
 .chrome button { font: inherit; color: var(--text); background: var(--surface); border: 2px solid var(--c-dim); padding: 6px 14px; cursor: pointer; }
 .chrome .where { font-family: var(--font-mono); min-width: 120px; }
-.chrome .title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .chrome .rm[aria-pressed="true"] { border-color: var(--c-highlight); }
 
 /* Level indicator (notation.md): four rungs, the current one filled, the scope beside it. A theme may

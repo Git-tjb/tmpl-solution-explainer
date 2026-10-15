@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, P, main, shownName, readJson, readYaml, readText, loadModel, loadFlows, runAnswers, viewElements,
-  writeText, walk, UserError, rel } from './lib/common.mjs';
+  writeText, walk, UserError, rel, UPSCALE_CAP } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -23,6 +23,19 @@ function inlineSvg(svg, prefix, extraClass = '') {
     .replace(/url\(#se-/g, `url(#${prefix}-se-`)
     .replace(/aria-labelledby="se-/g, `aria-labelledby="${prefix}-se-`)
     .replace(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" class="diagram"/, `<svg xmlns="http://www.w3.org/2000/svg" class="diagram${extraClass ? ' ' + extraClass : ''}"`);
+}
+
+// A scene shows a diagram's content only (D4): the viewBox hugs the drawn content, leaving out the SVG's own
+// title row and legend (the page has the title, and the legend is a row below the figure), and the diagram
+// scales up to fill its figure, capped so a small view does not turn into poster type.
+function sceneSvg(svg, L) {
+  const c = L.content;
+  return svg.replace(/ viewBox="[^"]*" width="\d+" height="\d+"/, ` viewBox="${c.x} ${c.y} ${c.w} ${c.h}" style="max-width:${Math.round(c.w * UPSCALE_CAP)}px;max-height:${Math.round(c.h * UPSCALE_CAP)}px"`);
+}
+// The legend as one row under the figure: only what the view draws. The focus entry shows only while a
+// highlight is on (base.css).
+function legendRow(L) {
+  return `<div class="legend" role="group" aria-label="Legend">${L.legend.map((it) => `<span class="lg" data-lg="${esc(it.key)}"><svg class="diagram swatch" viewBox="-3 -3 50 32" width="34" height="22" aria-hidden="true">${it.draw}</svg>${esc(it.label)}</span>`).join('')}</div>`;
 }
 
 function treeOf(dir, maxLines = 80) {
@@ -122,7 +135,8 @@ export function buildSite(siteDir) {
     return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
       + `<header><h2>${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
       + `<div class="text"><p class="point" role="note" aria-label="Message">${esc(s.point)}</p>${text}</div>`
-      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>` : `<div class="figure">${expandable(inlineSvg(svgOf(s.view), s.id.toLowerCase()))}</div>`)
+      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>`
+        : `<div class="figure"><div class="art">${expandable(inlineSvg(sceneSvg(svgOf(s.view), layouts[s.view]), s.id.toLowerCase()))}</div>${legendRow(layouts[s.view])}</div>`)
       + `<div class="popovers"></div>`
       + `</section>`;
   }).join('\n');
@@ -184,7 +198,6 @@ ${panels}
 <nav class="chrome" aria-label="Presentation controls">
 <button class="prev" type="button" aria-label="Previous step">&#8592;</button>
 <span class="where" aria-live="polite"></span>
-<span class="title"></span>
 <div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li data-rung="L1">Context</li><li data-rung="L2">Functions</li><li data-rung="L3">Components</li><li data-rung="L4">Code</li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
 <button class="pointtoggle" type="button" aria-pressed="true">Message (P)</button>
 <button class="maptoggle" type="button">Map (M)</button>

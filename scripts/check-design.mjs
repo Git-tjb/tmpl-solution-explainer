@@ -71,6 +71,10 @@ export function checkDesign(report) {
       ids = new Set([...els, ...(v.level === 'L3' ? [v.scope] : [])]);
       const rels = viewRelationships(M, els, v.level, v.scope);
       const relIds = new Set(rels.flatMap((r) => r.ids));
+      // Plain line labels (views.md, Relationships): a merged line shows one verb unless the spec gives it a label.
+      const lines = new Set(rels.map((r) => `${r.from}--${r.to}`));
+      for (const k of Object.keys(spec.labels || {})) report.check(lines.has(k), `view "${v.id}": labels."${k}" is not a line in the view`);
+      if (v.level !== 'L1' && spec.mode !== 'structure') for (const r of rels) if (r.verbs.length > 1 && !spec.labels?.[`${r.from}--${r.to}`]) report.note(`view "${v.id}": the line ${r.from}--${r.to} stands for ${r.verbs.length} relationships and shows only "${r.verbs[0]}"; give it a plain label in labels`);
       for (const [name, st] of Object.entries(spec.states || {})) {
         for (const id of st.elements || []) report.check(ids.has(id), `view "${v.id}" state "${name}": "${id}" is not in the view`);
         for (const id of st.relationships || []) report.check(relIds.has(id), `view "${v.id}" state "${name}": relationship "${id}" is not in the view`);

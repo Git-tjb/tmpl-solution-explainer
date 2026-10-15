@@ -15,7 +15,8 @@
     "elk.padding": "[top=12,left=12,bottom=12,right=12]",
     "elk.randomSeed": "1",
     "elk.layered.spacing.edgeNodeBetweenLayers": "14",
-    "elk.layered.spacing.edgeEdgeBetweenLayers": "10"
+    "elk.layered.spacing.edgeEdgeBetweenLayers": "10",
+    "elk.layered.thoroughness": "20"
   },
   "flow": {
     "elk.algorithm": "layered",
@@ -57,20 +58,20 @@
       "min": 2
     }
   },
-  "ports": {
-    "structure": {
-      "out": "SOUTH",
-      "in": "NORTH"
-    },
-    "flow": {
-      "out": "EAST",
-      "in": "WEST"
-    }
-  },
   "structure_grid": {
     "elk.algorithm": "rectpacking",
     "elk.aspectRatio": "1.9",
     "elk.spacing.nodeNode": "32",
     "elk.padding": "[top=48,left=20,bottom=20,right=20]"
-  }
+  },
+  "structure_direction_candidates": [
+    "DOWN",
+    "RIGHT"
+  ],
+  "flow_aspect_candidates": [
+    "1.7",
+    "1.0",
+    "2.4",
+    "3.2"
+  ]
 }

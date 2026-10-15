@@ -87,9 +87,16 @@ above.
 | `data` | dashed 2px, `--c-edge` | open |
 | `human` | dotted 2px, `--c-human` | filled |
 
-Every line carries its verb as a label. A line that stands for several merged relationships shows the first
-verb and a count ("file into +3"); its tooltip lists them all. A label sits on its line, or beside it, and
-never over a box or another line; when neither fits, it sits near the line's start with a dotted leader.
+Every line carries one plain label, except at L1, where lines carry none (the wording stays in the tooltip
+and the map). A line that stands for several merged relationships shows the view spec's label for it, or the
+first verb; never a count, and its tooltip lists them all. Lines leaving one flow node with the same label
+share one label near the source, and a decision's branch labels sit on their own line's first segment. A
+label sits on its line, or beside it, and never over a box or another line; when neither fits, it sits near
+the line's start with a dotted leader.
+
+Inside a box, text wraps to the box: the name (up to three lines), the exact name on its own line in the
+monospace face (paths wrap at `/`), the type, then the responsibility or the "what it does" bullets in full.
+Text that needs more lines than that fails the render; it is never cut.
 
 ## Flow node types
 

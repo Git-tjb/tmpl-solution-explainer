@@ -1,62 +1,121 @@
 // Render every view in scenes.json to SVG from the system model, flows, view specs, and the fixed
 // layout profile (_config/standards/). Deterministic: the same inputs give byte-identical files.
-//   (default)   -> stages/05_build/output/site/assets/diagrams/
-//   --preview   -> stages/04_design/output/preview/
+//   (default)   -> stages/05_build/output/site/assets/diagrams/  (fails when a scene's diagram would render
+//                  below the 16px label floor, or text does not fit its shape)
+//   --preview   -> stages/04_design/output/preview/  (warns instead of failing)
 //   --out <dir> -> <dir> (used by verify to prove determinism)
 import fs from 'node:fs';
 import path from 'node:path';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { ROOT, P, out, main, shownName, elementLevel, elementKind, readJson, readText, loadModel, loadFlows, viewElements, viewRelationships,
-  writeText, loadTokens, UserError, rel } from './lib/common.mjs';
+import { ROOT, P, out, main, shownName, elementLevel, elementKind, readJson, readYaml, loadModel, loadFlows, viewRelationships,
+  viewElements, writeText, loadTokens, UserError, rel, FIGURE, LABEL_FLOOR, UPSCALE_CAP } from './lib/common.mjs';
 import { loadViewSpecs, REQUIRED_TOKENS } from './check-design.mjs';
 
 const profile = readJson(path.join(P.standards, 'layout-profile.json'));
+const metrics = readJson(path.join(P.standards, 'font-metrics.json')).fonts;
 const FONT = profile.node.font_px;
-const CHAR = 0.56; // average glyph width / font size for the bundled sans
 const LINE = (px) => Math.round(px * 1.3);
 const f1 = (n) => (Math.round(n * 10) / 10).toString();
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export function wrap(text, width, px, maxLines = 99) {
-  const max = Math.max(4, Math.floor(width / (px * CHAR)));
+// ---------- measured text (iteration 002, D5) ----------
+// Widths come from the bundled fonts (font-metrics.json), not an average glyph width, so text is wrapped and
+// boxes are sized to what the browser will draw.
+const FACE = { 400: 'sans-400', 600: 'sans-600', mono: 'mono-400' };
+export function textWidth(text, px, face = 400) {
+  const w = metrics[FACE[face]].widths;
+  let sum = 0;
+  for (const ch of String(text)) sum += w[ch] ?? 600;
+  return (sum / 1000) * px;
+}
+// Split a word that is wider than the line: at '/' for paths, then by characters.
+function breakWord(word, width, px, face) {
+  if (textWidth(word, px, face) <= width) return [word];
+  const parts = word.includes('/') ? word.split(/(?<=\/)/) : [...word];
+  const o = [];
+  let cur = '';
+  for (const p of parts) {
+    if (cur && textWidth(cur + p, px, face) > width) { o.push(cur); cur = p; }
+    else cur += p;
+  }
+  if (cur) o.push(cur);
+  return o;
+}
+// Wrap to a width. Never truncates: callers decide what too many lines means (R8).
+export function wrap(text, width, px, face = 400) {
   const lines = [];
   let cur = '';
-  for (const w of String(text).split(/\s+/).filter(Boolean)) {
-    if (!cur) cur = w;
-    else if ((cur + ' ' + w).length <= max) cur += ' ' + w;
-    else { lines.push(cur); cur = w; }
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    for (const piece of breakWord(word, width, px, face)) {
+      const join = cur ? (cur.endsWith('/') ? cur + piece : cur + ' ' + piece) : piece;
+      if (!cur || textWidth(join, px, face) <= width) cur = join;
+      else { lines.push(cur); cur = piece; }
+    }
   }
   if (cur) lines.push(cur);
-  if (lines.length > maxLines) { const keep = lines.slice(0, maxLines); keep[maxLines - 1] += ' …'; return keep; }
   return lines;
 }
 
-// ---------- node content ----------
-// One width per type (layout-profile.json), so four parts fit side by side beside the text at 1080p.
-// In a structure view the box shows the element's what_it_does bullets in place of its responsibility.
-function elementBox(e, structure = false) {
+// Text that needs more lines than its shape allows fails the render, naming who fixes it (R8).
+const LIMITS = { name: 3, exact: 2, resp: 4, flow_label: 4, edge_label: 3 };
+let tooLong = [];
+function limit(lines, max, what) {
+  if (lines.length > max) tooLong.push(`${what}: needs ${lines.length} lines (max ${max})`);
+  return lines;
+}
+
+// ---------- node content: one layout of lines per box, read by the emitter ----------
+// Each box is a list of text rows ({ cls, lines, px, face, anchor, x, y }) laid top to bottom, and its size.
+function elementBox(e, structure, who) {
+  const kind = elementKind(e);
   const w = profile.node.element.width_by_type?.[e.type] || profile.node.element.width;
-  const name = wrap(shownName(e), w - 28, FONT.name, 2);
+  const inner = w - 28;
+  const rows = [];
+  rows.push({ cls: 'name', lines: limit(wrap(e.name, inner, FONT.name, 600), LIMITS.name, `${who} name "${e.name}" (stage 01)`), px: FONT.name, face: 600 });
+  // The exact name goes on its own smaller line, in the monospace face, wrapping paths at '/' (A8).
+  if (e.exact_name) rows.push({ cls: 'exact', lines: limit(wrap(e.exact_name, inner, FONT.type_label, 'mono'), LIMITS.exact, `${who} exact_name "${e.exact_name}" (stage 01)`), px: FONT.type_label, face: 'mono' });
+  rows.push({ cls: 'type', lines: [`[${kind}]`], px: FONT.type_label, face: 400, gap: 2 });
   const items = structure ? (e.what_it_does || []).map((x) => x.text) : [];
   if (items.length) {
-    const bullets = items.map((t) => wrap(t, w - 46, FONT.responsibility, 3));
-    const lines = bullets.reduce((a, b) => a + b.length, 0);
-    const h = 16 + name.length * LINE(FONT.name) + LINE(FONT.type_label) + 10 + lines * LINE(FONT.responsibility) + (bullets.length - 1) * 4 + 14;
-    return { w, h, name, resp: [], bullets };
+    // Bullets wrap fully; the box grows (A14).
+    for (const t of items) rows.push({ cls: 'resp wid', bullet: true, lines: wrap(t, w - 46, FONT.responsibility), px: FONT.responsibility, face: 400, anchor: 'start', x: 32, gap: 6 });
+  } else {
+    rows.push({ cls: 'resp', lines: limit(wrap(e.responsibility, inner, FONT.responsibility), LIMITS.resp, `${who} responsibility (stage 01)`), px: FONT.responsibility, face: 400, gap: 6 });
   }
-  const resp = wrap(e.responsibility, w - 28, FONT.responsibility, 4);
-  const h = Math.max(profile.node.element.height, 16 + name.length * LINE(FONT.name) + LINE(FONT.type_label) + 6 + resp.length * LINE(FONT.responsibility) + 14);
-  return { w, h, name, resp, bullets: null };
+  let y = kind === 'store' ? 18 : 12;
+  for (const r of rows) { y += r.gap || 0; r.y = y + r.px * 0.95; y += r.lines.length * LINE(r.px); }
+  const h = Math.max(profile.node.element.height, Math.ceil(y + 14));
+  return { w, h, rows, kind };
 }
-function flowBox(n) {
-  const w = profile.node.flow_node.width;
-  const label = wrap(n.label, w - 32, FONT.name - 2, 3);
-  const h = Math.max(profile.node.flow_node.height, 34 + (n.type === 'store' ? 10 : 0) + LINE(FONT.type_label) + label.length * LINE(FONT.name - 2) + 14);
-  return { w, h, label };
+function flowBox(n, M, who) {
+  const bound = n.on ? M.els.get(n.on) : null;
+  const kind = n.type === 'store' && elementKind(bound) === 'file' ? 'file' : n.type;
+  const decision = n.type === 'decision';
+  // A decision's label must fit the diamond's inscribed rectangle, so it wraps narrower and the diamond grows.
+  const inner = decision ? 150 : profile.node.flow_node.width - 32;
+  const rows = [];
+  rows.push({ cls: 'type', lines: [`[${kind}]`], px: FONT.type_label, face: 400 });
+  // The bound element's name goes on its own line under the type, so the type line never overflows.
+  if (bound) rows.push({ cls: 'type onname', lines: limit(wrap(bound.name, inner, FONT.type_label), 2, `${who} bound element name (stage 01)`), px: FONT.type_label, face: 400 });
+  rows.push({ cls: 'lbl', lines: limit(wrap(n.label, inner, FONT.name - 2, 600), LIMITS.flow_label, `${who} label "${n.label}" (stage 01, flows.yaml)`), px: FONT.name - 2, face: 600, gap: 4 });
+  let y = 0;
+  for (const r of rows) { y += r.gap || 0; r.y = y + r.px * 0.95; y += r.lines.length * LINE(r.px); }
+  const contentH = y;
+  let w = profile.node.flow_node.width;
+  let h = Math.max(profile.node.flow_node.height, Math.ceil(contentH + 44 + (n.type === 'store' ? 10 : 0)));
+  let offY = 22 + (n.type === 'store' ? 10 : 0);
+  if (decision) {
+    const cw = Math.max(...rows.map((r) => Math.max(...r.lines.map((l) => textWidth(l, r.px, r.face))))) + 16;
+    w = Math.ceil(Math.max(profile.node.flow_node.width, cw * 2));
+    h = Math.ceil(Math.max(profile.node.flow_node.height, (contentH + 12) * 2));
+    offY = (h - contentH) / 2;
+  }
+  for (const r of rows) r.y += offY;
+  return { w, h, rows, kind };
 }
-function labelSize(text) {
-  const lines = wrap(text, 220, FONT.edge_label, 3);
-  return { lines, w: Math.ceil(Math.max(...lines.map((l) => l.length)) * FONT.edge_label * CHAR) + 12, h: lines.length * LINE(FONT.edge_label) + 6 };
+function labelSize(text, who) {
+  const lines = limit(wrap(text, 220, FONT.edge_label), LIMITS.edge_label, `${who} line label "${text}"`);
+  return { lines, w: Math.ceil(Math.max(...lines.map((l) => textWidth(l, FONT.edge_label)))) + 14, h: lines.length * LINE(FONT.edge_label) + 6 };
 }
 
 // ---------- shapes (notation.md) ----------
@@ -88,17 +147,15 @@ function shape(kind, w, h) {
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}"/>`;
   }
 }
-// "What it does" bullets inside a structure-view box: a dot, then the wrapped lines, left-aligned.
-function bulletLines(bullets, y) {
-  let out = '', yy = y;
-  for (const lines of bullets) {
-    out += `<circle class="bullet" cx="20" cy="${f1(yy - FONT.responsibility * 0.32)}" r="3"/>` + textLines(lines, 32, yy, FONT.responsibility, 'resp wid', 'start');
-    yy += lines.length * LINE(FONT.responsibility) + 4;
+// The rows of a box as SVG text; a bullet row draws its dot.
+function rowsSvg(b) {
+  let o = '';
+  for (const r of b.rows) {
+    const anchor = r.anchor || 'middle', x = r.x ?? b.w / 2;
+    if (r.bullet) o += `<circle class="bullet" cx="20" cy="${f1(r.y - r.px * 0.32)}" r="3"/>`;
+    o += r.lines.map((l, i) => `<text class="${r.cls}" x="${f1(x)}" y="${f1(r.y + i * LINE(r.px))}" text-anchor="${anchor}">${esc(l)}</text>`).join('');
   }
-  return out;
-}
-function textLines(lines, x, y, px, cls, anchor = 'middle') {
-  return lines.map((l, i) => `<text class="${cls}" x="${f1(x)}" y="${f1(y + i * LINE(px))}" text-anchor="${anchor}">${esc(l)}</text>`).join('');
+  return o;
 }
 
 // ---------- styles: token values from tokens.css become fallbacks so a standalone SVG renders ----------
@@ -113,8 +170,10 @@ function styleBlock(tokens) {
 .diagram .expand-mark circle{fill:${v('--surface')};stroke:${v('--c-highlight')};stroke-width:2px;}
 .diagram .expand-mark path{stroke:${v('--c-highlight')};stroke-width:2px;}
 .diagram .name{fill:${v('--text')};font-size:${FONT.name}px;font-weight:600;}
-.diagram .type{fill:${v('--text-muted')};font-size:${FONT.type_label}px;font-variant:small-caps;letter-spacing:.04em;}
-.diagram .resp,.diagram .lbl{fill:${v('--text')};font-size:${FONT.responsibility}px;}
+.diagram .exact{fill:${v('--text-muted')};font-size:${FONT.type_label}px;font-family:var(--font-mono, 'IBM Plex Mono', monospace);}
+.diagram .type{fill:${v('--text-muted')};font-size:${FONT.type_label}px;}
+.diagram .resp{fill:${v('--text')};font-size:${FONT.responsibility}px;}
+.diagram .lbl{fill:${v('--text')};font-size:${FONT.name - 2}px;font-weight:600;}
 .diagram .bullet{fill:${v('--text')};}
 .diagram .edge .leader{fill:none;stroke:${v('--c-edge')};stroke-width:2px;stroke-dasharray:2 4;}
 .diagram .shape{fill:${v('--surface')};stroke-width:2px;}
@@ -127,7 +186,6 @@ function styleBlock(tokens) {
 .diagram .on-external .shape{stroke:${v('--c-external')};}
 .diagram .n-step .shape{stroke:${v('--c-internal')};}
 .diagram .n-trigger .shape{stroke:${v('--c-edge')};}
-.diagram .type .onname{font-variant:normal;letter-spacing:0;}
 .diagram .n-trigger .bar{fill:${v('--c-edge')};}
 .diagram .n-gate .shape{stroke:${v('--c-human')};stroke-width:3px;}
 .diagram .n-output .shape{stroke:${v('--c-system')};}
@@ -156,27 +214,32 @@ function styleBlock(tokens) {
 }
 
 // ---------- graph building ----------
-function buildStructureGraph(M, view, spec, priorLayout) {
+// `dir` is the layout candidate's direction (D4): DOWN or RIGHT.
+function buildStructureGraph(M, view, spec, priorLayout, dir) {
   const structure = spec?.mode === 'structure';
   const els = viewElements(M, view, spec);
   // A structure view draws no lines (views.md, Modes).
   const rels = structure ? [] : viewRelationships(M, els, view.level, view.scope);
-  const opts = { ...profile.structure };
+  const opts = { ...profile.structure, 'elk.direction': dir };
   const nodeOf = (id) => {
     const e = M.els.get(id);
-    const b = elementBox(e, structure);
+    const b = elementBox(e, structure, `view ${view.id}, element "${id}"`);
     return { id, width: b.w, height: b.h, _box: b, _el: e };
   };
   let children;
   let boundary = null;
   if (view.level === 'L1') children = els.map(nodeOf);
   else {
-    const boundaryId = view.level === 'L2' ? view.scope : view.scope;
-    const inner = view.level === 'L2' ? els.filter((id) => M.els.get(id).parent === view.scope) : els.filter((id) => M.els.get(id).parent === view.scope);
+    const inner = els.filter((id) => M.els.get(id).parent === view.scope);
     const outer = els.filter((id) => !inner.includes(id));
+    const be = M.els.get(view.scope);
+    // A boundary is at least as wide as its title (A10).
+    const titleW = Math.ceil(textWidth(`${shownName(be)} [${be.type}]`, 18, 600) + 40);
     // Structure views lay the parts out as a grid inside the boundary (rectpacking), not as layers.
     const inside = structure ? { ...profile.structure_grid } : { ...spacing(profile.structure), 'elk.padding': '[top=48,left=20,bottom=20,right=20]' };
-    boundary = { id: `boundary:${boundaryId}`, _boundary: M.els.get(boundaryId), layoutOptions: inside, children: inner.map(nodeOf) };
+    inside['elk.nodeSize.constraints'] = 'MINIMUM_SIZE';
+    inside['elk.nodeSize.minimum'] = `(${titleW}, 80)`;
+    boundary = { id: `boundary:${view.scope}`, _boundary: be, layoutOptions: inside, children: inner.map(nodeOf) };
     children = [...outer.map(nodeOf)];
     // Keep neighbors and the zoomed function where the L2 view put them (views.md rule 5).
     if (view.level === 'L3' && priorLayout) {
@@ -187,12 +250,14 @@ function buildStructureGraph(M, view, spec, priorLayout) {
     } else children.push(boundary);
   }
   const edges = rels.map((r, i) => {
-    // Merged relationships show one verb and a count ("file into +3"); the full list is in the tooltip
-    // and the map panel.
-    const text = r.verbs.length > 1 ? `${r.verbs[0]} +${r.verbs.length - 1}` : r.verb;
-    const ls = labelSize(text);
+    // Plain labels (R15): one verb, or the spec's label for this line; never a count. The full list is in
+    // the tooltip and the map panel. L1 lines carry no label.
+    const key = `${r.from}--${r.to}`;
+    const text = view.level === 'L1' ? null : (spec?.labels?.[key] || r.verbs[0]);
     const end = (id) => (boundary && id === view.scope ? boundary.id : id);
-    return { id: `e${i}`, sources: [end(r.from)], targets: [end(r.to)], _label: { text, width: ls.w, height: ls.h, _lines: ls.lines }, _rel: r };
+    const e = { id: `e${i}`, sources: [end(r.from)], targets: [end(r.to)], _rel: r };
+    if (text) { const ls = labelSize(text, `view ${view.id}, line ${key}`); e._label = { text, width: ls.w, height: ls.h, _lines: ls.lines }; }
+    return e;
   });
   // A structure view has no edges, so each level is laid out on its own (the grid needs its own algorithm).
   const rootOpts = { ...opts, 'elk.hierarchyHandling': structure ? 'SEPARATE_CHILDREN' : 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' };
@@ -213,7 +278,7 @@ function buildStructureGraph(M, view, spec, priorLayout) {
     const key = (c) => { const pin = pinOf(c); return pin ? pin.layer * 1000 + pin.order : after * 1000 + 999; };
     children.sort((a, b) => key(a) - key(b));
   }
-  return { graph: { id: 'root', layoutOptions: rootOpts, children, edges }, els, rels };
+  return { id: 'root', layoutOptions: rootOpts, children, edges };
 }
 // Nested graphs (boundaries, lanes) take the same spacing as the root.
 function spacing(opts) { return Object.fromEntries(Object.entries(opts).filter(([k]) => k.includes('spacing'))); }
@@ -221,9 +286,10 @@ function pinOpts(spec, id) {
   const p = (spec?.pins || []).find((x) => x.target === id);
   return p ? { 'elk.layered.layering.layerChoiceConstraint': String(p.layer), 'elk.layered.crossingMinimization.positionChoiceConstraint': String(p.order) } : {};
 }
-function buildFlowGraph(M, view, spec, flow) {
+// `aspect` is the layout candidate's aspect-ratio target (D4).
+function buildFlowGraph(M, view, spec, flow, aspect) {
   const nodes = [...flow.nodes].sort((a, b) => a.step - b.step);
-  const nodeOf = (n) => { const b = flowBox(n); return { id: n.id, width: b.w, height: b.h, _box: b, _node: n, layoutOptions: pinOpts(spec, n.id) }; };
+  const nodeOf = (n) => { const b = flowBox(n, M, `view ${view.id}, step ${n.step}`); return { id: n.id, width: b.w, height: b.h, _box: b, _node: n, layoutOptions: pinOpts(spec, n.id) }; };
   let children;
   if (spec?.lanes) {
     const laneOf = (n) => {
@@ -237,27 +303,41 @@ function buildFlowGraph(M, view, spec, flow) {
     children = lanes.map((l) => {
       const members = nodes.filter((n) => laneOf(n) === l).map(nodeOf);
       if (l === '_edge') return members;
-      return [{ id: `lane:${l}`, _lane: M.els.get(l), layoutOptions: { ...spacing(profile.flow), 'elk.padding': '[top=48,left=20,bottom=20,right=20]' }, children: members }];
+      const le = M.els.get(l);
+      const titleW = Math.ceil(textWidth(`${shownName(le)} [${le.type}]`, 18, 600) + 40);
+      return [{ id: `lane:${l}`, _lane: le, layoutOptions: { ...spacing(profile.flow), 'elk.padding': '[top=48,left=20,bottom=20,right=20]', 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${titleW}, 80)` }, children: members }];
     }).flat();
   } else children = nodes.map(nodeOf);
+  // Lines leaving one node with the same label share one label, placed near the source (R12).
+  const textOf = (x) => (x.condition ? `${x.label} [${x.condition}]` : x.label);
+  const types = new Map(flow.nodes.map((n) => [n.id, n.type]));
+  const seen = new Set();
   const edges = flow.edges.map((e, i) => {
-    const text = e.condition ? `${e.label} [${e.condition}]` : e.label;
-    const ls = labelSize(text);
-    return { id: `e${i}`, sources: [e.from], targets: [e.to], _label: { text, width: ls.w, height: ls.h, _lines: ls.lines }, _fedge: e };
+    const text = textOf(e);
+    const key = `${e.from}|${text}`;
+    const shared = flow.edges.filter((x) => x.from === e.from && textOf(x) === text).length > 1;
+    const o = { id: `e${i}`, sources: [e.from], targets: [e.to], _fedge: e };
+    if (!seen.has(key)) {
+      seen.add(key);
+      const ls = labelSize(text, `view ${view.id}, line ${e.from}--${e.to}`);
+      // A decision's branch labels and a shared label sit on the line's first segment, by the source.
+      o._label = { text, width: ls.w, height: ls.h, _lines: ls.lines, first: shared || types.get(e.from) === 'decision' };
+    }
+    return o;
   });
-  return { graph: { id: 'root', layoutOptions: { ...profile.flow, 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' }, children, edges } };
+  return { id: 'root', layoutOptions: { ...profile.flow, 'elk.aspectRatio': aspect, 'elk.layered.thoroughness': '20', 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' }, children, edges };
 }
 
 // ---------- SVG emit ----------
 // Level badge in every diagram's title row (notation.md, Level indicator).
 const BADGE = { L1: 'L1 · CONTEXT', L2: 'L2 · FUNCTIONS', L3: 'L3 · COMPONENTS', flow: 'FLOW' };
+const LEVEL_NAME = { L1: 'Context', L2: 'Functions', L3: 'Components' };
 // The expand marker: a drawn plus in a circle at the box's top-right (no text, so it never counts as a label).
 const expandMark = (w) => `<g class="expand-mark" aria-hidden="true" transform="translate(${f1(w - 18)},18)"><circle r="11"/><path d="M-6 0 H6 M0 -6 V6"/></g>`;
-
-const LEVEL_NAME = { L1: 'Context', L2: 'Functions', L3: 'Components' };
+const PADX = 24, TOP = 52;
+const LG_ORDER = ['actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
 
 function emit(view, spec, laid, tokens, M) {
-  const PADX = 24, TOP = 52;
   // A view whose nodes come from more than one level (usually a flow) outlines each node in its level's
   // colour and adds a level key to the legend; a single-level view needs neither (notation.md, Level key).
   const nodeLevels = new Set();
@@ -287,33 +367,22 @@ function emit(view, spec, laid, tokens, M) {
     }
     if (n._el) {
       const e = n._el, b = n._box;
-      const kind = elementKind(e);
-      legendTypes.add(kind);
-      const cy = 16 + LINE(FONT.name) * 0.8;
+      legendTypes.add(b.kind);
       const ex = canExpand(e);
-      parts.nodes.push(`<g class="node el t-${kind}${lvClass(e)}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(kind, b.w, b.h)}`
-        + textLines(b.name, b.w / 2, cy + (e.type === 'store' ? 8 : 0), FONT.name, 'name')
-        + `<text class="type" x="${f1(b.w / 2)}" y="${f1(cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label))}" text-anchor="middle">[${kind}]</text>`
-        + (b.bullets ? bulletLines(b.bullets, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 10 + LINE(FONT.responsibility))
-          : textLines(b.resp, b.w / 2, cy + (e.type === 'store' ? 8 : 0) + (b.name.length - 1) * LINE(FONT.name) + LINE(FONT.type_label) + 6 + LINE(FONT.responsibility), FONT.responsibility, 'resp'))
-        + (ex ? expandMark(b.w) : '')
-        + `<title>${esc(shownName(e))} [${kind}]: ${esc(e.responsibility)}</title></g>`);
+      parts.nodes.push(`<g class="node el t-${b.kind}${lvClass(e)}" data-el="${esc(e.id)}"${ex ? ` data-expand="${esc(e.id)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(b.kind, b.w, b.h)}`
+        + rowsSvg(b) + (ex ? expandMark(b.w) : '')
+        + `<title>${esc(shownName(e))} [${b.kind}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
     if (n._node) {
       const fnode = n._node, b = n._box;
       const bound = fnode.on ? M.els.get(fnode.on) : null;
-      const fkind = fnode.type === 'store' && elementKind(bound) === 'file' ? 'file' : fnode.type;
-      legendTypes.add(fkind);
-      const onType = fnode.on ? M.els.get(fnode.on)?.type : null;
-      const dy = fnode.type === 'store' ? 10 : 0;
-      const ex = fnode.on && canExpand(M.els.get(fnode.on));
-      parts.nodes.push(`<g class="node fn n-${fkind}${onType ? ` on-${onType}` : ''}${bound ? lvClass(bound) : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''}${ex ? ` data-expand="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(fkind, b.w, b.h)}`
+      legendTypes.add(b.kind);
+      const ex = fnode.on && canExpand(bound);
+      parts.nodes.push(`<g class="node fn n-${b.kind}${bound ? ` on-${bound.type}` : ''}${bound ? lvClass(bound) : ''}" data-node="${esc(fnode.id)}" data-step="${fnode.step}"${fnode.on ? ` data-on="${esc(fnode.on)}"` : ''}${ex ? ` data-expand="${esc(fnode.on)}"` : ''} transform="translate(${f1(x)},${f1(y)})">${shape(b.kind, b.w, b.h)}`
         + `<g class="stepno"><circle cx="0" cy="0" r="15"/><text x="0" y="6" text-anchor="middle">${fnode.step}</text></g>`
-        + `<text class="type" x="${f1(b.w / 2)}" y="${30 + dy}" text-anchor="middle">[${fkind}]${fnode.on ? `<tspan class="onname"> ${esc(M.els.get(fnode.on)?.name || fnode.on)}</tspan>` : ''}</text>`
-        + textLines(b.label, b.w / 2, 30 + dy + LINE(FONT.name - 2), FONT.name - 2, 'lbl')
-        + (ex ? expandMark(b.w) : '')
-        + `<title>Step ${fnode.step} [${fnode.type}]: ${esc(fnode.label)}</title></g>`);
+        + rowsSvg(b) + (ex ? expandMark(b.w) : '')
+        + `<title>Step ${fnode.step} [${b.kind}]: ${esc(fnode.label)}</title></g>`);
       positions[fnode.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
     for (const c of n.children || []) visit(c);
@@ -335,16 +404,17 @@ function emit(view, spec, laid, tokens, M) {
     const s = e.sections?.[0];
     if (!s) return [];
     const raw = [s.startPoint, ...(s.bendPoints || []), s.endPoint];
-    const out = [];
+    const o = [];
     for (let k = 0; k < raw.length - 1; k++) {
       const p = raw[k], q = raw[k + 1];
-      out.push({ x: Math.min(p.x, q.x) - 3, y: Math.min(p.y, q.y) - 3, w: Math.abs(q.x - p.x) + 6, h: Math.abs(q.y - p.y) + 6 });
+      o.push({ x: Math.min(p.x, q.x) - 3, y: Math.min(p.y, q.y) - 3, w: Math.abs(q.x - p.x) + 6, h: Math.abs(q.y - p.y) + 6 });
     }
-    return out;
+    return o;
   });
   const crossesLine = (r, own) => segRects.some((rs, j) => j !== own && rs.some((b) => overlaps(r, b)));
   const inside = (r) => r.x >= -PADX + 4 && r.y >= -TOP + 50;
-  let labelRight = 0, labelBottom = 0; // labels count toward the diagram's bounds (ported from trial run 1)
+  // The drawn content's bounds (D4): nodes and boundaries, then every placed label.
+  let cx0 = 0, cy0 = 0, cx1 = laid.width, cy1 = laid.height;
   laid.edges.forEach((e, ei) => {
     const s = e.sections?.[0];
     if (!s) return;
@@ -353,15 +423,16 @@ function emit(view, spec, laid, tokens, M) {
     edgeKinds.add(kind);
     const attrs = e._rel ? `data-rel="${esc(e._rel.ids.join(' '))}" data-edge="${esc(e._rel.from)}--${esc(e._rel.to)}"` : `data-edge="${esc(e._fedge.from)}--${esc(e._fedge.to)}"`;
     // Labels are placed here, not by the layout, so they never add a layer of height. In order: on the
-    // line (longest segment first), then to either side of it, avoiding boxes, other labels, and other
-    // lines; failing that, beside the line's start with a leader, never over a box.
+    // line (longest segment first; the first segment first for a branch or shared label), then to either
+    // side of it, avoiding boxes, other labels, and other lines; failing that, beside the line's start with
+    // a leader, never over a box.
     const L = e._label;
     let label = '';
     if (L) {
       const raw = [s.startPoint, ...(s.bendPoints || []), s.endPoint];
       const segs = [];
-      for (let k = 0; k < raw.length - 1; k++) segs.push({ a: raw[k], b: raw[k + 1], len: Math.hypot(raw[k + 1].x - raw[k].x, raw[k + 1].y - raw[k].y) });
-      segs.sort((p, q) => q.len - p.len);
+      for (let k = 0; k < raw.length - 1; k++) segs.push({ a: raw[k], b: raw[k + 1], len: Math.hypot(raw[k + 1].x - raw[k].x, raw[k + 1].y - raw[k].y), k });
+      if (L.first) segs.sort((p, q) => p.k - q.k); else segs.sort((p, q) => q.len - p.len);
       const on = [], side = [];
       for (const g of segs) for (const t of [0.5, 0.35, 0.65, 0.2, 0.8]) {
         const mx = g.a.x + (g.b.x - g.a.x) * t, my = g.a.y + (g.b.y - g.a.y) * t;
@@ -387,61 +458,46 @@ function emit(view, spec, laid, tokens, M) {
         } else pick = on[0];
       }
       blocked.push(pick);
+      cx0 = Math.min(cx0, pick.x); cy0 = Math.min(cy0, pick.y); cx1 = Math.max(cx1, pick.x + pick.w); cy1 = Math.max(cy1, pick.y + pick.h);
       const lx = pick.x + PADX, ly = pick.y + TOP;
-      labelRight = Math.max(labelRight, lx + L.width); labelBottom = Math.max(labelBottom, ly + L.height);
       label = leader + `<rect class="lblbg" x="${f1(lx)}" y="${f1(ly)}" width="${f1(L.width)}" height="${f1(L.height)}"/>` + L._lines.map((l, i) => `<text x="${f1(lx + L.width / 2)}" y="${f1(ly + 3 + (i + 0.78) * LINE(FONT.edge_label))}" text-anchor="middle">${esc(l)}</text>`).join('');
     }
-    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : '';
+    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : `<title>${esc(e._fedge.label)}</title>`;
     parts.edges.push(`<g class="edge k-${kind}" ${attrs}>${tip}<path class="line" d="M${pts.join(' L')}" marker-end="url(#se-arrow-${kind})"/>${label}</g>`);
   });
+  const PAD = 10;
+  const content = { x: +f1(cx0 + PADX - PAD), y: +f1(cy0 + TOP - PAD), w: Math.ceil(cx1 - cx0 + PAD * 2), h: Math.ceil(cy1 - cy0 + PAD * 2) };
 
-  // Legend (views.md rule 2): generated from what is present.
-  const order = ['actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
-  const present = order.filter((t) => legendTypes.has(t));
-  const contentW = Math.max(laid.width + PADX * 2, labelRight + PADX);
-  const contentH = Math.max(laid.height + TOP, labelBottom + 8);
+  // Legend (views.md rule 2): generated from what is present. It is drawn in the SVG for standalone use and
+  // the map; scenes show the same entries as one row in the page (layout.json `legend`), so the legend never
+  // sets the diagram's extent (D4).
+  const present = LG_ORDER.filter((t) => legendTypes.has(t));
+  const isFlow = view.level === 'flow';
+  const legend = [];
+  for (const t of present) legend.push({ key: t, label: t, draw: `<g class="${isFlow ? `n-${t}` : `t-${t}`}">${shape(t, 44, 26)}</g>` });
+  if (spec.mode !== 'structure') legend.push({ key: 'focus', label: 'focus', draw: `<g class="focus-swatch"><rect class="shape" x="0" y="0" width="44" height="26"/></g>` });
+  if (mixed) for (const L of ['L1', 'L2', 'L3'].filter((x) => nodeLevels.has(x))) legend.push({ key: `lv-${L}`, label: LEVEL_NAME[L], draw: `<g class="lvkey lv-${L}"><rect class="shape" x="0" y="0" width="44" height="26"/></g>` });
+  for (const k of ['control', 'data', 'human'].filter((x) => edgeKinds.has(x))) legend.push({ key: `k-${k}`, label: k, kind: k, draw: `<g class="edge k-${k}"><path class="line" d="M0 13 L44 13"/></g>` });
+
+  const contentW = Math.max(laid.width + PADX * 2, cx1 + PADX);
+  const contentH = Math.max(laid.height + TOP, cy1 + TOP + 8);
   const lg = [];
   let lx = PADX, ly = contentH + 34;
   lg.push(`<text class="lgtitle" x="${lx}" y="${ly}">Legend</text>`);
   lx += 84;
-  const isFlow = view.level === 'flow';
-  // A tall, narrow diagram is limited by height on screen, so its legend may run wider than the content
-  // rather than wrap to a second row.
-  // The width it may use follows the on-screen frame's proportions beside text (about 1.2:1 at 1440x900,
-  // the narrower of the two viewports).
-  const wrapAt = Math.max(contentW, 640, Math.round((contentH + 60) * 1.2));
+  const wrapAt = Math.max(contentW, 640);
   let lgRight = 0;
-  for (const t of present) {
-    const w = 44, h = 26;
-    if (lx + w + 8 + t.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
-    const cls = isFlow ? `n-${t}` : `t-${t}`;
-    lg.push(`<g class="${cls}" transform="translate(${lx},${ly - 19})">${shape(t === 'external' ? 'external' : t, w, h)}</g><text x="${lx + w + 8}" y="${ly}">${t}</text>`);
-    lgRight = Math.max(lgRight, lx + w + 8 + t.length * 16 * CHAR);
-    lx += w + 8 + t.length * 16 * CHAR + 28;
+  for (const it of legend) {
+    const tw = textWidth(it.label, 16);
+    if (lx + 52 + tw > wrapAt) { lx = PADX + 84; ly += 40; }
+    if (it.kind) lg.push(`<g class="edge k-${it.kind}"><path class="line" d="M${lx} ${ly - 6} L${lx + 44} ${ly - 6}" marker-end="url(#se-arrow-${it.kind})"/></g>`);
+    else lg.push(`<g transform="translate(${lx},${ly - 19})">${it.draw}</g>`);
+    lg.push(`<text x="${f1(lx + 52)}" y="${ly}">${esc(it.label)}</text>`);
+    lgRight = Math.max(lgRight, lx + 52 + tw);
+    lx += 52 + tw + 28;
   }
-  // A focus swatch wherever a highlight can appear (not in structure views), so the legend matches the
-  // picture (O8); then the level key in a mixed-level view.
-  if (spec.mode !== 'structure') {
-    if (lx + 52 + 5 * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
-    lg.push(`<g class="focus-swatch" transform="translate(${lx},${ly - 19})"><rect class="shape" x="0" y="0" width="44" height="26"/></g><text x="${lx + 52}" y="${ly}">focus</text>`);
-    lgRight = Math.max(lgRight, lx + 52 + 5 * 16 * CHAR);
-    lx += 52 + 5 * 16 * CHAR + 28;
-  }
-  if (mixed) for (const L of ['L1', 'L2', 'L3'].filter((x) => nodeLevels.has(x))) {
-    const label = LEVEL_NAME[L];
-    if (lx + 52 + label.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
-    lg.push(`<g class="lvkey lv-${L}" transform="translate(${lx},${ly - 19})"><rect class="shape" x="0" y="0" width="44" height="26"/></g><text x="${lx + 52}" y="${ly}">${label}</text>`);
-    lgRight = Math.max(lgRight, lx + 52 + label.length * 16 * CHAR);
-    lx += 52 + label.length * 16 * CHAR + 28;
-  }
-  for (const k of ['control', 'data', 'human'].filter((k) => edgeKinds.has(k))) {
-    if (lx + 52 + k.length * 16 * CHAR > wrapAt) { lx = PADX + 84; ly += 40; }
-    lg.push(`<g class="edge k-${k}"><path class="line" d="M${lx} ${ly - 6} L${lx + 44} ${ly - 6}" marker-end="url(#se-arrow-${k})"/></g><text x="${lx + 52}" y="${ly}">${k}</text>`);
-    lgRight = Math.max(lgRight, lx + 52 + k.length * 16 * CHAR);
-    lx += 52 + k.length * 16 * CHAR + 28;
-  }
-  const badgeW = Math.ceil(BADGE[view.level].length * 16 * 0.62 + 24);
-  const W = Math.ceil(Math.max(contentW, 640, lgRight + PADX, PADX * 2 + badgeW + 14 + spec.title.length * 22 * CHAR));
+  const badgeW = Math.ceil(textWidth(BADGE[view.level], 16, 600) * 1.08 + 24);
+  const W = Math.ceil(Math.max(contentW, 640, lgRight + PADX, PADX * 2 + badgeW + 14 + textWidth(spec.title, 22, 600)));
   const H = Math.ceil(ly + 16);
   const defs = `<defs>${['control', 'data', 'human'].map((k) => `<marker id="se-arrow-${k}" class="m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 ${k === 'data' ? 'L4 6 ' : ''}Z"/></marker>`).join('')}</defs>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="diagram" data-view="${esc(view.id)}" data-level="${view.level}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="se-title-${esc(view.id)}">`
@@ -451,11 +507,37 @@ function emit(view, spec, laid, tokens, M) {
     + `<text class="title" x="${PADX + badgeW + 14}" y="36">${esc(spec.title)}</text>`
     + `<g class="boundaries">${parts.boundaries.join('')}</g><g class="edges">${parts.edges.join('')}</g><g class="nodes">${parts.nodes.join('')}</g>`
     + `<g class="legend">${lg.join('')}</g></svg>\n`;
-  return { svg, layout: { w: W, h: H, nodes: positions } };
+  return { svg, layout: { w: W, h: H, content, legend: legend.map(({ key, label, draw }) => ({ key, label, draw })), nodes: positions } };
 }
 
-export async function renderAll(outDir) {
+// ---------- layout candidates (D4) ----------
+// The rendered label size of a content box in a figure area, at each viewport, and the worst of them as a
+// fraction of that viewport's floor (1 or more meets it). Upscaling is capped (UPSCALE_CAP).
+function fitScore(content, figures) {
+  let worst = Infinity;
+  const px = {};
+  for (const { vp, box } of figures) {
+    const p = 16 * Math.min(UPSCALE_CAP, box.w / content.w, box.h / content.h);
+    px[vp] = Math.min(px[vp] ?? Infinity, p);
+    worst = Math.min(worst, p / LABEL_FLOOR[vp]);
+  }
+  return { score: worst, px };
+}
+// The figure areas a view is shown in: every scene that uses it, at both viewports.
+function figuresFor(viewId, S, SS) {
+  const o = [];
+  for (const s of S.scenes) {
+    if (s.view !== viewId) continue;
+    const layout = SS?.scenes?.[s.id]?.layout || 'diagram-with-text';
+    for (const vp of Object.keys(FIGURE)) if (FIGURE[vp][layout]) o.push({ vp, box: FIGURE[vp][layout], scene: s.id, layout });
+  }
+  return o;
+}
+
+export async function renderAll(outDir, { strict = true } = {}) {
   const S = readJson(P.scenes);
+  let SS = null;
+  try { SS = readYaml(P.sceneSpecs); } catch { /* no scene specs yet */ }
   const M = loadModel();
   const { flows } = loadFlows();
   const specs = loadViewSpecs();
@@ -463,48 +545,65 @@ export async function renderAll(outDir) {
   for (const t of REQUIRED_TOKENS) if (!tokens[t]) throw new UserError(`tokens.css is missing ${t}; run check-design.`);
   const elk = new ELK();
   const layouts = {};
+  const report = [];
   const order = { L1: 0, L2: 1, L3: 2, flow: 3 };
   const views = [...S.views].sort((a, b) => order[a.level] - order[b.level] || a.id.localeCompare(b.id));
   fs.mkdirSync(outDir, { recursive: true });
+  tooLong = [];
   for (const v of views) {
     const spec = specs.get(v.id);
     if (!spec) throw new UserError(`views/${v.id}.yaml is missing; run check-design.`);
-    let graph;
+    const figures = figuresFor(v.id, S, SS);
+    // Candidates, in a fixed order; the first best one wins, so the output stays deterministic.
+    let candidates;
     if (v.level === 'flow') {
       const f = flows.get(v.scope);
       if (!f) throw new UserError(`view ${v.id}: flow ${v.scope} not found`);
-      graph = buildFlowGraph(M, v, spec, f).graph;
+      candidates = profile.flow_aspect_candidates.map((a) => ({ name: `aspect ${a}`, graph: () => buildFlowGraph(M, v, spec, f, a) }));
     } else {
       const prior = v.level === 'L3' && spec.inherit_from ? layouts[spec.inherit_from] : null;
-      graph = buildStructureGraph(M, v, spec, prior).graph;
+      const dirs = spec.mode === 'structure' ? ['DOWN'] : profile.structure_direction_candidates;
+      candidates = dirs.map((d) => ({ name: d === 'DOWN' ? 'top-to-bottom' : 'left-to-right', graph: () => buildStructureGraph(M, v, spec, prior, d) }));
     }
-    const laid = await elk.layout(graph);
-    const { svg, layout } = emit(v, spec, laid, tokens, M);
-    writeText(path.join(outDir, `${v.id}.svg`), svg);
-    layouts[v.id] = layout;
+    let best = null;
+    for (const c of candidates) {
+      const before = tooLong.length;
+      const laid = await elk.layout(c.graph());
+      const r = emit(v, spec, laid, tokens, M);
+      if (best) tooLong.length = before; // text problems are the same in every candidate; report them once
+      const fit = figures.length ? fitScore(r.layout.content, figures) : { score: 0, px: {} };
+      if (!best || fit.score > best.fit.score + 1e-9) best = { ...r, fit, name: c.name };
+      if (!figures.length) break; // a map-only view keeps the first candidate
+    }
+    best.layout.chosen = best.name;
+    writeText(path.join(outDir, `${v.id}.svg`), best.svg);
+    layouts[v.id] = best.layout;
+    if (figures.length) report.push({ view: v.id, chosen: best.name, fit: best.fit, figures, content: best.layout.content });
   }
   writeText(path.join(outDir, 'layout.json'), JSON.stringify(layouts, null, 1) + '\n');
-  return layouts;
+  const problems = [...new Set(tooLong)].map((t) => `${t}: shorten it at that stage (text is never cut, R8)`);
+  for (const r of report) if (r.fit.score < 1 - 1e-9) {
+    const worst = Object.entries(r.fit.px).map(([vp, px]) => `${px.toFixed(1)}px at ${vp} (min ${LABEL_FLOOR[vp].toFixed(1)})`).join(', ');
+    const scenes = [...new Set(r.figures.map((f) => `${f.scene} (${f.layout})`))].join(', ');
+    const byHeight = r.figures.some((f) => f.box.h / r.content.h < f.box.w / r.content.w);
+    problems.push(`view ${r.view} in ${scenes}: labels would render at ${worst}; best layout ${r.chosen}, content ${r.content.w}x${r.content.h}, limited by its ${byHeight ? 'height' : 'width'}. Narrow or split the view at stage 04, or give the scene the "diagram" layout`);
+  }
+  if (problems.length) {
+    if (strict) throw new UserError(`render-diagrams: ${problems.length} problem(s):\n  - ${problems.join('\n  - ')}`);
+    for (const p of problems) console.log(`WARN ${p}`);
+  }
+  return { layouts, report };
 }
 
 if (process.argv[1]?.endsWith('render-diagrams.mjs')) {
   main(async () => {
     const i = process.argv.indexOf('--out');
-    const dir = i > 0 ? path.resolve(ROOT, process.argv[i + 1])
-      : process.argv.includes('--preview') ? out('04', 'preview') : path.join(P.site, 'assets', 'diagrams');
+    const preview = process.argv.includes('--preview');
+    const dir = i > 0 ? path.resolve(ROOT, process.argv[i + 1]) : preview ? out('04', 'preview') : path.join(P.site, 'assets', 'diagrams');
     fs.rmSync(dir, { recursive: true, force: true });
-    const layouts = await renderAll(dir);
+    const { layouts, report } = await renderAll(dir, { strict: !preview });
     console.log(`Rendered ${Object.keys(layouts).length} view(s) into ${rel(dir)}`);
-    // Predicted label size on a 1920x1080 screen, per scene layout (build-rules.md: labels >= 16px).
-    const FIG = { 'diagram-with-text': { w: 1338, h: 968 }, diagram: { w: 1824, h: 898 }, 'diagram-wide': { w: 1824, h: 820 } };
-    let SS = null;
-    try { SS = (await import('./lib/common.mjs')).readYaml(P.sceneSpecs); } catch { /* no scene specs yet */ }
-    const S = readJson(P.scenes);
-    for (const s of S.scenes) {
-      const L = layouts[s.view], layout = SS?.scenes?.[s.id]?.layout || 'diagram-with-text';
-      if (!L || !FIG[layout]) continue;
-      const scale = Math.min(1, FIG[layout].w / L.w, FIG[layout].h / L.h);
-      if (scale < 1) console.log(`WARN ${s.id} (${s.view}, ${layout}): labels would render at ${(16 * scale).toFixed(1)}px at 1920x1080 (min 16). Narrow or split the view, or use layout "diagram".`);
-    }
+    // Predicted label size per view, at both viewports (build-rules.md: labels >= 16px at 1080p).
+    for (const r of report) console.log(`  ${r.view.padEnd(28)} ${r.chosen.padEnd(14)} ${Object.entries(r.fit.px).map(([vp, px]) => `${vp} ${px.toFixed(1)}px`).join('  ')}`);
   });
 }

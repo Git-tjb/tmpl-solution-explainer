@@ -187,8 +187,9 @@ async function legibility(page, label, tokens) {
     }
     const svg = sc.querySelector('svg.diagram');
     if (svg) {
+      // The diagram is drawn to fit its box with its aspect kept, so the scale is the smaller of the two.
       const vb = svg.viewBox.baseVal, r = svg.getBoundingClientRect();
-      const scale = r.width / vb.width;
+      const scale = Math.min(r.width / vb.width, r.height / vb.height);
       let min = 99;
       for (const t of svg.querySelectorAll('.nodes text, .edges text, .boundaries text')) {
         if (t.closest('.is-hidden')) continue;
@@ -324,7 +325,11 @@ main(async () => {
   const declared = new Set(S.views.map((v) => v.id));
   const files = fs.readdirSync(path.join(P.site, 'assets', 'diagrams')).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4));
   for (const f of files) if (!declared.has(f)) fail('AC-9', `diagram ${f}.svg is not a declared view`);
-  for (const m of html.matchAll(/<svg\b[^>]*>/g)) if (!/class="diagram/.test(m[0]) || !/data-view="([^"]+)"/.test(m[0]) || !declared.has(m[0].match(/data-view="([^"]+)"/)[1])) fail('AC-9', `an <svg> in the page is not a rendered view: ${m[0].slice(0, 80)}`);
+  // Legend swatches are drawn by the renderer too (layout.json `legend`), one per entry in a scene's legend row.
+  for (const m of html.matchAll(/<svg\b[^>]*>/g)) if (/class="diagram swatch"/.test(m[0])) continue; else if (!/class="diagram/.test(m[0]) || !/data-view="([^"]+)"/.test(m[0]) || !declared.has(m[0].match(/data-view="([^"]+)"/)[1])) fail('AC-9', `an <svg> in the page is not a rendered view: ${m[0].slice(0, 80)}`);
+  for (const sec of html.matchAll(/<section class="scene" id="(S\d\d)"[\s\S]*?<\/section>/g)) {
+    if (/<div class="art">/.test(sec[0]) && !/<div class="legend" role="group" aria-label="Legend"><span class="lg"/.test(sec[0])) fail('AC-9', `${sec[1]}: the diagram has no legend row`);
+  }
   for (const id of declared) {
     const svg = readText(path.join(P.site, 'assets', 'diagrams', `${id}.svg`));
     if (!/<title id="se-title-/.test(svg)) fail('AC-9', `${id}: no title`);
@@ -377,7 +382,7 @@ main(async () => {
   crit('AC-14');
   const tmp = out('06', 'rebuild');
   fs.rmSync(tmp, { recursive: true, force: true });
-  await renderAll(path.join(tmp, 'assets', 'diagrams'));
+  await renderAll(path.join(tmp, 'assets', 'diagrams'), { strict: false });
   buildSite(tmp);
   const hashes = (dir) => Object.fromEntries(walk(dir).map((f) => [path.relative(dir, f).split(path.sep).join('/'), sha256(fs.readFileSync(f))]));
   const a = hashes(P.site), b = hashes(tmp);

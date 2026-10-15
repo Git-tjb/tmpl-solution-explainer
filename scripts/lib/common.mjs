@@ -296,6 +296,18 @@ export const hueGap = (h1, h2) => { const d = Math.abs(h1 - h2) % 360; return d 
 export const words = (s) => String(s).trim().split(/\s+/).filter(Boolean).length;
 
 // How an element's name is shown everywhere: "name (exact_name)", or just the name (system-model.md).
+// The area a scene's diagram gets, per viewport and scene layout, in CSS px, after the legend row below it.
+// Derived from scripts/site/base.css (scene padding, text column, control bar, header); keep the two in step.
+// render-diagrams uses it to choose a layout and to predict label size (iteration 002, D4).
+export const FIGURE = {
+  '1920x1080': { 'diagram-with-text': { w: 1338, h: 928 }, diagram: { w: 1824, h: 858 }, 'diagram-wide': { w: 1824, h: 780 } },
+  '1440x900': { 'diagram-with-text': { w: 956, h: 767 }, diagram: { w: 1344, h: 697 }, 'diagram-wide': { w: 1344, h: 619 } },
+};
+// Diagram labels must render at 16px at 1080p, scaled with viewport height below it (build-rules.md).
+export const LABEL_FLOOR = { '1920x1080': 16, '1440x900': 16 * (900 / 1080) };
+// A small diagram scales up to fill its figure, but no more than this (iteration 002, D4).
+export const UPSCALE_CAP = 1.6;
+
 // The level an element belongs to, from the model's hierarchy (system-model.md, Levels): actors, externals,
 // and the system are L1; functions, and stores held by the system, are L2; components, and stores held by a
 // function, are L3.

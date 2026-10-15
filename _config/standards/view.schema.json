@@ -19,6 +19,12 @@
       "items": { "$ref": "#/$defs/id" },
       "description": "Narrows the default element set. Omit to use the default."
     },
+    "labels": {
+      "type": "object",
+      "description": "Plain labels for lines, keyed from--to (element IDs): used in place of the first verb, mainly for merged lines",
+      "propertyNames": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*--[a-z0-9]+(-[a-z0-9]+)*$" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 40 }
+    },
     "lanes": { "type": "boolean", "description": "flow views only: group nodes into lanes by function" },
     "inherit_from": { "$ref": "#/$defs/id", "description": "L3 only: the L2 view whose positions neighbors keep" },
     "pins": {

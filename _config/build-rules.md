@@ -75,9 +75,11 @@ them under "What it does".
 ## Screen-share legibility
 - Body text at least 20px at 1920x1080; diagram labels at least 16px as rendered (after the diagram is
   scaled to fit). At 1440x900 both minimums scale with the viewport height (x0.83).
-- A tall view will not fit at full size: five layers top to bottom is about the limit beside text.
-  `render-diagrams --preview` warns per scene; narrow or split the view, or give the scene the
-  `diagram-wide` or `diagram` layout.
+- A scene shows the diagram's drawn content only, scaled to fill its figure area (up to 1.6x), with the
+  legend as a row below it. `render-diagrams` tries each view top-to-bottom and left-to-right (flows: several
+  aspect ratios) and keeps the layout with the largest labels at both viewports. If none reaches the floor,
+  the build fails (the preview warns) and names the view and what limits it; narrow or split the view, or
+  give the scene the `diagram-wide` or `diagram` layout.
 - No hairline strokes: every stroke at least 2px.
 - Text contrast at least 7:1 against its background, `--c-highlight` included (it colors highlighted labels);
   dimmed diagram text (`--text-dim`) at least 4.5:1, on `--bg` and on `--surface`.

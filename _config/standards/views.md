@@ -31,8 +31,8 @@ A run never edits this file. Changes are made in the template.
   its L2-level ancestor.
 - **Relationships:** every relationship between included elements. A relationship to a hidden element is
   drawn to that element's nearest visible ancestor. Two relationships that end up with the same ends are
-  drawn as one line labelled with the first verb and a count ("file into +3"); the full list is in the
-  line's tooltip and the map panel.
+  drawn as one line with one plain label: the view spec's `labels` entry for that line, or else the first
+  verb. Never a count. The full list is in the line's tooltip and the map panel. L1 lines carry no label.
 
 A view spec may narrow the element list. It may not add an element of the wrong level.
 
@@ -50,7 +50,8 @@ A view is `wired` (the default) or `structure`.
 
 1. **Title** has the form `<Level name>: <scope name>`: "Context: Example System", "Functions: Example
    System", "Components: Workflow templates", "Flow: Run one stage".
-2. **Legend** on every view, generated from the element or node types present. Never written by hand.
+2. **Legend** on every view, generated from what is drawn (notation.md, Legend). Never written by hand. In a
+   scene it is one quiet row under the diagram, behind a "Legend" control when the row does not fit.
 3. **Type label** on every element (C4's rule; it removes level ambiguity).
 4. **At most 9 elements** per view, neighbors included. Over 9: split the view, or narrow it.
 5. **Position holds across levels.** An L3 view names the L2 view it zooms from (`inherit_from`). The
