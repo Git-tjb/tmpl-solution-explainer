@@ -9,12 +9,12 @@ model, and the explainer is a static page set checked in three browsers.
 ## Stage Map
 | Stage | Does | Reads | Writes |
 | --- | --- | --- | --- |
-| `01_discover` | Snapshot sources; fact sheet, system model, flows, conflicts | `_config/run.md`, the sources | `stages/01_discover/output/` |
+| `01_discover` | Snapshot sources and visual references; fact sheet, system model, before model, flows, conflicts | `_config/run.md`, the sources | `stages/01_discover/output/` |
 | `02_scope` | Core message, audience framing, what is in and out | `01_discover/output/` | `stages/02_scope/output/` |
 | `03_storyboard` | 8-14 scenes and the map | `02_scope/output/`, `01_discover/output/` | `stages/03_storyboard/output/` |
 | `04_design` | Tokens, view specs, scene specs, previews | `03_storyboard/output/`, the model | `stages/04_design/output/` |
-| `05_build` | Render diagrams and build the page set | `04_design/output/`, `03_storyboard/output/`, the model | `stages/05_build/output/` |
-| `06_verify` | Scripted checks, content and design review | `05_build/output/site/`, the model, the fact sheet | `stages/06_verify/output/` |
+| `05_build` | Render diagrams, build the page set, export it as one file and declare it | `04_design/output/`, `03_storyboard/output/`, the models | `stages/05_build/output/` |
+| `06_verify` | Scripted checks on the page set and the single file, content and design review | `05_build/output/`, the models, the fact sheet | `stages/06_verify/output/` |
 | `07_retro` | The run's retro, from `_config/retro.md` | every stage's `output/` | `stages/07_retro/output/` |
 
 Each stage's `CONTEXT.md` lists its exact inputs. Scripts run from the workspace root (`scripts/`).
@@ -31,7 +31,10 @@ stale stage is re-run before anything reads its output, so a fix upstream always
 ## Filing
 Nothing in this instance files itself. When the operator declares the run complete, `Close-Instance` (in
 `aiso-workbench`) archives the whole instance, explainer and retro included, into the project's folder in
-its KB vault. Copying the explainer anywhere else is the operator's manual step.
+its KB vault. Stage 05 declares the single-file explainer as the run's deliverable
+(`stages/05_build/output/deliverables.yml`), so the close-out can file it where it is easy to find; until the
+workshop does that, the operator may ask the filing skill for a copy. Copying the explainer anywhere else is the
+operator's manual step.
 
 ## Known Limits
 - `function` is the element type most likely to be ambiguous outside software; record hard calls in the

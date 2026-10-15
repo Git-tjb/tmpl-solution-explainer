@@ -8,108 +8,11 @@ This file holds open ideas only. When an iteration addresses a seed, or the oper
 seed is removed from here. When the last seed is removed, delete this file; it is created again with the next
 seed.
 
-## S1. Single-file export as a standard end-of-run output
-
-Raised 2026-10-13, after trial run 2 was archived.
-
-**What.** When a run completes, the template offers a standard export of the final output as one
-self-contained HTML file: CSS, JS, fonts and diagrams inlined, page title set. The operator can then take it,
-share it, or open it from the KB vault in a browser without companion files.
-
-**How it played out.** The operator asked for the explainer as one file after the run was archived. A
-throwaway script built it from the archived `stages/05_build/output/site/` without modifying the archive:
-
-1. Base64-encode each `.woff2` into the `url()` of the stylesheets.
-2. Replace the three `<link rel="stylesheet">` tags (`tokens.css`, `base.css`, `theme.css`) with inline
-   `<style>` blocks.
-3. Replace the `runtime.js` `<script src>` with an inline `<script>`, escaping any `</script`.
-4. Set the `<title>`, then assert no `assets/` reference remains.
-
-Result: 430 KB, 5 fonts embedded, opens with no other files. The diagrams were already inline in `index.html`.
-It was filed to the personal KB vault's inbox by hand. The write hook blocked every shell command that named
-the vault path until the filing marker was set, reads included.
-
-**Needs thought.**
-- Where the export sits in the run: a final step of the build stage, a separate stage, or an option on
-  `Close-Instance`. It must not alter the approved `site/`.
-- Filing it with the project archive. The archive holds the multi-file tree under
-  `Workflows/<date> - <instance>/`. Decide whether the single file also goes in the archive, under what name,
-  and whether a non-markdown artifact needs a stamp, frontmatter or provenance (source instance and commit).
-  Today the inbox accepts it only because the inbox accepts anything.
-- Running it from the vault in a browser. The vault is a private repo and the file is not a note. Open points:
-  which viewer or host serves it, how a private repo exposes it (local open, rendered view, static host), and
-  keeping it out of any public path.
-
-**Likely touches.** The build stage and its `CONTEXT.md`, `Close-Instance.ps1` and the archive layout
-(schema section 13), the KB vault schema's attachment and artifact rules, and the hook's handling of reads.
-
-**Open questions.**
-- Is the single file a build-stage output, or a step that runs at close?
-- Does it go into the archive, beside it, or only to the inbox?
-- What is the browser path for a private vault?
-
 ## Seeds from a viewer's review of trial run 2
 
 Raised 2026-10-13. A viewer who used the trial run 2 explainer (13 scenes, S01 to S13) gave the feedback behind
 S2 to S10. Scene numbers in those seeds refer to that run. Iteration 002 addressed S2, S3, S4, S7, and S10
-(legibility and correctness); S5, S6, S8, and S9 remain.
-
-## S5. Story: every scene needs its own picture
-
-**What.**
-- The same context diagram appears four times (S01, S03, S04, S13). S03 ("Two machines, one way of working")
-  and S04 ("When the design drifted") state the problem, but the picture shows the finished solution with one or
-  two boxes outlined, so it shows neither two machines nor drift.
-- S13 is S01 again with a new message.
-- Bullets often repeat the message: S12's message and first bullet are the same sentence; S02's bullet restates
-  the four level names.
-- Step reveals are inconsistent: bullets appear one per step in some scenes, all at once in others (S01, S11).
-
-**Wanted.**
-- Problem scenes get a visual that shows the problem, even a simple before/after pair.
-- The closing scene does something the opening did not, such as the context diagram with the three functions
-  revealed inside the system box.
-- Each bullet adds something the message does not, or is removed.
-- One reveal behaviour across the deck.
-
-**Touches.** `stages/03_storyboard` and `_config/narrative-arc.md` (a rule that no two scenes share a picture
-unless the second adds something), `scripts/check-storyboard.mjs` (flag repeated views and bullets that
-duplicate the message), `_config/standards/scenes.schema.json`. The scene-specific cases above are run content,
-fixed in an instance.
-
-## S6. Control bar and navigation
-
-Iteration 002 (R21 and the control bar) delivered part of this seed: prev and next are the only filled
-controls, Message and Map are quiet, reduced motion is a small toggle, a position strip coloured by level sits
-above the bar, and a one-time hint shows on the first scene. What remains:
-
-**What.**
-- The position strip is display only, so scenes past 10 can be reached only through the map.
-- The level pills look like buttons and do nothing; "Code" never lights up, and nothing says why (map only).
-- Only focus is styled; buttons and clickable nodes have no hover or pressed state.
-- The `(+)` expand marker is the only sign a node is clickable.
-
-**Wanted.**
-- Each strip segment clickable, with the scene title as its tooltip.
-- Level pills either jump to the first scene at that level or are styled as a status readout; "Code" explains
-  itself on hover or links to the map.
-- Hover and pressed states on every button and clickable node.
-
-**Touches.** `scripts/site/base.css`, `runtime.js`, the page template in `scripts/build-site.mjs`.
-
-## S8. Map
-
-**What.**
-- Open, the map still shows the scene's control bar state ("S01 . 0/2") and gives no sign that Map is active.
-- The detail panel is one long scroll: responsibility, bullets, a full diagram, several file trees.
-- In the "How to read this" ladder, "Map only" for the Code level is plain text.
-
-**Wanted.**
-- The Map button shows pressed, and the map has a visible Close button.
-- Short in-panel anchors (What it does, Inside, Files, Appears in), or file trees collapsed by default.
-- "Map only" is a link that opens the map.
-
-**Touches.** `scripts/site/runtime.js`, `scripts/build-site.mjs`, `_config/information-architecture.md`.
+(legibility and correctness); iteration 003 addressed S5, S6, and S8 (story and delivery). S9 remains.
 
 ## S9. Small screens
 
