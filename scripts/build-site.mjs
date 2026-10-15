@@ -85,7 +85,7 @@ export function buildSite(siteDir, { strict = true } = {}) {
   const appearsIn = new Map();
   for (const s of S.scenes) {
     const v = views.get(s.view);
-    if (!v) continue; // the orientation scene has no view
+    if (!v || v.level === 'before') continue; // the title scene has no view; before views hold no solution
     let ids = [];
     if (v.level === 'flow') ids = flows.get(v.scope).nodes.map((n) => n.on).filter(Boolean);
     else ids = [...viewElements(M, v, specs.get(v.id)), ...(v.level === 'L3' ? [v.scope] : [])];
@@ -105,7 +105,8 @@ export function buildSite(siteDir, { strict = true } = {}) {
   }).join('')}</ol>`;
 
   // The level indicator for each scene (notation.md, Level indicator): which rungs are filled, the scope
-  // beside it, and a tag on flow and orientation scenes. A flow fills the rungs its steps come from.
+  // beside it, and a tag on flow, title, and before scenes. A flow fills the rungs its steps come from; the
+  // title and before scenes fill none, since neither shows a level of the solution.
   const rungOf = (id) => {
     const e = M.els.get(id);
     if (!e) return null;
@@ -114,8 +115,9 @@ export function buildSite(siteDir, { strict = true } = {}) {
     return 'L1';
   };
   const levelOf = (s) => {
-    if (s.section === 'orientation') return { level: 'key', rungs: [], scope: 'All levels', tag: 'Key' };
+    if (s.section === 'title') return { level: 'title', rungs: [], scope: run.solution || '', tag: 'Title' };
     const v = views.get(s.view);
+    if (v.level === 'before') return { level: 'before', rungs: [], scope: (specs.get(v.id)?.title || '').replace(/^Before: /, ''), tag: 'Before' };
     if (v.level === 'flow') {
       const f = flows.get(v.scope);
       return { level: 'flow', rungs: [...new Set(f.nodes.map((n) => rungOf(n.on)).filter(Boolean))].sort(), scope: f.title, tag: 'Flow' };
@@ -147,16 +149,25 @@ export function buildSite(siteDir, { strict = true } = {}) {
     return i <= 0 ? '' : ` fit-${i + 1}`;
   };
 
+  // The title visual (iteration 003, D4): the art drawn from the model, or the approved image in title/.
+  const titleFigure = (spec) => {
+    const tv = spec.title_visual || { kind: 'art' };
+    if (tv.kind === 'image') return `<div class="figure title-visual"><img class="title-image" src="assets/title/${esc(tv.image)}" alt="${esc(tv.alt)}"></div>`;
+    const f = path.join(diagDir, 'title-art.svg');
+    if (!fs.existsSync(f)) throw new UserError(`${rel(f)} is missing; run scripts/render-diagrams.mjs first.`);
+    return `<div class="figure title-visual">${readText(f).trim().replace(/ id="se-/g, ' id="title-se-').replace(/url\(#se-/g, 'url(#title-se-')}</div>`;
+  };
+
   // Scenes
   const sceneHtml = S.scenes.map((s) => {
     const spec = SS.scenes[s.id];
-    const text = s.text.map((t, i) => `<p data-text="${i + 1}">${esc(t)}</p>`).join('');
+    const text = s.text.map((t, i) => `<p data-text="${i + 1}">${esc(t.line)}</p>`).join('');
     const tf = fit(s.title, spec.layout, px('--size-title', 44), 600, 'title', s.id);
     const pf = spec.layout === 'diagram' ? '' : fit(s.point, spec.layout, px('--size-point', 28), 600, 'message', s.id, 20);
     return `<section class="scene" id="${s.id}" data-scene="${s.id}" data-view="${esc(s.view || '')}" data-layout="${spec.layout}" data-mode="${s.mode}" data-level="${s.level}" aria-label="${esc(s.id + ': ' + s.title)}">`
       + `<header><h2 class="title${tf}">${esc(s.title)}</h2><span class="sid">${s.id}</span></header>`
       + `<div class="text"><p class="point${pf}" role="note" aria-label="Message">${esc(s.point)}</p>${text}</div>`
-      + (spec.layout === 'statement' ? '' : spec.layout === 'orientation' ? `<div class="figure orientation">${ladderHtml()}</div>`
+      + (spec.layout === 'statement' ? '' : spec.layout === 'title' ? titleFigure(spec)
         : `<div class="figure"><div class="art">${expandable(inlineSvg(sceneSvg(svgOf(s.view), layouts[s.view]), s.id.toLowerCase()))}</div>${legendRow(layouts[s.view])}</div>`)
       + `<div class="popovers"></div>`
       + `</section>`;
@@ -242,6 +253,12 @@ ${panels}
   writeText(path.join(siteDir, 'assets', 'css', 'base.css'), readText(path.join(siteSrc, 'base.css')));
   writeText(path.join(siteDir, 'assets', 'js', 'runtime.js'), readText(path.join(siteSrc, 'runtime.js')));
   writeText(path.join(siteDir, 'assets', 'css', 'tokens.css'), readText(P.tokens));
+  // A title image travels with its licence (title/ holds both; check-design).
+  if (Object.values(SS.scenes).some((x) => x.title_visual?.kind === 'image')) {
+    const dest = path.join(siteDir, 'assets', 'title');
+    fs.mkdirSync(dest, { recursive: true });
+    for (const f of fs.readdirSync(P.title).sort()) fs.copyFileSync(path.join(P.title, f), path.join(dest, f));
+  }
   if (hasTheme) for (const f of walk(P.theme)) {
     const dest = path.join(siteDir, 'assets', 'theme', path.relative(P.theme, f));
     fs.mkdirSync(path.dirname(dest), { recursive: true });

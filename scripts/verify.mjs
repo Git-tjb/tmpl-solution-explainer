@@ -83,11 +83,12 @@ async function indicatorProblems(page, scene) {
     const probs = [];
     if (cs.display === 'none' || cs.visibility !== 'visible' || parseFloat(cs.opacity) < 0.5 || r.width < 40 || r.height < 10) probs.push('level indicator is hidden');
     if (r.right > innerWidth + 1 || r.bottom > innerHeight + 1 || r.left < -1) probs.push('level indicator is off screen');
-    const want = scene.section === 'orientation' ? 'key' : scene.level;
+    const want = scene.level;
     if (el.getAttribute('data-level') !== want) probs.push(`level indicator shows "${el.getAttribute('data-level')}", expected "${want}"`);
     const rungs = el.querySelectorAll('[data-rung]').length, on = el.querySelectorAll('[data-rung].on').length;
     if (rungs !== 4) probs.push(`level indicator has ${rungs} rungs (4)`);
-    if (want === 'key' ? on !== 0 : want === 'flow' ? on < 1 : on !== 1) probs.push(`level indicator fills ${on} rung(s)`);
+    // The title and before scenes show no level of the solution; a flow fills the rungs its steps come from.
+    if (['title', 'before'].includes(want) ? on !== 0 : want === 'flow' ? on < 1 : on !== 1) probs.push(`level indicator fills ${on} rung(s)`);
     return probs;
   }, scene);
 }
@@ -355,9 +356,17 @@ main(async () => {
   crit('AC-9');
   const declared = new Set(S.views.map((v) => v.id));
   const files = fs.readdirSync(path.join(P.site, 'assets', 'diagrams')).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4));
-  for (const f of files) if (!declared.has(f)) fail('AC-9', `diagram ${f}.svg is not a declared view`);
+  for (const f of files) if (!declared.has(f) && f !== 'title-art') fail('AC-9', `diagram ${f}.svg is not a declared view`);
+  // The title art (iteration 003, D4) is drawn from the model: shapes only, each carrying a model ID.
+  const M9 = loadModel();
+  for (const m of html.matchAll(/<svg\b[^>]*class="title-art"[^>]*>([\s\S]*?)<\/svg>/g)) {
+    const shapes = [...m[1].matchAll(/<g class="art-(?:node|boundary)(?: [^"]*)?"( data-el="([^"]+)")?/g)];
+    if (!shapes.length) fail('AC-9', 'the title art draws no shapes');
+    for (const sh of shapes) if (!sh[2] || !M9.els.has(sh[2])) fail('AC-9', `a title art shape has no model ID (${sh[2] || 'none'})`);
+    if (/<text\b/.test(m[1])) fail('AC-9', 'the title art draws text; it is shapes and lines only');
+  }
   // Legend swatches are drawn by the renderer too (layout.json `legend`), one per entry in a scene's legend row.
-  for (const m of html.matchAll(/<svg\b[^>]*>/g)) if (/class="diagram swatch"/.test(m[0])) continue; else if (!/class="diagram/.test(m[0]) || !/data-view="([^"]+)"/.test(m[0]) || !declared.has(m[0].match(/data-view="([^"]+)"/)[1])) fail('AC-9', `an <svg> in the page is not a rendered view: ${m[0].slice(0, 80)}`);
+  for (const m of html.matchAll(/<svg\b[^>]*>/g)) if (/class="(diagram swatch|title-art)"/.test(m[0])) continue; else if (!/class="diagram/.test(m[0]) || !/data-view="([^"]+)"/.test(m[0]) || !declared.has(m[0].match(/data-view="([^"]+)"/)[1])) fail('AC-9', `an <svg> in the page is not a rendered view: ${m[0].slice(0, 80)}`);
   for (const sec of html.matchAll(/<section class="scene" id="(S\d\d)"[\s\S]*?<\/section>/g)) {
     if (/<div class="art">/.test(sec[0]) && !/<div class="legend" role="group" aria-label="Legend"><span class="lg"/.test(sec[0])) fail('AC-9', `${sec[1]}: the diagram has no legend row`);
   }
@@ -406,7 +415,7 @@ main(async () => {
   const domIds = [...html.matchAll(/<section class="scene" id="(S\d\d)"/g)].map((m) => m[1]);
   if (domIds.join() !== S.scenes.map((s) => s.id).join()) fail('AC-11', `page scenes ${domIds.join(',')} differ from scenes.json`);
   const decode = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-  for (const s of S.scenes) for (const t of s.text) if (!decode(html).includes(t)) fail('AC-11', `${s.id}: text "${t}" is not on the page`);
+  for (const s of S.scenes) for (const t of s.text) if (!decode(html).includes(t.line)) fail('AC-11', `${s.id}: text "${t.line}" is not on the page`);
   if (C['AC-11'].result === 'pass') { C['AC-11'].result = 'review'; note('AC-11', 'Scene IDs and text match; each claim against its facts needs review.'); }
 
   // AC-14 determinism: render and build again into this stage's output and compare byte for byte.

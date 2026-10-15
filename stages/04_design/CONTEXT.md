@@ -35,8 +35,11 @@ Run the commands from the workspace root.
 3. Write `scene-specs.yaml`: `text_reveal` (`per-step` by default: each on-screen line in its own step, in
    order; or `with-scene`: every line from the start, the same in every scene), then for every scene its
    layout, entry, and the actions of each reveal step, in the motion vocabulary of `build-rules.md`, with the
-   end state in words. The title scene (and only it) uses the `title` layout. With `animation: false` in
-   `run.md`, use `cut` entries and actions with `duration_ms: 0` only.
+   end state in words. The title scene (and only it) uses the `title` layout and sets `title_visual`
+   (`build-rules.md`, Title visual): `art` with an optional `from_view` and the `assemble` entry, or, when
+   `run.md` `title_visual.from` is `image`, `image` with alt text, after copying the image and its licence into
+   `title/` and recording the operator's approval in `design-spec.md` under "Title image". With
+   `animation: false` in `run.md`, use `cut` entries and actions with `duration_ms: 0` only.
 4. Write `design-spec.md`: the visual system and why, the map and navigation chrome, any departure from
    the defaults, the theme and each approved exception to the banned list (a heading "Approved exceptions"), any runtime library and its justification, and a self-check against each banned pattern.
 5. Run `node scripts/check-design.mjs` and fix what it reports.
@@ -58,6 +61,7 @@ Run the commands from the workspace root.
 | --- | --- |
 | `tokens.css` | `output/` |
 | `theme/` (only when `visual` is not `default`) | `output/` |
+| `title/` (only for a title image: the image and its licence) | `output/` |
 | `views/<view-id>.yaml` | `output/` |
 | `scene-specs.yaml` | `output/` |
 | `design-spec.md` | `output/` |

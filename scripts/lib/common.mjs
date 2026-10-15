@@ -40,6 +40,7 @@ export const P = {
   sceneSpecs: out('04', 'scene-specs.yaml'),
   tokens: out('04', 'tokens.css'),
   theme: out('04', 'theme'),
+  title: out('04', 'title'),
   site: out('05', 'site'),
 };
 
@@ -321,7 +322,7 @@ export const FIGURE = {
 // The width a scene's title and message get at 1440x900, the tighter viewport, per layout (base.css), and the
 // size steps build-site may use to fit each in two lines (R18). Sizes are fractions of --size-title and
 // --size-point.
-export const TEXT_COLUMN = { 'diagram-with-text': 400, orientation: 400, diagram: 1260, 'diagram-wide': 1260, statement: 1260 };
+export const TEXT_COLUMN = { 'diagram-with-text': 400, title: 400, diagram: 1260, 'diagram-wide': 1260, statement: 1260 };
 export const FIT_STEPS = [1, 0.86, 0.78];
 // Diagram labels must render at 16px at 1080p, scaled with viewport height below it (build-rules.md).
 export const LABEL_FLOOR = { '1920x1080': 16, '1440x900': 16 * (900 / 1080) };

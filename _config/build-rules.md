@@ -54,7 +54,10 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
   `state`, `trace` (a dot travels along a relationship or flow edge), `show-text`, `expand` and `collapse`
   (open or close an element's "what it does" popover; targets are element IDs with `what_it_does`); and on
   scene entry `cut`, `fade`, `zoom-in`, `zoom-out` (a function's region expands into its L3 view in place,
-  or back). An open popover is part of a step's end state.
+  or back), and `assemble` (the title scene with title art only: the boundary forms, then the parts appear in
+  model order, then the lines, in 1200 ms). An open popover is part of a step's end state.
+- `assemble` plays whenever the title scene is arrived at other than by stepping back, including when the
+  explainer opens on it: one entrance, never a loop.
 
 ## Scene layouts
 | Layout | Use |
@@ -64,6 +67,19 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | `diagram` | the diagram alone, no text |
 | `statement` | text only |
 | `title` | the title scene only: the solution's name, its purpose line, and the title visual |
+
+## Title visual
+The title scene shows the solution's name, its purpose line, and a picture of the solution, set in
+`scene-specs.yaml` (`title_visual`):
+- `art` (the default, and what `run.md` `title_visual.from: model` asks for): drawn by `render-diagrams` from
+  the model (`standards/notation.md`, Title art), from `from_view`, a wired L1 or L2 view (default: the first
+  wired L2 view).
+- `image` (when `run.md` asks for one): an image the operator supplied, copied by stage 04 from
+  `01_discover/output/visual-refs/` into `title/` with its licence file. PNG, JPEG, WebP, or SVG, at most 2 MB;
+  an SVG has no script, event attribute, remote reference, or embedded foreign content. `design-spec.md` has a
+  "Title image" section recording the image, its licence, and the operator's approval, and the image passes
+  the banned-pattern self-check. It is shown with its alt text and travels with its licence into
+  `assets/title/`.
 
 ## Expanding an element
 In any wired or flow view, an element with `what_it_does` carries a small expand marker. Clicking it, or

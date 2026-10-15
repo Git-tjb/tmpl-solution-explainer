@@ -28,7 +28,7 @@
           "required": ["kind"],
           "additionalProperties": false,
           "properties": {
-            "kind": { "enum": ["cut", "fade", "zoom-in", "zoom-out"] },
+            "kind": { "enum": ["cut", "fade", "zoom-in", "zoom-out", "assemble"], "description": "assemble: the title scene only, with title art: the boundary, then the parts, then the lines" },
             "from_view": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the view the zoom starts from" },
             "target": { "$ref": "#/$defs/id", "description": "zoom-in / zoom-out: the function that expands or collapses" }
           }
@@ -58,6 +58,18 @@
                 }
               }
             }
+          }
+        },
+        "title_visual": {
+          "type": "object",
+          "description": "The title scene only: the picture beside the solution's name (iteration 003, D4)",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["art", "image"], "description": "art: drawn from the model's structure; image: an approved, licensed image in title/" },
+            "from_view": { "$ref": "#/$defs/id", "description": "art: the wired L1 or L2 view whose level the art draws (default: the first wired L2 view)" },
+            "image": { "type": "string", "pattern": "^[^/\\\\:]+$", "description": "image: a file name in stages/04_design/output/title/" },
+            "alt": { "type": "string", "minLength": 1, "description": "image: what the image shows, for screen readers" }
           }
         },
         "end_state": { "type": "string", "description": "What the screen shows after the last step, in words" }

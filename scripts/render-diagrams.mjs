@@ -7,9 +7,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { ROOT, P, out, main, shownName, elementLevel, elementKind, readJson, readYaml, loadModel, loadFlows, viewRelationships,
+import { ROOT, P, out, main, shownName, elementLevel, elementKind, readJson, readYaml, loadModel, loadFlows, loadBefore, viewRelationships,
+  defaultViewElements,
   viewElements, writeText, loadTokens, UserError, rel, FIGURE, LABEL_FLOOR, UPSCALE_CAP } from './lib/common.mjs';
-import { loadViewSpecs, REQUIRED_TOKENS } from './check-design.mjs';
+import { loadViewSpecs, beforeViewElements, REQUIRED_TOKENS } from './check-design.mjs';
 
 const profile = readJson(path.join(P.standards, 'layout-profile.json'));
 const metrics = readJson(path.join(P.standards, 'font-metrics.json')).fonts;
@@ -87,6 +88,21 @@ function elementBox(e, structure, who) {
   const h = Math.max(profile.node.element.height, Math.ceil(y + 14));
   return { w, h, rows, kind };
 }
+// A before-model element (system-model.md, The before model): its name, an exact name for a means, and its
+// type. A pain's name is what hurt, so it may take a line more.
+function beforeBox(e, who) {
+  const w = profile.node.element.width;
+  const inner = w - 28 - (e.type === 'pain' ? 22 : 0);
+  const rows = [];
+  rows.push({ cls: 'name', lines: limit(wrap(e.name, inner, FONT.name, 600), e.type === 'pain' ? 4 : LIMITS.name, `${who} name "${e.name}" (stage 01, before-model.yaml)`), px: FONT.name, face: 600 });
+  if (e.exact_name) rows.push({ cls: 'exact', lines: limit(wrap(e.exact_name, inner, FONT.type_label, 'mono'), LIMITS.exact, `${who} exact_name "${e.exact_name}" (stage 01, before-model.yaml)`), px: FONT.type_label, face: 'mono' });
+  rows.push({ cls: 'type', lines: [`[${e.type}]`], px: FONT.type_label, face: 400, gap: 2 });
+  let y = 12;
+  for (const r of rows) { y += r.gap || 0; r.y = y + r.px * 0.95; y += r.lines.length * LINE(r.px); }
+  if (e.type === 'pain') for (const r of rows) r.x = (8 + w - 22) / 2; // centred between the tag's bar and its point
+  const h = Math.max(profile.node.element.height - 20, Math.ceil(y + 14));
+  return { w, h, rows, kind: e.type };
+}
 function flowBox(n, M, who) {
   const bound = n.on ? M.els.get(n.on) : null;
   const kind = n.type === 'store' && elementKind(bound) === 'file' ? 'file' : n.type;
@@ -139,6 +155,14 @@ function labelSize(text, who) {
 // ---------- shapes (notation.md) ----------
 function shape(kind, w, h) {
   switch (kind) {
+    case 'pain': { // a notched tag with a heavy bar at its left: one thing that hurt
+      const k = 22;
+      return `<path class="shape" d="M0 0 H${w - k} L${w} ${f1(h / 2)} L${w - k} ${h} H0 Z"/><rect class="bar" x="0" y="0" width="8" height="${h}"/>`;
+    }
+    case 'person':
+      return `<rect class="shape" x="0" y="0" width="${w}" height="${h}" rx="${f1(Math.min(h / 2, 40))}"/>`;
+    case 'task':
+      return `<rect class="shape" x="0" y="0" width="${w}" height="${h}" rx="6"/>`;
     case 'actor': case 'trigger':
       return `<rect class="shape" x="0" y="0" width="${w}" height="${h}" rx="${f1(Math.min(h / 2, 40))}"/>` + (kind === 'trigger' ? `<rect class="bar" x="0" y="8" width="8" height="${h - 16}"/>` : '');
     case 'system':
@@ -227,8 +251,32 @@ function styleBlock(tokens) {
 .diagram .node.lv-L1 .shape,.diagram .lvkey.lv-L1 .shape{stroke:${v('--lv-1')};}
 .diagram .node.lv-L2 .shape,.diagram .lvkey.lv-L2 .shape{stroke:${v('--lv-2')};}
 .diagram .node.lv-L3 .shape,.diagram .lvkey.lv-L3 .shape{stroke:${v('--lv-3')};}
+.diagram .t-person .shape{stroke:${v('--c-actor')};}
+.diagram .t-task .shape{stroke:${v('--c-internal')};}
+.diagram .t-means .shape{stroke:${v('--c-external')};stroke-dasharray:8 6;}
+.diagram .t-pain .shape{stroke:${v('--c-system')};}
+.diagram .t-pain .bar{fill:${v('--c-system')};}
+.diagram .node.hl.t-pain .bar{fill:${v('--c-highlight')};}
+.diagram .edge.k-hurts path.line{stroke-dasharray:3 6;stroke-linecap:round;}
 .diagram marker path{fill:${v('--c-edge')};}
 .diagram marker.m-human path{fill:${v('--c-human')};}
+</style>`;
+}
+// The title art (iteration 003, D4): a large schematic of the solution drawn from a view's laid-out geometry,
+// with shapes and lines only, in the neutral structure colours.
+function artStyle(tokens) {
+  const v = (t) => `var(${t}, ${tokens[t] || '#888'})`;
+  return `<style>
+.title-art .grid circle{fill:${v('--c-dim')};}
+.title-art .shape,.title-art .rim{fill:none;stroke:${v('--c-internal')};stroke-width:3px;}
+.title-art .t-system .shape,.title-art .art-boundary rect{fill:none;stroke:${v('--c-system')};stroke-width:4px;}
+.title-art .t-actor .shape{stroke:${v('--c-actor')};}
+.title-art .t-external .shape{stroke:${v('--c-external')};stroke-dasharray:10 8;}
+.title-art .art-node .shape{fill:${v('--surface')};}
+.title-art .art-edge path{fill:none;stroke:${v('--c-edge')};stroke-width:3px;}
+.title-art .art-edge.k-data path{stroke-dasharray:10 7;}
+.title-art .art-edge.k-human path{stroke:${v('--c-human')};stroke-dasharray:2 7;stroke-linecap:round;}
+.title-art marker path{fill:${v('--c-edge')};}
 </style>`;
 }
 
@@ -351,14 +399,58 @@ function buildFlowGraph(M, view, spec, flow, aspect, rooms) {
   return { id: 'root', layoutOptions: { ...profile.flow, 'elk.aspectRatio': aspect, 'elk.layered.thoroughness': '20', 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' }, children, edges };
 }
 
+// A before view (views.md): the before model's elements and relationships, and each pain's line to what it
+// hurts. The user takes the first layer, so the picture leads with them (iteration 003, D4). A pain is laid out
+// after what it hurts (the layout edge runs from the target to the pain); its line is drawn from the pain. A
+// pain that hurts a relationship points at the relationship's target.
+function buildBeforeGraph(B, view, spec, dir) {
+  const els = beforeViewElements(B, spec);
+  const has = new Set(els);
+  const children = els.map((id) => {
+    const e = B.els.get(id);
+    const b = beforeBox(e, `view ${view.id}, element "${id}"`);
+    return { id, width: b.w, height: b.h, _box: b, _bel: e };
+  });
+  const edges = [];
+  for (const r of B.rels) {
+    if (!has.has(r.from) || !has.has(r.to)) continue;
+    const e = { id: `e${edges.length}`, sources: [r.from], targets: [r.to], _brel: r };
+    const ls = labelSize(r.verb, `view ${view.id}, line ${r.from}--${r.to}`);
+    e._label = { text: r.verb, width: ls.w, height: ls.h, _lines: ls.lines };
+    edges.push(e);
+  }
+  for (const id of els) {
+    const p = B.els.get(id);
+    if (p.type !== 'pain') continue;
+    const rel = B.rels.find((r) => r.id === p.hurts);
+    const target = rel ? rel.to : p.hurts;
+    if (!has.has(target)) continue;
+    edges.push({ id: `e${edges.length}`, sources: [target], targets: [id], _hurts: { pain: p, target } });
+  }
+  const opts = { ...profile.structure, 'elk.direction': dir, 'elk.json.edgeCoords': 'ROOT', 'elk.json.shapeCoords': 'ROOT' };
+  const pins = spec?.pins || [];
+  if (pins.length) {
+    opts['elk.partitioning.activate'] = 'true';
+    const after = Math.max(...pins.map((x) => x.layer)) + 1;
+    for (const c of children) { const pin = pins.find((x) => x.target === c.id); c.layoutOptions = { 'elk.partitioning.partition': String(pin ? pin.layer : after) }; }
+  } else {
+    opts['elk.partitioning.activate'] = 'true';
+    for (const c of children) c.layoutOptions = { 'elk.partitioning.partition': c.id === B.data.user ? '0' : '1' };
+  }
+  return { id: 'root', layoutOptions: opts, children, edges };
+}
+
 // ---------- SVG emit ----------
 // Level badge in every diagram's title row (notation.md, Level indicator).
-const BADGE = { L1: 'L1 · CONTEXT', L2: 'L2 · FUNCTIONS', L3: 'L3 · COMPONENTS', flow: 'FLOW' };
+const BADGE = { before: 'BEFORE', L1: 'L1 · CONTEXT', L2: 'L2 · FUNCTIONS', L3: 'L3 · COMPONENTS', flow: 'FLOW' };
 const LEVEL_NAME = { L1: 'Context', L2: 'Functions', L3: 'Components' };
 // The expand marker: a drawn plus in a circle at the box's top-right (no text, so it never counts as a label).
 const expandMark = (w) => `<g class="expand-mark" aria-hidden="true" transform="translate(${f1(w - 18)},18)"><circle r="11"/><path d="M-6 0 H6 M0 -6 V6"/></g>`;
 const PADX = 24, TOP = 52;
-const LG_ORDER = ['actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
+const LG_ORDER = ['person', 'task', 'means', 'pain', 'actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
+// Line kinds, in legend order, and how the legend names them.
+const LINE_KINDS = ['control', 'data', 'human', 'before', 'hurts'];
+const LINE_LABEL = { before: 'relationship' };
 
 function emit(view, spec, laid, tokens, M) {
   // A flow whose steps come from more than one level outlines each node in its level's colour and adds a level
@@ -399,6 +491,13 @@ function emit(view, spec, laid, tokens, M) {
         + `<title>${esc(shownName(e))} [${b.kind}]: ${esc(e.responsibility)}</title></g>`);
       positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
     }
+    if (n._bel) {
+      const e = n._bel, b = n._box;
+      legendTypes.add(b.kind);
+      parts.nodes.push(`<g class="node el t-${b.kind}" data-el="${esc(e.id)}" transform="translate(${f1(x)},${f1(y)})">${shape(b.kind, b.w, b.h)}`
+        + rowsSvg(b) + `<title>${esc(shownName(e))} [${b.kind}]</title></g>`);
+      positions[e.id] = { x: +f1(x), y: +f1(y), w: b.w, h: b.h };
+    }
     if (n._node) {
       const fnode = n._node, b = n._box;
       const bound = fnode.on ? M.els.get(fnode.on) : null;
@@ -417,7 +516,7 @@ function emit(view, spec, laid, tokens, M) {
   // Boxes labels must not cover: every node, and every boundary's title strip.
   const blocked = [];
   const addBlock = (n) => {
-    if (n._el || n._node) blocked.push({ x: n.x - 4, y: n.y - 4, w: n.width + 8, h: n.height + 8 });
+    if (n._el || n._node || n._bel) blocked.push({ x: n.x - 4, y: n.y - 4, w: n.width + 8, h: n.height + 8 });
     for (const c of n.children || []) addBlock(c);
   };
   for (const c of laid.children) addBlock(c);
@@ -465,9 +564,13 @@ function emit(view, spec, laid, tokens, M) {
     const s = e.sections?.[0];
     if (!s) return;
     const pts = [s.startPoint, ...(s.bendPoints || []), s.endPoint].map((p) => `${f1(p.x + PADX)} ${f1(p.y + TOP)}`);
-    const kind = e._rel ? e._rel.kind : e._fedge.kind;
+    if (e._hurts) pts.reverse(); // laid out from the target to the pain, drawn from the pain
+    const kind = e._rel ? e._rel.kind : e._fedge ? e._fedge.kind : e._brel ? 'before' : 'hurts';
     edgeKinds.add(kind);
-    const attrs = e._rel ? `data-rel="${esc(e._rel.ids.join(' '))}" data-edge="${esc(e._rel.from)}--${esc(e._rel.to)}"` : `data-edge="${esc(e._fedge.from)}--${esc(e._fedge.to)}"`;
+    const attrs = e._rel ? `data-rel="${esc(e._rel.ids.join(' '))}" data-edge="${esc(e._rel.from)}--${esc(e._rel.to)}"`
+      : e._fedge ? `data-edge="${esc(e._fedge.from)}--${esc(e._fedge.to)}"`
+      : e._brel ? `data-rel="${esc(e._brel.id)}" data-edge="${esc(e._brel.from)}--${esc(e._brel.to)}"`
+      : `data-rel="${esc(e._hurts.pain.id)}" data-edge="${esc(e._hurts.pain.id)}--${esc(e._hurts.target)}"`;
     // Labels are placed here, not by the layout, so they never add a layer of height. In order: on the
     // line (longest segment first; the first segment first for a branch or shared label), then to either
     // side of it, avoiding boxes, other labels, and other lines; failing that, beside the line's start with
@@ -515,7 +618,9 @@ function emit(view, spec, laid, tokens, M) {
       const lx = pick.x + PADX, ly = pick.y + TOP;
       label = leader + `<rect class="lblbg" x="${f1(lx)}" y="${f1(ly)}" width="${f1(L.width)}" height="${f1(L.height)}"/>` + L._lines.map((l, i) => `<text x="${f1(lx + L.width / 2)}" y="${f1(ly + 3 + (i + 0.78) * LINE(FONT.edge_label))}" text-anchor="middle">${esc(l)}</text>`).join('');
     }
-    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : `<title>${esc(e._fedge.condition ? `${e._fedge.label} (${e._fedge.condition})` : e._fedge.label)}</title>`;
+    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>`
+      : e._fedge ? `<title>${esc(e._fedge.condition ? `${e._fedge.label} (${e._fedge.condition})` : e._fedge.label)}</title>`
+      : e._brel ? `<title>${esc(e._brel.verb)}</title>` : `<title>hurts</title>`;
     parts.edges.push(`<g class="edge k-${kind}" ${attrs}>${tip}<path class="line" d="M${pts.join(' L')}" marker-end="url(#se-arrow-${kind})"/>${label}</g>`);
   });
   const PAD = 10;
@@ -530,7 +635,7 @@ function emit(view, spec, laid, tokens, M) {
   for (const t of present) legend.push({ key: t, label: t, draw: `<g class="${isFlow ? `n-${t}` : `t-${t}`}">${shape(t, 44, 26)}</g>` });
   if (spec.mode !== 'structure') legend.push({ key: 'focus', label: 'focus', draw: `<g class="focus-swatch"><rect class="shape" x="0" y="0" width="44" height="26"/></g>` });
   if (mixed) for (const L of ['L1', 'L2', 'L3'].filter((x) => nodeLevels.has(x))) legend.push({ key: `lv-${L}`, label: LEVEL_NAME[L], draw: `<g class="lvkey lv-${L}"><rect class="shape" x="0" y="0" width="44" height="26"/></g>` });
-  for (const k of ['control', 'data', 'human'].filter((x) => edgeKinds.has(x))) legend.push({ key: `k-${k}`, label: k, kind: k, draw: `<g class="edge k-${k}"><path class="line" d="M0 13 L44 13"/></g>` });
+  for (const k of LINE_KINDS.filter((x) => edgeKinds.has(x))) legend.push({ key: `k-${k}`, label: LINE_LABEL[k] || k, kind: k, draw: `<g class="edge k-${k}"><path class="line" d="M0 13 L44 13"/></g>` });
 
   const contentW = Math.max(laid.width + PADX * 2, cx1 + PADX);
   const contentH = Math.max(laid.height + TOP, cy1 + TOP + 8);
@@ -552,7 +657,7 @@ function emit(view, spec, laid, tokens, M) {
   const badgeW = Math.ceil(textWidth(BADGE[view.level], 16, 600) * 1.08 + 24);
   const W = Math.ceil(Math.max(contentW, 640, lgRight + PADX, PADX * 2 + badgeW + 14 + textWidth(spec.title, 22, 600)));
   const H = Math.ceil(ly + 16);
-  const defs = `<defs>${['control', 'data', 'human'].map((k) => `<marker id="se-arrow-${k}" class="m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 ${k === 'data' ? 'L4 6 ' : ''}Z"/></marker>`).join('')}</defs>`;
+  const defs = `<defs>${LINE_KINDS.map((k) => `<marker id="se-arrow-${k}" class="m-${k}" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 ${k === 'data' ? 'L4 6 ' : ''}Z"/></marker>`).join('')}</defs>`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" class="diagram" data-view="${esc(view.id)}" data-level="${view.level}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="se-title-${esc(view.id)}">`
     + `<title id="se-title-${esc(view.id)}">${esc(spec.title)}</title>${styleBlock(tokens)}${defs}`
     + `<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`
@@ -561,6 +666,69 @@ function emit(view, spec, laid, tokens, M) {
     + `<g class="edges">${parts.edges.join('')}</g><g class="boundaries">${parts.boundaries.join('')}</g><g class="nodes">${parts.nodes.join('')}</g>`
     + `<g class="legend">${lg.join('')}</g></svg>\n`;
   return { svg, retitle, layout: { w: W, h: H, content, legend: legend.map(({ key, label, draw }) => ({ key, label, draw })), nodes: positions } };
+}
+
+// ---------- title art (iteration 003, D4) ----------
+// The title scene's default visual: a view's laid-out geometry drawn as a large schematic, shapes and lines
+// only (no text, so no label floor applies), each shape carrying its model ID so the picture traces to the
+// model. The page assembles it on entry: boundaries, then parts in model order, then lines (`assemble`).
+const TITLE_ART_ASPECT = 1265 / 922; // the title figure at 1920x1080 (base.css)
+// The art's graph: every default element of the view's level, no labels. The boundary's parts are laid out on
+// their own, in their own direction, so the whole can be shaped to the title's figure; a line between a part and
+// an outside element ends at the boundary.
+function buildArtGraph(M, view, outerDir, innerDir) {
+  const els = defaultViewElements(M, view.level, view.scope);
+  const box = (id) => { const e = M.els.get(id); const b = elementBox(e, false, `title art, element "${id}"`); return { id, width: b.w, height: b.h, _box: b, _el: e }; };
+  const rels = viewRelationships(M, els, view.level, view.scope);
+  if (view.level === 'L1') {
+    return { id: 'root', layoutOptions: { ...profile.structure, 'elk.direction': outerDir }, children: els.map(box),
+      edges: rels.map((r, i) => ({ id: `e${i}`, sources: [r.from], targets: [r.to], _rel: r })) };
+  }
+  const innerIds = new Set(els.filter((id) => M.els.get(id).parent === view.scope));
+  const bid = `boundary:${view.scope}`;
+  const end = (id) => (innerIds.has(id) ? bid : id);
+  const innerEdges = [], outerEdges = [], seen = new Set();
+  rels.forEach((r, i) => {
+    if (innerIds.has(r.from) && innerIds.has(r.to)) innerEdges.push({ id: `e${i}`, sources: [r.from], targets: [r.to], _rel: r });
+    else {
+      const a = end(r.from), b = end(r.to), k = `${a}>${b}`;
+      if (a === b || seen.has(k)) return;
+      seen.add(k);
+      outerEdges.push({ id: `e${i}`, sources: [a], targets: [b], _rel: r });
+    }
+  });
+  const boundary = { id: bid, _boundary: M.els.get(view.scope), children: [...innerIds].map(box), edges: innerEdges,
+    layoutOptions: { ...profile.structure, 'elk.direction': innerDir, 'elk.padding': '[top=36,left=36,bottom=36,right=36]' } };
+  return { id: 'root', layoutOptions: { ...profile.structure, 'elk.direction': outerDir, 'elk.hierarchyHandling': 'SEPARATE_CHILDREN' },
+    children: [...els.filter((id) => !innerIds.has(id)).map(box), boundary], edges: outerEdges };
+}
+function emitArt(view, laid, tokens) {
+  const PAD = 28, GRID = 36;
+  const bounds = [], nodes = [], lines = [];
+  let order = 0;
+  const edgesOf = (list, ox, oy) => {
+    for (const e of list || []) {
+      const s = e.sections?.[0];
+      if (!s || !e._rel) continue;
+      const pts = [s.startPoint, ...(s.bendPoints || []), s.endPoint].map((p) => `${f1(p.x + ox)} ${f1(p.y + oy)}`);
+      lines.push(`<g class="art-edge k-${e._rel.kind}" data-rel="${esc(e._rel.ids.join(' '))}"><path d="M${pts.join(' L')}" marker-end="url(#se-art-arrow)"/></g>`);
+    }
+  };
+  const visit = (n, ox, oy) => {
+    const x = n.x + ox, y = n.y + oy;
+    if (n._boundary) bounds.push(`<g class="art-boundary" data-el="${esc(n._boundary.id)}"><rect x="${f1(x)}" y="${f1(y)}" width="${f1(n.width)}" height="${f1(n.height)}"/></g>`);
+    if (n._el) nodes.push(`<g class="art-node t-${n._box.kind}" data-el="${esc(n._el.id)}" data-order="${order++}" transform="translate(${f1(x)},${f1(y)})">${shape(n._box.kind, n._box.w, n._box.h)}</g>`);
+    if (n._boundary) edgesOf(n.edges, x, y);
+    for (const c of n.children || []) visit(c, x, y);
+  };
+  for (const c of laid.children) visit(c, 0, 0);
+  edgesOf(laid.edges, 0, 0);
+  const x0 = -PAD, y0 = -PAD, w = Math.ceil(laid.width + PAD * 2), h = Math.ceil(laid.height + PAD * 2);
+  const dots = [];
+  for (let gx = Math.ceil(x0 / GRID) * GRID; gx <= x0 + w; gx += GRID) for (let gy = Math.ceil(y0 / GRID) * GRID; gy <= y0 + h; gy += GRID) dots.push(`<circle cx="${gx}" cy="${gy}" r="2"/>`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="title-art" data-from="${esc(view.id)}" viewBox="${x0} ${y0} ${w} ${h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="The solution's structure, drawn from its model">`
+    + `${artStyle(tokens)}<defs><marker id="se-art-arrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L12 6 L0 12 Z"/></marker></defs>`
+    + `<g class="grid" aria-hidden="true">${dots.join('')}</g><g class="art-boundaries">${bounds.join('')}</g><g class="art-edges">${lines.join('')}</g><g class="art-nodes">${nodes.join('')}</g></svg>\n`;
 }
 
 // ---------- layout candidates (D4) ----------
@@ -599,7 +767,8 @@ export async function renderAll(outDir, { strict = true } = {}) {
   const elk = new ELK();
   const layouts = {};
   const report = [];
-  const order = { L1: 0, L2: 1, L3: 2, flow: 3 };
+  const order = { before: -1, L1: 0, L2: 1, L3: 2, flow: 3 };
+  const B = S.views.some((v) => v.level === 'before') ? loadBefore() : null;
   const views = [...S.views].sort((a, b) => order[a.level] - order[b.level] || a.id.localeCompare(b.id));
   fs.mkdirSync(outDir, { recursive: true });
   tooLong = [];
@@ -609,7 +778,10 @@ export async function renderAll(outDir, { strict = true } = {}) {
     const figures = figuresFor(v.id, S, SS);
     // Candidates, in a fixed order; the first best one wins, so the output stays deterministic.
     let candidates;
-    if (v.level === 'flow') {
+    if (v.level === 'before') {
+      if (!B) throw new UserError(`view ${v.id}: before-model.yaml is missing (stage 01)`);
+      candidates = profile.structure_direction_candidates.map((d) => ({ name: d === 'DOWN' ? 'top-to-bottom' : 'left-to-right', graph: () => buildBeforeGraph(B, v, spec, d) }));
+    } else if (v.level === 'flow') {
       const f = flows.get(v.scope);
       if (!f) throw new UserError(`view ${v.id}: flow ${v.scope} not found`);
       candidates = profile.flow_aspect_candidates.map((a) => ({ name: `aspect ${a}`, graph: (rooms) => buildFlowGraph(M, v, spec, f, a, rooms) }));
@@ -628,7 +800,7 @@ export async function renderAll(outDir, { strict = true } = {}) {
       let r = null, rFit = null;
       for (let attempt = 0; ; attempt++) {
         const laid = await elk.layout(c.graph(rooms));
-        const a = emit(v, spec, laid, tokens, M), aFit = fitOf(a);
+        const a = { ...emit(v, spec, laid, tokens, M), laid }, aFit = fitOf(a);
         // The label floor comes first: a narrower title that costs the view its floor is not taken.
         if (!r || aFit.score >= 1 - 1e-9) { r = a; rFit = aFit; } else break;
         const fixable = a.retitle.filter((x) => x.room >= 80 && x.room < (rooms.get(x.id) ?? Infinity));
@@ -652,6 +824,25 @@ export async function renderAll(outDir, { strict = true } = {}) {
       const hi = ns.reduce((a, b) => ((byHeight ? b[1].y + b[1].h > a[1].y + a[1].h : b[1].x + b[1].w > a[1].x + a[1].w) ? b : a), ns[0]);
       report.push({ view: v.id, chosen: best.name, fit: best.fit, figures, content: best.layout.content, bound: byHeight ? 'height' : 'width', ends: [lo?.[0], hi?.[0]] });
     }
+  }
+  // The title scene's art, unless stage 04 chose an approved image (title_visual in scene-specs.yaml).
+  const title = S.scenes.find((s) => s.section === 'title');
+  const tv = title ? SS?.scenes?.[title.id]?.title_visual : null;
+  if (title && (!tv || tv.kind === 'art')) {
+    const from = tv?.from_view || S.views.find((v) => v.level === 'L2' && v.mode !== 'structure')?.id;
+    const fv = S.views.find((v) => v.id === from);
+    if (!fv || !['L1', 'L2'].includes(fv.level)) throw new UserError(`title art: "${from}" is not an L1 or L2 view; set title_visual.from_view in scene-specs.yaml (stage 04)`);
+    // The whole solution, not the view's narrowing: every default element of its level, with no labels. Of the
+    // layout directions, the one whose shape best fills the title's landscape figure wins (ties: the first).
+    const want = Math.log(TITLE_ART_ASPECT), textProblems = tooLong.length;
+    let art = null;
+    for (const [outer, inner] of [['RIGHT', 'DOWN'], ['DOWN', 'RIGHT'], ['DOWN', 'DOWN'], ['RIGHT', 'RIGHT']]) {
+      const laid = await elk.layout(buildArtGraph(M, fv, outer, inner));
+      const off = Math.abs(Math.log(laid.width / laid.height) - want);
+      if (!art || off < art.off - 1e-9) art = { laid, off };
+    }
+    tooLong.length = textProblems; // the art draws no text, so its boxes' text limits do not apply
+    writeText(path.join(outDir, 'title-art.svg'), emitArt(fv, art.laid, tokens));
   }
   writeText(path.join(outDir, 'layout.json'), JSON.stringify(layouts, null, 1) + '\n');
   const problems = [...new Set(tooLong)].map((t) => `${t}: shorten it at that stage (text is never cut, R8)`);

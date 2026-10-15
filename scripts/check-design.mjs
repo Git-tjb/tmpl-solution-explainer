@@ -59,6 +59,28 @@ export function checkTheme(report, run) {
   }
 }
 
+// A title image (iteration 003, D4): a picture file with its licence in title/, safe to inline, and approved in
+// design-spec.md. Stage 04 copies it from 01_discover/output/visual-refs/.
+const TITLE_IMAGE = /\.(png|jpe?g|webp|svg)$/i;
+export const TITLE_IMAGE_MAX = 2 * 1024 * 1024;
+function checkTitleImage(report, sid, tv) {
+  if (!report.check(!!tv.image && !!tv.alt, `${sid}: a title image needs title_visual.image (a file in title/) and alt text`)) return;
+  const f = path.join(P.title, tv.image);
+  if (!report.check(fs.existsSync(f), `${sid}: title image title/${tv.image} is missing; copy it from 01_discover/output/visual-refs/`)) return;
+  report.check(TITLE_IMAGE.test(tv.image), `${sid}: the title image must be PNG, JPEG, WebP, or SVG (got ${tv.image})`);
+  report.check(fs.statSync(f).size <= TITLE_IMAGE_MAX, `${sid}: the title image is ${fs.statSync(f).size} bytes (max ${TITLE_IMAGE_MAX})`);
+  if (/\.svg$/i.test(tv.image)) {
+    const svg = readText(f);
+    report.check(!/<script\b/i.test(svg), `${sid}: the title SVG has a script`);
+    report.check(!/\son[a-z]+\s*=/i.test(svg), `${sid}: the title SVG has an event attribute (on...=)`);
+    report.check(!/(href|src)\s*=\s*["']\s*(https?:|\/\/|file:)/i.test(svg) && !/url\(\s*["']?\s*(https?:|\/\/)/i.test(svg), `${sid}: the title SVG references a remote file`);
+    report.check(!/<foreignObject\b/i.test(svg), `${sid}: the title SVG embeds foreign content`);
+  }
+  report.check(fs.readdirSync(P.title).some((x) => /(licen[cs]e|copying)/i.test(x)), `${sid}: title/ has no licence file for the image`);
+  const ds = path.join(P.title, '..', 'design-spec.md');
+  report.check(fs.existsSync(ds) && /^#+\s*Title image\b/im.test(readText(ds)), `${sid}: design-spec.md needs a "Title image" section recording the image, its licence, and the operator's approval`);
+}
+
 export function checkDesign(report) {
   const S = readJson(P.scenes);
   const M = loadModel();
@@ -177,6 +199,18 @@ export function checkDesign(report) {
         else report.check((a.targets || []).length > 0 || a.do === 'clear-highlight', `${s.id} step ${st.step}: "${a.do}" needs targets`);
         for (const t of a.targets || []) report.check(targets.has(t), `${s.id} step ${st.step}: target "${t}" is not in view "${s.view}" or the scene's text`);
       }
+      // The title visual (iteration 003, D4): art drawn from a wired L1 or L2 view, or an approved image.
+      if (s.section === 'title') {
+        const tv = spec.title_visual || { kind: 'art' };
+        const runFrom = run.title_visual?.from || 'model';
+        report.check((tv.kind === 'image') === (runFrom === 'image'), `${s.id}: title_visual is ${tv.kind}, but run.md title_visual.from is ${runFrom}`);
+        if (tv.kind === 'art' && tv.from_view) {
+          const fv = views.get(tv.from_view);
+          report.check(['L1', 'L2'].includes(fv?.level) && specs.get(tv.from_view)?.mode !== 'structure', `${s.id}: title_visual.from_view "${tv.from_view}" must be a wired L1 or L2 view`);
+        }
+        if (tv.kind === 'image') checkTitleImage(report, s.id, tv);
+      } else report.check(!spec.title_visual, `${s.id}: title_visual is for the title scene only`);
+      if (spec.enter.kind === 'assemble') report.check(s.section === 'title' && (spec.title_visual?.kind || 'art') === 'art', `${s.id}: the assemble entry is for the title scene with title art`);
       if (['zoom-in', 'zoom-out'].includes(spec.enter.kind)) {
         report.check(!!spec.enter.from_view && views.has(spec.enter.from_view), `${s.id}: ${spec.enter.kind} needs from_view naming a declared view`);
         report.check(!!spec.enter.target, `${s.id}: ${spec.enter.kind} needs a target function`);

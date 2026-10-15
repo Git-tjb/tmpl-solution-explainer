@@ -167,10 +167,27 @@
     var ids = [].concat(h.elements || [], h.relationships || [], (h.steps || []).map(function (n) { return 'step-' + n; }));
     if (ids.length) highlight(sceneEl, ids, 0);
   }
+  // The title art assembles (build-rules.md, Motion): the boundary forms, then the parts appear in model order,
+  // then the lines, in 1200 ms. Reduced motion shows the finished picture at once.
+  function assemble(sceneEl) {
+    var art = sceneEl.querySelector('svg.title-art');
+    if (!art || reduced() || !art.animate) return;
+    var parts = Array.prototype.slice.call(art.querySelectorAll('.art-node'))
+      .sort(function (a, b) { return a.getAttribute('data-order') - b.getAttribute('data-order'); });
+    var at = function (el, delay, ms) {
+      var a = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms, delay: delay, easing: 'ease-out', fill: 'backwards' });
+      running.push(a);
+      a.finished.then(function () { running.splice(running.indexOf(a), 1); }, function () { running.splice(running.indexOf(a), 1); });
+    };
+    each(art.querySelectorAll('.art-boundary'), function (el) { at(el, 0, 400); });
+    parts.forEach(function (el, i) { at(el, 300 + Math.round(i * 500 / Math.max(1, parts.length)), 300); });
+    each(art.querySelectorAll('.art-edge'), function (el) { at(el, 900, 300); });
+  }
   function enter(sceneEl, si) {
     var e = spec(si).enter || { kind: 'cut' };
     var fig = sceneEl.querySelector('.figure') || sceneEl;
     if (e.kind === 'fade') animate(sceneEl, [{ opacity: 0 }, { opacity: 1 }], 600);
+    else if (e.kind === 'assemble') assemble(sceneEl);
     else if ((e.kind === 'zoom-in' || e.kind === 'zoom-out') && D.layouts[e.from_view]) {
       // Positions are in the full diagram's coordinates; the scene shows its content box (layout.json).
       var L = D.layouts[e.from_view], n = L.nodes[e.target], c = L.content;
@@ -229,7 +246,8 @@
       indicate(si);
       reset(sceneEl, si);
       for (var k = 1; k <= step; k++) runStep(sceneEl, si, k, false);
-      if (how === 'forward') enter(sceneEl, si);
+      // The title art also assembles when the explainer opens on it, once per arrival; never on a step back.
+      if (how === 'forward' || (how === 'jump' && (spec(si).enter || {}).kind === 'assemble')) enter(sceneEl, si);
     } else if (step === state.step + 1 && how === 'forward') {
       runStep(sceneEl, si, step, true);
     } else {

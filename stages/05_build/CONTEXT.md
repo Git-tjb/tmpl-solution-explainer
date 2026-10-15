@@ -7,7 +7,7 @@ Run the commands from the workspace root.
 ## Inputs
 | Layer | Path | Use |
 | --- | --- | --- |
-| 4 | `../04_design/output/tokens.css`, `views/`, `scene-specs.yaml` | the design |
+| 4 | `../04_design/output/tokens.css`, `views/`, `scene-specs.yaml`, `title/` (if any) | the design |
 | 4 | `../03_storyboard/output/scenes.json` | scenes, text, map |
 | 4 | `../01_discover/output/system-model.yaml`, `flows.yaml` | what the diagrams draw |
 | 4 | `../01_discover/output/sources/` | L4 detail for map panels (read by the script only) |

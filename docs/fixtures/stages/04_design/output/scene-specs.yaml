@@ -3,7 +3,8 @@ text_reveal: per-step
 scenes:
   S01:
     layout: title
-    enter: { kind: fade }
+    enter: { kind: assemble }
+    title_visual: { kind: art, from_view: functions }
     steps:
       - { step: 1, actions: [{ do: show-text, targets: [text-1], duration_ms: 500 }] }
     end_state: The kit's name and purpose beside its title visual, with who it is for.

@@ -56,6 +56,8 @@ Functions, Components, Code** (L1 to L4), top to bottom or left to right.
 - The current rung is filled; the other three are outlined. The scope name sits beside the ladder
   ("Components · Agent setup").
 - On a flow scene the ladder carries a "Flow" tag and fills the rungs the flow's steps come from.
+- On the title scene and on before scenes the ladder fills no rung and carries a "Title" or "Before" tag: those
+  pictures show no level of the solution. Their segments in the position strip are neutral (`--text-muted`).
 - It appears in the page chrome of every scene, and as a compact badge in the title row of every rendered
   diagram (`L2 · FUNCTIONS`), so a standalone diagram carries it too.
 - A theme may restyle the indicator but may not remove it. Its colors come from the tokens above; filled
@@ -98,6 +100,32 @@ the line's start with a dotted leader.
 Inside a box, text wraps to the box: the name (up to three lines), the exact name on its own line in the
 monospace face (paths wrap at `/`), the type, then the responsibility or the "what it does" bullets in full.
 Text that needs more lines than that fails the render; it is never cut.
+
+## Before views
+
+A before view draws the before model (`system-model.md`, The before model): the user and the old way, never
+the solution. Its badge reads `BEFORE`, and the user takes the first layer, so the picture leads with them.
+
+| Type | Shape | Outline |
+| --- | --- | --- |
+| `person` | stadium (the actor shape) | solid 2px, `--c-actor` |
+| `task` | rectangle, 6px corner radius | solid 2px, `--c-internal` |
+| `means` | rectangle, square corners | dashed 2px, `--c-external` |
+| `pain` | a tag pointing right, with a heavy bar at its left | solid 2px, `--c-system`; the bar filled `--c-system` |
+
+Inside each box: the name (bold; for a pain, what hurt, up to four lines), an exact name for a means, and the
+`[type]` label. Relationship lines are solid 2px `--c-edge` with their verb as the label (the legend calls them
+"relationship"). Each pain has one dotted, unlabelled `hurts` line from the pain to what it hurts; a pain that
+hurts a relationship points at the relationship's target. Pains use the neutral structure colours: when a step
+highlights a pain, its outline, its bar, and its `hurts` line take `--c-highlight`. No colour is added.
+
+## Title art
+
+The title scene's default visual (`title_visual.kind: art`) is the solution drawn as a large schematic: every
+default element of a wired L1 or L2 view (the view's narrowing and labels left out), laid out to fill the
+title's landscape figure, on a quiet dot grid. Shapes and lines only, in the structure colours at 3-4px; no
+text, legend, or badge, so no label floor applies. Every shape carries its model ID (`data-el`). It is not a
+second picture of the answer: it carries no names, and the answer scene's L1 view does.
 
 ## Flow node types
 

@@ -34,12 +34,17 @@ a { color: var(--c-highlight); }
 .scene[data-layout="diagram-wide"] .text { grid-row: 3; display: flex; flex-wrap: wrap; gap: 8px 48px; align-self: end; padding-top: 10px; }
 .scene[data-layout="diagram-wide"] .text p { margin: 0; }
 
-/* Orientation: the level ladder drawn large, from data (build-site.mjs). The same four rungs as the
-   level indicator, top to bottom, joined by a rail. */
-.scene[data-layout="orientation"] { grid-template-columns: minmax(400px, 28%) 1fr; grid-template-rows: auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
-.scene[data-layout="orientation"] header { grid-column: 1; grid-row: 1; flex-direction: column; gap: 6px; align-self: end; }
-.scene[data-layout="orientation"] .text { grid-column: 1; grid-row: 2; align-self: start; padding-top: 12px; }
-.scene[data-layout="orientation"] .figure { grid-column: 2; grid-row: 1 / span 2; }
+/* Title (iteration 003, D4): the solution's name and purpose in the text column, the title visual beside them. */
+.scene[data-layout="title"] { grid-template-columns: minmax(400px, 28%) 1fr; grid-template-rows: 1fr auto 1fr; column-gap: calc(var(--space, 24px) * 2); }
+.scene[data-layout="title"] header { grid-column: 1; grid-row: 2; flex-direction: column; gap: 6px; align-self: end; }
+.scene[data-layout="title"] h2 { font-size: calc(var(--size-title, 44px) * 1.25); }
+.scene[data-layout="title"] .text { grid-column: 1; grid-row: 3; align-self: start; padding-top: 12px; }
+.scene[data-layout="title"] .figure { grid-column: 2; grid-row: 1 / span 3; }
+.scene .figure.title-visual { align-items: center; justify-content: center; }
+.scene .figure.title-visual svg.title-art { width: 100%; height: 100%; }
+.scene .figure.title-visual img.title-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* The level ladder, drawn from data (build-site.mjs): the same four rungs as the level indicator, top to
+   bottom, joined by a rail. */
 .ladder { list-style: none; margin: 0; padding: 0 0 0 40px; display: grid; gap: 22px; width: 100%; position: relative; counter-reset: rung; }
 .ladder::before { content: ""; position: absolute; left: 12px; top: 24px; bottom: 24px; border-left: 3px solid var(--text-muted); }
 .ladder li { position: relative; border: 3px solid var(--text); padding: 16px 22px; display: grid; grid-template-columns: 240px 1fr; column-gap: 24px; row-gap: 4px; font-size: 24px; counter-increment: rung; }
@@ -63,7 +68,6 @@ a { color: var(--c-highlight); }
 .scene .figure .art svg.diagram { width: 100%; height: 100%; }
 /* The page header is the scene's one title, and the legend is the row below (D4). */
 .scene .figure .art svg.diagram > .badge, .scene .figure .art svg.diagram > .title, .scene .figure .art svg.diagram > .legend { display: none; }
-.scene .figure.orientation { justify-content: center; }
 .scene .figure .legend { flex: none; display: flex; align-items: center; gap: 6px 22px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap;
   min-height: 34px; padding-top: 6px; font-size: 16px; color: var(--text-muted); }
 .scene .figure .legend .lg { display: inline-flex; align-items: center; gap: 8px; }
@@ -143,6 +147,8 @@ svg.diagram .node.has-link { cursor: pointer; }
 .progress li[data-level="L2"] { background: var(--lv-2); }
 .progress li[data-level="L3"] { background: var(--lv-3); }
 .progress li[data-level="flow"] { background: var(--lv-flow); }
+/* The title and before scenes show no level of the solution: their segments are neutral. */
+.progress li[data-level="title"], .progress li[data-level="before"] { background: var(--text-muted); }
 .progress li:not(.current):not(.done) { opacity: 0.35; }
 .progress li.current { box-shadow: 0 -4px 0 var(--text); }
 
