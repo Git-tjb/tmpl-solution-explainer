@@ -22,12 +22,12 @@ Run the commands from the workspace root.
 1. If the test browsers are missing, run `npx playwright install chromium firefox` (Edge is used from the
    machine; if it is missing, `npx playwright install msedge`).
 2. Run `node scripts/verify.mjs`. It runs the scripted criteria in Chromium, Edge, and Firefox at both
-   viewports, writes `output/verify-results.json`, and captures every scene at its final step into
-   `output/screenshots/`.
+   viewports (the legibility criteria AC-6 and AC-19 to AC-28 at every scene and every reveal step), writes
+   `output/verify-results.json`, and captures every scene at its final step into `output/screenshots/`.
 3. Review content fidelity: every line of on-screen text in `scenes.json` against the fact IDs it cites.
 4. Review the screenshots against `banned-patterns.md` (accepting only the exceptions listed in
-   `design-spec.md`, if the run has a theme) and the IA rules marked as review in
-   `acceptance-criteria.md`.
+   `design-spec.md`, if the run has a theme), the IA rules marked as review, and the "Review at stage 06"
+   list in `acceptance-criteria.md` (branching flows, plain line labels, one meaning per colour).
 5. Write `verify-report.md`: pass or fail per criterion; each failure with its scene or element ID and the
    stage that should be re-run.
 6. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 06`.

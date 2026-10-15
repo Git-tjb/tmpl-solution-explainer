@@ -1,7 +1,7 @@
 ---
 component: tmpl-solution-explainer
 kind: template
-version: 0.1.0
+version: 0.2.0
 ---
 # Solution Explainer Design
 
@@ -34,12 +34,13 @@ any stage filing into a KB vault or copying into a solution repo; automated chec
 | `_config/visual-direction.md`, `banned-patterns.md`, `build-rules.md` | Look, anti-patterns, technical constraints |
 | `_config/retro.md` | Retro sections, with gate feedback grouped by template area |
 | `_config/gate-feedback.md` | The format of each stage's `gate-feedback.md` |
-| `_config/standards/` | The consistency layer: model, flows, views, notation, layout profile, and the schemas for every machine-read output. Never edited in a run. |
+| `_config/standards/` | The consistency layer: model, flows, views, notation (colour roles included), layout profile, the bundled fonts' measured widths (`font-metrics.json`), and the schemas for every machine-read output. Never edited in a run. |
 | `stages/01_discover` ... `07_retro` | Stage contracts and stage references |
-| `scripts/` | Deterministic helpers (section 4), shared code (`scripts/lib/`), and the page runtime (`scripts/site/`: `runtime.js`, `base.css`) |
+| `scripts/` | Deterministic helpers (section 4), shared code (`scripts/lib/`, including `page-checks.mjs`, the in-page checks verify and the mockups share), and the page runtime (`scripts/site/`: `runtime.js`, `base.css`) |
 | `package.json`, `package-lock.json` | Pinned tooling: elkjs, yaml, ajv, playwright, @axe-core/playwright, and the IBM Plex fonts (OFL) from @fontsource |
 | `docs/fixtures/` | Made-up inputs for dry runs: run answers, a source folder, and stage 01-04 outputs including a small run theme (never copied into an instance) |
 | `docs/iterations/` | Iteration records: requirements, design, and verification per iteration |
+| `docs/seeds.md` | Open improvement ideas between iterations; it exists only while it holds one |
 | `.gitleaks.toml` | Secret scanning with the default rules, allowing `.stamp.json` hash files |
 
 ## 4. Behavior
@@ -65,11 +66,12 @@ Every stage from 01 to 06 logs its gate's corrections in `gate-feedback.md`, and
 | `inventory-sources.mjs` | the snapshot | `01_discover/output/inventory.md` | — |
 | `check-model.mjs [--scope]` | model, flows, fact sheet [, `scope.md`] | report to the console | any schema or integrity rule in `system-model.md` / `flows.md` fails (including `what_it_does`); with `--scope`, an unknown or excluded ID, a bad depth, or more than 14 target scenes |
 | `check-storyboard.mjs` | `scenes.json`, model, flows, `scope.md`, fact sheet | report | schema, IA rules marked (checked) including orientation and structure before wiring, `excluded` and `map_only`, talk time, map coverage |
-| `check-design.mjs` | views, scene specs, `tokens.css`, `theme/`, `scenes.json`, model | report | view rules and modes, scene/step coverage, action vocabulary (incl. expand targets), theme contents, contrast below 7:1 |
-| `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `tokens.css`, theme tokens | SVG per view in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule |
-| `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, `theme/`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing |
-| `mockups.mjs` | scenes, scene specs, model, views, tokens | `04_design/output/mockup/`, `mockups/` (PNG per scene, `index.html`) | when Chromium cannot start |
-| `verify.mjs` | the site, `scenes.json`, view specs, model | `06_verify/output/verify-results.json`, `screenshots/` (AC-1 to AC-18) | never (results record failures) |
+| `check-design.mjs` | views, scene specs, `tokens.css`, `theme/`, `scenes.json`, model | report | view rules and modes, scene/step coverage, action vocabulary (incl. expand targets), a scene whose step 0 is empty, theme contents, contrast (text 7:1, dimmed text 4.5:1), colour roles; notes merged lines with no plain label |
+| `render-diagrams.mjs [--preview]` | model, flows, view specs, `layout-profile.json`, `font-metrics.json`, `tokens.css`, theme tokens, scene specs | SVG per view and `layout.json` (content box, legend, positions) in `05_build/output/site/assets/diagrams/` (or `04_design/output/preview/`) | layout fails, a view breaks a rule, text is too long for its shape, or a scene's diagram would render below the label floor (the preview warns instead) |
+| `build-site.mjs` | `scenes.json`, scene specs, `tokens.css`, `theme/`, the SVGs, the snapshot | `05_build/output/site/` | a scene, view, or panel is missing; a title or message cannot fit in two lines |
+| `mockups.mjs` | scenes, scene specs, model, views, tokens | `04_design/output/mockup/`, `mockups/` (PNG per scene at both viewports, `index.html`, `measurements.json`) | when Chromium cannot start |
+| `verify.mjs` | the site, `scenes.json`, view specs, model | `06_verify/output/verify-results.json`, `screenshots/` (AC-1 to AC-28) | never (results record failures) |
+| `font-metrics.mjs` | the @fontsource packages | `_config/standards/font-metrics.json` (template tool; re-run when the font packages change) | when Chromium cannot start |
 | `dry-run.mjs` | `docs/fixtures/` | every stage's output, in the template only (gitignored) | any script fails |
 | `stamp.mjs <nn>` | the stage's declared inputs | `stages/<nn>_*/output/.stamp.json` (sha256 per input) | — |
 | `status.mjs` | every stamp | report: not run, done, or stale per stage | — |
@@ -98,6 +100,14 @@ and model order; the same inputs give byte-identical files.
 | D-16 | No themes in the template; a run may bring `theme/` (CSS, fonts, licences) over named styling points | Keeps the template's look neutral while letting a run have its own, under the same checks (iteration 001, D5) |
 | D-17 | Stage 04's gate reviews scene mockups (`mockups.mjs`), not loose diagram previews | The operator judges the look as the audience will see it (iteration 001, D6) |
 | D-18 | `excluded` in `scope.md` is honoured by every later stage and script | Excluding an element must remove it everywhere, map included (trial run 1, O12) |
+| D-19 | Colour has roles, one meaning each: focus, four level colours, neutral structure; `check-design` enforces them in OKLCH on the default look and any theme | One colour did four jobs in trial run 2 (iteration 002, D2) |
+| D-20 | Dimming changes colour, not opacity: dimmed text has its own token at 4.5:1; traced lines count as highlighted; a flow highlight dims nothing | The line a step was about was the darkest thing on screen (iteration 002, D3) |
+| D-21 | A scene shows only the diagram's drawn content, scaled to fill its figure (capped at 1.6x), with the legend as an HTML row below; the page header is the one title | Diagrams used a fraction of their space and showed three titles (iteration 002, D4) |
+| D-22 | Each view is laid out in a small fixed set of candidates and the one with the largest labels at both viewports is kept; under the floor, the build fails | Top-to-bottom layering cost the height trial run 2 needed (iteration 002, D4) |
+| D-23 | Text is measured with the bundled fonts' widths and never cut: too long for its shape fails the build, naming the stage that owns the text | Trial run 2 cut copy mid-sentence and ran text past its boxes (iteration 002, D5) |
+| D-24 | Boundary titles wrap to their boundary and sit in a gap between crossing lines, or under a halo when the floor leaves no room; AC-28 still flags the halo case | ELK ignores a minimum size on nested nodes; lines ran through titles (iteration 002, W5) |
+| D-25 | The control bar never wraps; a position strip and a first-screen hint tell a viewer where they are and how to advance | Controls wrapped and clipped at 1440 wide; nothing told a viewer how to drive it (iteration 002, D6) |
+| D-26 | Legibility is checked at every scene and step, at both viewports, in three browsers (AC-19 to AC-28), and measured in the mockups at design | A viewer found what the scripted checks never looked at (iteration 002, D7) |
 
 ### How the format meets the output-format requirements (AC-15)
 | Requirement | How |
@@ -124,16 +134,24 @@ template itself:
 | T-4 | The scrub scan finds no configured term | `Test-Scrub.ps1` (pre-commit) |
 
 ## 6. Known Limits
-- In development: no `v1.0.0` tag. Trial run 1 (on the AI Workshop) closed at the stage 04 gate, and
-  iteration 001 applied its retro. Trial run 2 is the next test; whether the template earns a release is
-  decided after it.
+- In development: no `v1.0.0` tag. Trial run 1 closed at the stage 04 gate and iteration 001 applied its
+  retro; trial run 2 was presented, and iteration 002 applied a viewer's review of it and the retro's
+  legibility items. Trial run 3 is the next test; whether the template earns a release is decided after it.
 - `function` (formerly `container`) is an adaptation of C4 and is the type most likely to need refining.
 - The element (9) and node (12) limits, the 8-14 scene range, the depth meanings, and the zoom table in
   `narrative-arc.md` are starting points, to be tuned after real presentations.
 - Pins work on top-level nodes only; pins on parts inside a boundary or lane have no effect.
 - Narrower boxes (iteration 001) make two-line names more common, so tall views reach the 16px label limit
-  sooner; the preview warns, and the fix is to narrow or split the view.
-- The label fallback (beside the line's start, with a leader) has not yet been needed by a real diagram.
+  sooner; the preview warns, the build refuses, and the fix is to narrow or split the view.
+- A laned flow cannot wrap into rows (ELK lays lanes out as one row), so beyond about seven steps it falls
+  below the label floor in a `diagram-wide` scene; the fixture flow is unlaned for that reason. The 12-node
+  flow limit holds for unlaned flows.
+- A line can still pass under a boundary title (with a halo) when no gap is wide enough and wrapping the
+  title would cost the view its label floor; AC-28 reports it, and stage 04 narrows the view.
+- A traced line's arrowhead keeps the line colour; the line and its label take the focus colour.
+- An L3 view laid out left to right keeps its L2 neighbours' order only approximately.
+- The figure sizes `render-diagrams` predicts with (`FIGURE` in `scripts/lib/common.mjs`) are derived from
+  `base.css`; a change to the page layout must update both.
 - Whether the tooling installs on a company-managed machine is unverified.
 
 ## 7. History
@@ -141,3 +159,4 @@ template itself:
 | --- | --- | --- |
 | 0.0.0 | 2026-10-11 | First build from the requirements "Solution Explainer ICM Workflow (V1)", rev 3 |
 | 0.1.0 | 2026-10-12 | Iteration 001 (`docs/iterations/001-trial-run-1-lessons/`): trial run 1's lessons, requirements rev 4 |
+| 0.2.0 | 2026-10-14 | Iteration 002 (`docs/iterations/002-legibility-and-correctness/`): legibility and correctness, from a viewer's review of trial run 2 and its retro |

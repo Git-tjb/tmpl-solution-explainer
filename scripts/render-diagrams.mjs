@@ -326,9 +326,11 @@ function buildFlowGraph(M, view, spec, flow, aspect, rooms) {
       return [{ id: `lane:${l}`, _lane: le, _title: title, layoutOptions: { ...spacing(profile.flow), 'elk.padding': `[top=${title.padTop},left=20,bottom=20,right=20]` }, children: members }];
     }).flat();
   } else children = nodes.map(nodeOf);
-  // Lines leaving one node with the same label share one label, placed near the source (R12).
-  const textOf = (x) => (x.condition ? `${x.label} [${x.condition}]` : x.label);
+  // Lines leaving one node with the same label share one label, placed near the source (R12). A decision's
+  // branch shows its condition alone ("pass"), short enough to sit on the line by the diamond; its verb is in
+  // the line's tooltip.
   const types = new Map(flow.nodes.map((n) => [n.id, n.type]));
+  const textOf = (x) => (types.get(x.from) === 'decision' && x.condition ? x.condition : x.label);
   const seen = new Set();
   const edges = flow.edges.map((e, i) => {
     const text = textOf(e);
@@ -503,7 +505,7 @@ function emit(view, spec, laid, tokens, M) {
       const lx = pick.x + PADX, ly = pick.y + TOP;
       label = leader + `<rect class="lblbg" x="${f1(lx)}" y="${f1(ly)}" width="${f1(L.width)}" height="${f1(L.height)}"/>` + L._lines.map((l, i) => `<text x="${f1(lx + L.width / 2)}" y="${f1(ly + 3 + (i + 0.78) * LINE(FONT.edge_label))}" text-anchor="middle">${esc(l)}</text>`).join('');
     }
-    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : `<title>${esc(e._fedge.label)}</title>`;
+    const tip = e._rel ? `<title>${esc(e._rel.verbs.join('; '))}</title>` : `<title>${esc(e._fedge.condition ? `${e._fedge.label} (${e._fedge.condition})` : e._fedge.label)}</title>`;
     parts.edges.push(`<g class="edge k-${kind}" ${attrs}>${tip}<path class="line" d="M${pts.join(' L')}" marker-end="url(#se-arrow-${kind})"/>${label}</g>`);
   });
   const PAD = 10;

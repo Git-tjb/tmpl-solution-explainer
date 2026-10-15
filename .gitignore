@@ -7,3 +7,5 @@ __pycache__/
 node_modules/
 # Fixtures are inputs to the dry run, not its output.
 !docs/fixtures/**
+# Crash dumps from Git for Windows tools.
+*.stackdump

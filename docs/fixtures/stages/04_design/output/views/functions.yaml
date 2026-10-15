@@ -5,4 +5,6 @@ scope: kit
 title: "Functions: Example Pipeline Kit"
 states:
   split: { elements: [templates, instances], relationships: [templates-create] }
-elements: [operator, templates, instances, library]
+elements: [templates, instances, library]
+labels:
+  templates--instances: create runs

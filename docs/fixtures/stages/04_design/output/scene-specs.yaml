@@ -52,8 +52,8 @@ scenes:
     steps:
       - { step: 1, actions: [{ do: show, targets: [step-2, step-3, start--load, load--execute], duration_ms: 700 }] }
       - { step: 2, actions: [{ do: show, targets: [step-4, step-5, execute--ask-model, ask-model--write], duration_ms: 700 }, { do: trace, targets: [ask-model--write], duration_ms: 1000 }] }
-      - { step: 3, actions: [{ do: show, targets: [step-6, step-7, write--review, review--done], duration_ms: 700 }, { do: highlight, targets: [review], duration_ms: 500 }] }
-    end_state: All seven steps shown; the review gate highlighted.
+      - { step: 3, actions: [{ do: show, targets: [step-6, step-7, step-8, step-9, write--check, check--review, check--flagged, review--done], duration_ms: 700 }, { do: highlight, targets: [review], duration_ms: 500 }] }
+    end_state: All nine steps shown, the check's two branches labelled; the review gate highlighted.
   S09:
     layout: diagram-with-text
     enter: { kind: zoom-out, from_view: functions, target: kit }

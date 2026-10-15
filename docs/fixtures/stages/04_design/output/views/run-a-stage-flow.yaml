@@ -3,4 +3,4 @@ id: run-a-stage-flow
 level: flow
 scope: run-a-stage
 title: "Flow: Run one stage"
-lanes: true
+lanes: false

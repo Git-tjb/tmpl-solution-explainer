@@ -218,7 +218,7 @@
     // Position in the explainer (R21): scene of total, then the step when the scene has steps.
     where.textContent = (si + 1) + ' / ' + scenes.length + (maxStep(si) ? ' · step ' + step + ' of ' + maxStep(si) : '');
     each(progress, function (li, i) { li.classList.toggle('current', i === si); li.classList.toggle('done', i < si); });
-    if (how === 'forward' && (si > 0 || step > 0)) hideHint();
+    if (si > 0 || step > 0) hideHint(); // anywhere but the very start, by any route
     fitLegend(sceneEl);
     var h = '#' + id + (step ? '.' + step : '');
     lastSet = h;

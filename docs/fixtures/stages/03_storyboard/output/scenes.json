@@ -188,7 +188,7 @@
     {
       "id": "S06",
       "section": "build",
-      "title": "Inside a template",
+      "title": "Inside a template: contracts and standards",
       "point": "Contracts direct each stage; standards constrain the contracts.",
       "mode": "explanation",
       "level": "L3",
@@ -246,7 +246,7 @@
       "level": "flow",
       "view": "run-a-stage-flow",
       "text": [
-        "Seven steps, one human gate"
+        "Nine steps, one check, one human gate"
       ],
       "reveals": [
         {
@@ -259,7 +259,7 @@
         },
         {
           "step": 3,
-          "shows": "the gate and output"
+          "shows": "the check, the gate, and the output"
         }
       ],
       "animation": {

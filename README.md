@@ -11,7 +11,7 @@ page set is checked automatically in three browsers.
 It is not a slide deck, a document for the audience to keep, or published documentation. The output is a
 static page set you open in a browser. Nothing is hosted.
 
-Current version: 0.1.0 (in development; see `docs/iterations/`).
+Current version: 0.2.0 (in development; see `docs/iterations/`).
 
 ## What you get
 
@@ -23,6 +23,12 @@ contains:
 - a theme and tokens you can restyle per run (stage 04)
 
 Every claim in the explainer traces back to a fact sheet the first stage builds from your sources.
+
+The page is built to stay readable on a shared screen: diagrams fill their space with labels at 16px or more,
+what a step is about is drawn at full strength in one focus colour, and text is never cut. If something
+would break that (text too long for its box, a view too big for the screen), the build stops and says which
+stage should fix it. A position strip and a first-screen hint show the audience where they are and how to
+move: arrow keys or Space to advance, M for the map, P to show or hide each scene's message.
 
 ## How it works
 

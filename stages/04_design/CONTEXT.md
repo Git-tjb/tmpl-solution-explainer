@@ -37,12 +37,16 @@ Run the commands from the workspace root.
 4. Write `design-spec.md`: the visual system and why, the map and navigation chrome, any departure from
    the defaults, the theme and each approved exception to the banned list (a heading "Approved exceptions"), any runtime library and its justification, and a self-check against each banned pattern.
 5. Run `node scripts/check-design.mjs` and fix what it reports.
-6. Run `node scripts/render-diagrams.mjs --preview` to draw every view into `output/preview/` for review.
-   Act on every WARN: a view too tall or wide to show labels at 16px must be narrowed, split, or given the
-   `diagram` layout, then re-checked.
+6. Run `node scripts/render-diagrams.mjs --preview` to draw every view into `output/preview/`. It prints each
+   view's predicted label size at 1920x1080 and 1440x900 and what sets its extent. Act on every WARN: a view
+   below the label floor, or text too long for its shape, must be fixed here (narrow or split the view, give
+   the scene the `diagram` layout, or send the text back to the stage that owns it), then re-checked. The
+   build refuses both.
 7. Run `node scripts/mockups.mjs`. It renders the diagrams and builds the page into `output/mockup/`, then
-   captures every scene at its final reveal step at 1920x1080 into `output/mockups/`, numbered in
-   storyboard order, with `mockups/index.html` as a contact sheet. If Chromium is missing, run
+   captures every scene at its final reveal step at 1920x1080 and 1440x900 into `output/mockups/`, numbered
+   in storyboard order, measures each capture (label size, text fit, lines through text, and the other page
+   checks), and writes `mockups/index.html` (a contact sheet with the numbers) and
+   `mockups/measurements.json`. Resolve every problem it lists. If Chromium is missing, run
    `npx playwright install chromium`.
 8. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 04`.
 
@@ -56,7 +60,7 @@ Run the commands from the workspace root.
 | `design-spec.md` | `output/` |
 | `preview/*.svg` | `output/` |
 | `mockup/` (the page the mockups show) | `output/` |
-| `mockups/NN-SXX-<title>.png`, `mockups/index.html` | `output/` |
+| `mockups/NN-SXX-<title>-<width>.png`, `mockups/index.html`, `mockups/measurements.json` | `output/` |
 | `gate-feedback.md` | `output/` |
 
 ## Verify

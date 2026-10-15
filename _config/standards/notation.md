@@ -112,7 +112,8 @@ Text that needs more lines than that fails the render; it is never cut.
 | `output` | rectangle with a doubled bottom edge | solid 2px, `--c-system` |
 
 Every flow node shows its step number in a circle at its top-left corner. Flow edges: `control` solid,
-`data` dashed, both 2px, each with its verb label; a `decision` edge also shows its condition.
+`data` dashed, both 2px, each with its verb label; a line leaving a `decision` is labelled with its condition
+alone ("pass", "fail"), on the line by the diamond, and its verb is in the line's tooltip.
 
 ## Highlight states
 

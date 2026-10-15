@@ -51,77 +51,8 @@ the vault path until the filing marker was set, reads included.
 ## Seeds from a viewer's review of trial run 2
 
 Raised 2026-10-13. A viewer who used the trial run 2 explainer (13 scenes, S01 to S13) gave the feedback behind
-S2 to S10. Scene numbers in those seeds refer to that run. Most items are template defects (the runtime, the
-notation and build rules); a few are that run's content and would be fixed in an instance, not in the template,
-and each seed says which. The viewer's closing test is S10.
-
-## S2. Highlight and dimming hide the point of a scene
-
-**What.** When a scene has a highlight, every edge without `.hl` drops to 35% opacity, including the edges the
-scene just traced. In S07 to S10 the traced arrow renders dark on black and its label ("may graduate into",
-"are copied into", "deploy instructions and skills into") is unreadable. Dimmed node text and edge labels
-(S03, S07, S10) fall far below readable contrast. The `(+)` expand marker on a dimmed node is dimmed with it
-(S10, Projects).
-
-**Wanted.**
-- A traced edge and its label render at full opacity in the highlight colour.
-- Dimmed means quiet but readable: raise node dimming to roughly 55 to 60%, and never dim text below 4.5:1.
-- Interactive markers stay at full opacity.
-
-**Touches.** `_config/standards/notation.md` (`--c-dim`), `_config/build-rules.md` line 81 (today dimmed text
-needs only 3:1; this asks for 4.5:1), `scripts/site/base.css` and `runtime.js` (the opacity rules),
-`scripts/verify.mjs` (a contrast check at each step).
-
-## S3. Layout defects: wrapping controls, overflowing text, truncated copy, empty first frame
-
-**What.**
-- The control bar breaks at 1440 wide. On S09, S11 and S12 the long scope label makes "Message (P)", "Map (M)"
-  and "Reduced motion (R)" wrap to two or three lines and clip off the bottom of the screen.
-- In S11 and S12 the type line ("[EXTERNAL] Company KB vault", "[DECISION] Entry instructions") runs to or past
-  the node edge, and the decision diamond cannot hold its label.
-- Copy is cut mid-thought: "The right reference, and nothing else ..." (S12 step 9), "designing a new ..." (S05,
-  Projects). This one is also run content: the source text was too long for its slot.
-- S01 opens on an empty frame at step 0: a diagram title, an empty box and a legend.
-
-**Wanted.**
-- No control ever wraps. Truncate the scope label first, with a tooltip for the full text.
-- Wrap the type line or widen the node; size the diamond to its label.
-- Fit the full text or rewrite it shorter; the build fails on truncation rather than cutting.
-- Show the system node at step 0, or give the first scene a real title state.
-
-**Touches.** `scripts/site/base.css` and `runtime.js`, `scripts/render-diagrams.mjs` (node and diamond sizing),
-`scripts/verify.mjs` (checks for wrapped controls, text outside its shape, truncation, and an empty first
-frame), `_config/build-rules.md`.
-
-## S4. Diagrams: use the space, cut the noise
-
-**What.**
-- Diagrams are small for the room they have. S08's content is 280 units wide inside an 800-wide viewBox, so
-  three boxes sit in a narrow strip beside a blank half screen. S05 and S11 leave a large empty band below. The
-  legend sets the width. Body text inside diagrams lands near 13px at 1440 wide.
-- S12's routing is hard to follow: four "gives" labels stack, three "routes to" labels float away from their
-  lines on dotted leaders, and lines cross.
-- Each scene shows three titles that say the same thing: the page heading, a level badge, and an in-diagram
-  title ("Functions: AI Workshop"); the control bar repeats the heading again, truncated.
-- The legend is heavy: two rows on S09 to S12, repeated on every scene, with a "focus" swatch even when nothing
-  is focused.
-- Edge labels like "shape +2", "gate writes into +5" and "read bound vaults from +1" mean nothing to a
-  first-time viewer.
-
-**Wanted.**
-- The viewBox hugs the content (the legend does not set the width) and the diagram scales to fill the figure
-  area; body text at least 16px rendered at 1440 wide.
-- Re-lay out fan-shaped flows cleanly: decision on the left, destinations in a column, output on the right, one
-  shared label, branch labels sitting on their lines.
-- Drop the in-diagram title in scenes (keep it in the map) and the truncated heading from the control bar.
-- Show only the symbols present in the current diagram, on one quiet row, or behind a "Legend" toggle.
-- One plain summary label per line; the full list goes to the map panel.
-
-**Touches.** `scripts/render-diagrams.mjs`, `_config/standards/layout-profile.json`, `views.md`, `flows.md`
-(label rules), `scripts/site/runtime.js` (legend, titles).
-
-**Needs thought.** A 16px floor interacts with the 9-element and 12-node limits: bigger text means fewer nodes
-per view, or a bigger canvas.
+S2 to S10. Scene numbers in those seeds refer to that run. Iteration 002 addressed S2, S3, S4, S7, and S10
+(legibility and correctness); S5, S6, S8, and S9 remain.
 
 ## S5. Story: every scene needs its own picture
 
@@ -148,53 +79,23 @@ fixed in an instance.
 
 ## S6. Control bar and navigation
 
+Iteration 002 (R21 and the control bar) delivered part of this seed: prev and next are the only filled
+controls, Message and Map are quiet, reduced motion is a small toggle, a position strip coloured by level sits
+above the bar, and a one-time hint shows on the first scene. What remains:
+
 **What.**
-- The bar is the loudest thing on screen: four filled pills in three colours plus four outlined level pills, all
-  in caps.
-- Progress is one cue ("S06 . 2/2" in mono).
+- The position strip is display only, so scenes past 10 can be reached only through the map.
 - The level pills look like buttons and do nothing; "Code" never lights up, and nothing says why (map only).
-- Nothing tells a visitor how to drive it.
 - Only focus is styled; buttons and clickable nodes have no hover or pressed state.
 - The `(+)` expand marker is the only sign a node is clickable.
 
 **Wanted.**
-- Prev and next are the only filled controls; Message and Map are quiet secondary buttons; Reduced motion moves
-  into a small settings affordance.
-- A segmented progress strip, one segment per scene, coloured by level, each clickable with the scene title as
-  its tooltip. This also reaches scenes number keys cannot (S11 to S13).
+- Each strip segment clickable, with the scene title as its tooltip.
 - Level pills either jump to the first scene at that level or are styled as a status readout; "Code" explains
   itself on hover or links to the map.
-- A one-time hint on the first scene: arrow keys or Space to advance, M for the map, click a `(+)` node for
-  detail.
 - Hover and pressed states on every button and clickable node.
 
-**Touches.** `scripts/site/base.css`, `runtime.js`, the page template in `scripts/build-site.mjs`,
-`_config/visual-direction.md`.
-
-## S7. Colour and type
-
-**What.**
-- Orange does four jobs: the focus highlight (#ff9900), the message block (#ff9966), the prev/next buttons, and
-  the Flow level. In S11 an orange traced line sits under an orange Flow frame.
-- Scene titles and the L1 level share the same peach, so on L2 and L3 scenes the title differs from everything
-  else that marks the level.
-- The sidebar is decoration below 1600px wide: its labels are hidden and its lower three blocks never change.
-- Condensed all-caps titles wrap to four lines in the 230px text column (S03, S11, S12), pushing the message
-  down.
-- One-word last lines on titles and messages.
-
-**Wanted.**
-- Bright orange reserved for focus only; Flow gets its own colour; the message block gets a neutral treatment
-  with a thin level-coloured rule.
-- Titles coloured by the current level, or neutral.
-- A sidebar that carries information at every width (level name, scene number, progress), or a single
-  level-coloured rail.
-- A wider text column (the diagram has room once it hugs its content), or titles capped at two lines by sizing
-  to length.
-- `text-wrap: balance` on titles and the message.
-
-**Touches.** `_config/visual-direction.md` (token roles), `_config/standards/notation.md` (level colours),
-`scripts/site/base.css`.
+**Touches.** `scripts/site/base.css`, `runtime.js`, the page template in `scripts/build-site.mjs`.
 
 ## S8. Map
 
@@ -224,14 +125,30 @@ worth the cost; the template's `_config/` should state the decision either way.
 **Touches.** `_config/build-rules.md` (a stated viewport range), `scripts/site/base.css`, `scripts/verify.mjs`
 (the viewports it checks).
 
-## S10. Acceptance for the next iteration
+## S11. Laned flows beyond seven steps
 
-**What.** The viewer's "done when", kept as the seed for the next iteration's acceptance criteria. Every scene at
-every step, at 1440x900 and 1920x1080, has: no clipped or wrapped controls, no text outside its shape, no
-truncated copy, traced edges and their labels at full strength, dimmed text still readable, and diagram body
-text at 16px rendered or larger. A first-time visitor can tell from the first screen how to advance and where
-they are in the deck. `check-design` and `verify` pass.
+Raised 2026-10-14, in iteration 002 (W6).
 
-**Needs thought.** `verify` already runs scripted checks (AC-1 to AC-18) at two viewports; most of these are new
-checks to add there, not new viewports. Which can be scripted (wrapping, overflow, truncation, contrast, font
-size) and which need a human look (a diagram that shows the problem, clean routing) belongs in the requirements.
+**What.** ELK lays a flow's lanes out as one row and cannot wrap them, so a laned flow grows wider with every
+step. With iteration 002's measured text and label floor, the fixture's laned flow fits a `diagram-wide` scene at
+seven steps (18.7px at 1920x1080) and falls to 10.5px at nine. The fixture flow is now unlaned; unlaned flows wrap
+and meet the floor at nine steps.
+
+**Needs thought.**
+- A lower step limit for laned flows (about seven), stated in `flows.md` and checked by `check-design`.
+- Or a renderer that wraps laned flows (lanes as rows with the flow's direction down, or splitting a long laned
+  flow into two linked views).
+
+**Touches.** `_config/standards/flows.md`, `check-design.mjs`, `render-diagrams.mjs`.
+
+## S12. A traced line's arrowhead in the focus colour
+
+Raised 2026-10-14, in iteration 002 (W5).
+
+**What.** A traced or highlighted line and its label take the focus colour, but its arrowhead keeps the line
+colour, because the arrow markers are shared per line kind.
+
+**Needs thought.** Per-state markers (a focus-coloured marker per line kind) switched by the highlight class, or
+`context-stroke` where all three browsers support it.
+
+**Touches.** `render-diagrams.mjs` (markers), `scripts/site/base.css`.

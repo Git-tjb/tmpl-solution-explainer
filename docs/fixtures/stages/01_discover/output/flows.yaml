@@ -9,12 +9,16 @@ flows:
       - { id: execute, type: step, label: Run the stage, on: stage-runs, step: 3, sources: [F011] }
       - { id: ask-model, type: external, label: Ask the model, on: hosted-model, step: 4, sources: [F006] }
       - { id: write, type: store, label: Write output files, on: outputs, step: 5, sources: [F011] }
-      - { id: review, type: gate, label: Operator reviews output, on: operator, step: 6, sources: [F012] }
-      - { id: done, type: output, label: Approved stage output, step: 7, sources: [F012] }
+      - { id: check, type: decision, label: Checks pass?, on: stage-runs, step: 6, sources: [F011] }
+      - { id: review, type: gate, label: Operator reviews output, on: operator, step: 7, sources: [F012] }
+      - { id: done, type: output, label: Approved stage output, step: 8, sources: [F012] }
+      - { id: flagged, type: output, label: Run flagged for a fix, step: 9, sources: [F011] }
     edges:
       - { from: start, to: load, kind: control, label: starts }
       - { from: load, to: execute, kind: control, label: directs }
       - { from: execute, to: ask-model, kind: control, label: calls }
       - { from: ask-model, to: write, kind: data, label: returns text for }
-      - { from: write, to: review, kind: data, label: is read in }
+      - { from: write, to: check, kind: control, label: is checked }
+      - { from: check, to: review, kind: control, label: goes to, condition: pass }
+      - { from: check, to: flagged, kind: control, label: goes to, condition: fail }
       - { from: review, to: done, kind: control, label: approves }
