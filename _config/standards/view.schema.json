@@ -13,6 +13,10 @@
     "scope": { "$ref": "#/$defs/id", "description": "The word before (before), the system (L1, L2), a function (L3), or a flow ID (flow)" },
     "mode": { "enum": ["wired", "structure"], "default": "wired", "description": "structure: a grid of elements with their what-it-does bullets and no lines (L2 and L3 only)" },
     "title": { "type": "string", "pattern": "^(Before|Context|Functions|Components|Flow): .+$" },
+    "figure": { "enum": ["map", "repeat", "drift", "scatter", "gap", "wait", "cost"], "default": "map", "description": "before views only: the problem figure (notation.md, Problem figures); map is the node-link picture of the old way" },
+    "subject": { "$ref": "#/$defs/id", "description": "before views, every figure but map and cost: the element (or, for gap, the relationship) the figure is about" },
+    "measures": { "type": "array", "minItems": 1, "maxItems": 3, "items": { "$ref": "#/$defs/id" }, "description": "the cost figure: the measures it shows" },
+    "compare": { "type": "boolean", "description": "the cost figure, in why scenes only: show each measure's after value beside it" },
     "elements": {
       "type": "array",
       "maxItems": 9,

@@ -20,6 +20,12 @@ pains:
   - "Every run started from nothing"
   - "The steps drifted from one run to the next"
   - "Nothing was checked before the next step"
+pain_counts:
+  - "About four runs a month"
+  - "Three different copies of the notes by the end of a month"
+  - "Each run took about two days"
+  - "Up to five requests waiting for each weekly run"
+  - "It also pulled files from a shared drive"
 target_minutes: 12
 sources:
   - path: "docs/fixtures/sources-src/example-kit"

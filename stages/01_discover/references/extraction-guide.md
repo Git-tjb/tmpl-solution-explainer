@@ -5,7 +5,7 @@
 | Topic (`topic` column) | Look for |
 | --- | --- |
 | `purpose` | What the solution is for; the problem it solves, in the sources' own words. Include the operator's intent from `run.md` `intent_notes` and `operator-notes.md`, cited as such. |
-| `before` | The user (the role), what they were trying to do, how it was done before the solution existed, and what hurt, one fact per pain. Mostly from `run.md` `user`, `user_goal`, `before`, and `pains`, cited as their `OPN` notes; also any source that describes the earlier state. Nothing about the solution goes here. The before model (`system-model.md`) cites these facts. |
+| `before` | The user (the role), what they were trying to do, how it was done before the solution existed, and what hurt, one fact per pain, and one per countable detail (how often, how long, how many places, copies, or waiting items). Mostly from `run.md` `user`, `user_goal`, `before`, `pains`, and `pain_counts`, cited as their `OPN` notes; also any source that describes the earlier state. Nothing about the solution goes here. The before model (`system-model.md`) cites these facts. |
 | `outcomes` | What it produces or changes for its users; any measured result |
 | `constraints` | The conditions behind design choices (time, budget, tools, people, rules). Keep these apart from goals, problems, and intent. |
 | `environment` | Where and how the solution runs: machines, tools, harnesses. Documents often leave this out; `run.md` `environment` and the operator fill the gap. |

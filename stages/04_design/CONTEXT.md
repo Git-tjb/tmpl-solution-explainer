@@ -30,7 +30,8 @@ Run the commands from the workspace root.
    direction. If it describes a look, build a run theme in `theme/` (`theme.css`, fonts, licences) over the
    styling points listed in `build-rules.md`; keep `tokens.css` valid and put the themed values in `theme.css` `:root`.
 2. Write a view spec for every view in `scenes.json` (`views/<view-id>.yaml`): title, element list if
-   narrowed, `mode` (`structure` for the structure view, default `wired`), named highlight states, pins, and
+   narrowed (a map only), for a before view its `figure` (as in `scenes.json`) with its `subject`, or its
+   `measures` and `compare` for a cost (`../03_storyboard/references/problem-figures.md`), `mode` (`structure` for the structure view, default `wired`), named highlight states, pins, and
    `inherit_from` for L3 views.
 3. Write `scene-specs.yaml`: `text_reveal` (`per-step` by default: each on-screen line in its own step, in
    order; or `with-scene`: every line from the start, the same in every scene), then for every scene its

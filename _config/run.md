@@ -17,6 +17,8 @@ user_goal: "{{what they were trying to get done}}"
 before: "{{how it was done before the solution existed: tools, steps, people}}"
 pains:                      # what hurt before the solution, one item per pain (1-4), in the operator's words
   - "{{a pain}}"
+pain_counts: []             # optional: anything countable about the pains, in the operator's words
+                            # (how often, how long, how many places or copies, how much waited)
 target_minutes: 15          # at most 15
 sources:                    # copied into the run by scripts/snapshot-sources.mjs before discovery reads them
   - path: "{{absolute path to a repo, folder, or file}}"

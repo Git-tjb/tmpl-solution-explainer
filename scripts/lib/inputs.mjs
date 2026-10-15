@@ -12,7 +12,7 @@ export function stageInputs(nn) {
     case '01': return ['_config/gate-feedback.md', run(), 'stages/01_discover/references/extraction-guide.md', std('system-model.md'), std('flows.md')];
     case '02': return ['_config/gate-feedback.md', o('01', 'fact-sheet.md'), o('01', 'operator-notes.md'), o('01', 'system-model.yaml'), o('01', 'before-model.yaml'), o('01', 'flows.yaml'), run(), '_config/narrative-arc.md', '_config/information-architecture.md'];
     case '03': return ['_config/gate-feedback.md', o('02', 'scope.md'), o('01', 'fact-sheet.md'), o('01', 'system-model.yaml'), o('01', 'before-model.yaml'), o('01', 'flows.yaml'), o('01', 'inventory.md'),
-      '_config/narrative-arc.md', '_config/information-architecture.md', std('views.md'), std('scenes.schema.json')];
+      '_config/narrative-arc.md', '_config/information-architecture.md', std('views.md'), std('scenes.schema.json'), 'stages/03_storyboard/references/problem-figures.md'];
     case '04': return ['_config/gate-feedback.md', o('03', 'scenes.json'), o('03', 'storyboard.md'), o('01', 'system-model.yaml'), o('01', 'before-model.yaml'), o('01', 'flows.yaml'), o('01', 'visual-refs'),
       '_config/visual-direction.md', '_config/banned-patterns.md', '_config/build-rules.md', run(), std('notation.md'), std('views.md'),
       std('view.schema.json'), std('scene-spec.schema.json')];

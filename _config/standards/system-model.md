@@ -122,6 +122,14 @@ It holds **no part of the solution**.
 - Relationships have `id`, `from`, `to`, a present-tense `verb`, and `sources`. They join people, tasks, and
   means; a pain connects only through `hurts`.
 - At most 9 elements, pains included (the per-view limit in `views.md`).
+- Optional data for the problem figures (`notation.md`, Problem figures), each citing the facts that give it,
+  never estimated:
+  - `recurs: { every, shown, sources }` on a task: the period in at most four words, and 3 to 6 runs to draw.
+  - `versions: [{ label, sources }]` on a means: 2 to 5 labels of at most four words.
+  - `queue: { size, label, sources }` on a person or task: 2 to 12 items to draw, and what they are in at most
+    four words.
+  - Top-level `measures: [{ id, label, value, unit, sources, after }]`: a label of at most six words, a
+    positive value, a unit, and optionally `after: { value, sources }`, the value with the solution.
 
 Checked by `check-model`:
 1. The schema, with unique IDs; every cited fact exists.
@@ -131,6 +139,8 @@ Checked by `check-model`:
 4. **No solution in the picture:** no element shares an `id`, `name`, or `exact_name` with the system or
    anything inside it, or with a name in `canonical_names`. Actors and externals are not the solution, so
    the user may be the same person as an actor in the system model.
+5. The figure data sits on the right types (`recurs` on a task, `versions` on a means, `queue` on a person or
+   task), keeps to its word limits, and cites facts that exist; measure IDs are unique.
 
 ```yaml
 schema_version: 1

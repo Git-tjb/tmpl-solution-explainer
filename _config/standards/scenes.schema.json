@@ -36,6 +36,7 @@
           "id": { "$ref": "#/$defs/id" },
           "level": { "enum": ["before", "L1", "L2", "L3", "flow"] },
           "scope": { "$ref": "#/$defs/id", "description": "before: the word before; L1 and L2: the system; L3: a function; flow: a flow ID" },
+          "figure": { "enum": ["map", "repeat", "drift", "scatter", "gap", "wait", "cost"], "default": "map", "description": "before views only: the problem figure, matched by the view spec (stages/03_storyboard/references/problem-figures.md)" },
           "mode": { "enum": ["wired", "structure"], "default": "wired", "description": "Matches the view spec's mode; structure views show what each part does, wired views show how they connect" }
         }
       }

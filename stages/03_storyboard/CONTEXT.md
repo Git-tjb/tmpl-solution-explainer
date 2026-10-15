@@ -13,6 +13,7 @@ Run the commands from the workspace root.
 | 4 | `../01_discover/output/before-model.yaml` | the user, the old way, and what hurt, for the problem scenes |
 | 4 | `../01_discover/output/flows.yaml` | the example flows |
 | 4 | `../01_discover/output/inventory.md` | paths for L4 detail in map panels |
+| 3 | `references/problem-figures.md` | which picture fits each problem scene |
 | 3 | `../../_config/narrative-arc.md` | the section sequence, depth and zoom table, and budget |
 | 3 | `../../_config/information-architecture.md` | the rules each scene follows |
 | 3 | `../../_config/standards/views.md` | levels and what a view includes |
@@ -26,7 +27,7 @@ Run the commands from the workspace root.
 1. Allocate the budget first: the scenes and minutes for each section of the arc, within `target_minutes`
    (`budget` in `scenes.json`; the Budget table in `narrative-arc.md` is a starting point).
 2. Name the views the run needs: one or more before views (`level: before`, `scope: before`) for the problem
-   scenes, the L1 view, an L2 structure view and an L2 wired view of the system (`mode` on each), one L3 view
+   scenes, each with the `figure` that fits its pain (`references/problem-figures.md`; default `map`), the L1 view, an L2 structure view and an L2 wired view of the system (`mode` on each), one L3 view
    per in-scope function, and one flow view per example flow. Leave out everything `scope.md` excludes.
 3. Sequence 8-14 scenes along the arc, within the budget: the title scene first (`section: title`,
    `level: title`, no view; its point is `purpose_line`), then one or two problem scenes on before views, then

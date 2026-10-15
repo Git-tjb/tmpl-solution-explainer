@@ -26,7 +26,7 @@ Run the commands from the workspace root.
 2. Run `node scripts/inventory-sources.mjs`. It writes `output/inventory.md`: the tree, file types, sizes,
    last-modified dates, and existing diagrams.
 3. Start `operator-notes.md` from the operator's setup answers: quote `opening`, `takeaway`, `user`,
-   `user_goal`, `before`, each item of `pains`, `environment`, `intent_notes`, and anything in the body of
+   `user_goal`, `before`, each item of `pains` and of `pain_counts`, `environment`, `intent_notes`, and anything in the body of
    `run.md`, verbatim, one numbered note each (`OPN01`, ...). The operator's words are cited like any other
    source.
 4. Read the sources, primary first, using the inventory to prioritize. Extract facts into `fact-sheet.md`
@@ -37,7 +37,9 @@ Run the commands from the workspace root.
    for the usage patterns found, starting with `usage_examples` in `run.md`.
 6. Build `before-model.yaml` from the `before` facts (`system-model.md`, The before model): the user, what
    they were doing, what they did it with, and each pain with the one thing it hurts. It holds no part of the
-   solution; the opening scenes draw it, so the problem is shown before the answer.
+   solution; the opening scenes draw it, so the problem is shown before the answer. Where the `before` facts
+   carry a count, add the figure data it supports (`recurs`, `versions`, `queue`, `measures`); never estimate
+   one.
 7. Write `source-index.md`: every source in `run.md`, and every file read, partly read, or skipped, and why.
 8. Write `conflicts.md`: each naming difference from `canonical_names` and each fact on which sources
    disagree, with both readings and where each comes from. Never resolve one silently.

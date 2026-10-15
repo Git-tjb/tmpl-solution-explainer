@@ -119,6 +119,27 @@ Inside each box: the name (bold; for a pain, what hurt, up to four lines), an ex
 hurts a relationship points at the relationship's target. Pains use the neutral structure colours: when a step
 highlights a pain, its outline, its bar, and its `hurts` line take `--c-highlight`. No colour is added.
 
+## Problem figures
+
+A before view may be a figure instead of the map (`figure` in its view spec; iteration 003, D8). A figure is a
+fixed composition drawn from the before model: the user and the chain of relationships to the subject stand in
+a column at the left, the figure's marks stand to the right of the subject, and the pains that fall on what it
+draws stand in a row below, each with its `hurts` line. Hurts lines run in clear lanes at the left or right
+edge, so they never cross a box. Marks are shapes and lines, never text; the legend names each mark drawn.
+
+| Figure | Marks | Shape | Line |
+| --- | --- | --- | --- |
+| `repeat` | one run per period (`recurs.shown`), in rows of three | an empty page with a folded corner, dashed 2px `--c-internal` ("one run") | the period as the label of the line into the first run; dash-dot lines between runs ("starts over") |
+| `drift` | each version, stepped down and to the right | a card with a second card offset behind it, 2px `--c-external` ("a copy") | dotted lines fanning from the subject ("copied") |
+| `scatter` | each place the subject draws on, at uneven distances | its own before-model shape | the relationship lines, with their verbs |
+| `gap` | the pain in the break between the two ends | the pain tag | two dashed halves of the relationship, with its verb ("missing link") |
+| `wait` | the waiting items, in rows of six | a small card, 2px `--c-internal` ("waiting") | one line into the subject labelled with what waits |
+| `cost` | each measure as a bar on a common scale, the label beside it; with `compare`, the after value below | a bar, 3px `--c-system` ("measured"); dashed for the after value ("with the solution") | none |
+
+Highlights target the same IDs as the map: the elements, their relationships, and `measure:<id>` for a cost's
+label and bars. A figure's parts that stand for its subject (the runs, the copies, the waiting items) carry the
+subject's ID, so highlighting the subject highlights them too.
+
 ## Title art
 
 The title scene's default visual (`title_visual.kind: art`) is the solution drawn as a large schematic: every

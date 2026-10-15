@@ -2,13 +2,29 @@ schema_version: 1
 user: operator
 elements:
   - { id: operator, name: Operator, type: person, sources: [F019] }
-  - { id: weekly-work, name: Do the weekly work again, type: task, sources: [F020] }
-  - { id: old-notes, name: Old notes and copied files, type: means, sources: [F021] }
+  - id: weekly-work
+    name: Do the weekly work again
+    type: task
+    sources: [F020]
+    recurs: { every: every week, shown: 4, sources: [F026] }
+    queue: { size: 5, label: requests, sources: [F029] }
+  - id: old-notes
+    name: Old notes and copied files
+    type: means
+    sources: [F021]
+    versions:
+      - { label: The first notes, sources: [F027] }
+      - { label: A copy edited, sources: [F027] }
+      - { label: Another copy, sources: [F027] }
   - { id: fresh-chat, name: A fresh chat each run, type: means, sources: [F022] }
-  - { id: pain-from-nothing, name: Every run started from nothing, type: pain, hurts: fresh-chat, sources: [F023] }
+  - { id: shared-drive, name: Files on a shared drive, type: means, sources: [F030] }
+  - { id: pain-from-nothing, name: Every run started from nothing, type: pain, hurts: weekly-work, sources: [F023] }
   - { id: pain-drift, name: The steps drifted between runs, type: pain, hurts: old-notes, sources: [F024] }
   - { id: pain-unchecked, name: Nothing checked before the next step, type: pain, hurts: does-work, sources: [F025] }
 relationships:
   - { id: does-work, from: operator, to: weekly-work, verb: does, sources: [F019, F020] }
   - { id: work-from-notes, from: weekly-work, to: old-notes, verb: follows, sources: [F021] }
   - { id: work-in-chat, from: weekly-work, to: fresh-chat, verb: runs in, sources: [F022] }
+  - { id: work-from-drive, from: weekly-work, to: shared-drive, verb: pulls from, sources: [F030] }
+measures:
+  - { id: run-time, label: Time per run, value: 2, unit: days, sources: [F028], after: { value: 0.5, sources: [F031] } }

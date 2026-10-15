@@ -22,6 +22,10 @@ default, offer it and let the operator accept or change it.
    - **What they were trying to do** (`user_goal`).
    - **How it was done before** (`before`): the tools, steps, and people, before the solution existed.
    - **What hurt** (`pains`): one to four items, one pain each.
+   - **Anything countable** (`pain_counts`, optional): for each pain, anything the operator can count or
+     measure: how often it happened, how long it took, how many places or copies were involved, how much
+     waited. These draw the problem figures (`stages/03_storyboard/references/problem-figures.md`); without
+     them the explainer shows the problem as a map of the old way. Never estimate one for the operator.
 7. **Length** (`target_minutes`): default 15, at most 15.
 8. **Sources** (`sources`): each repo, folder, or file to read, with its absolute path, primary or
    supporting, and a note. Stage 01 copies them into the run before reading them; nothing is read from the

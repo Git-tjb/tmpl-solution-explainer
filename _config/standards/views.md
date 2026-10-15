@@ -20,7 +20,9 @@ A run never edits this file. Changes are made in the template.
 
 - One view, one level. Never mix levels.
 - Before views draw the before model (`system-model.md`, The before model), never the system model. A run has
-  at least one; the problem scenes show them. A spec may narrow the elements but keeps the user.
+  at least one; the problem scenes show them. A before view is the `map` of the old way, or a problem figure
+  (`notation.md`, Problem figures; `stages/03_storyboard/references/problem-figures.md`). A map's spec may narrow
+  the elements but keeps the user; a figure draws what its subject needs, the user always first.
 - L1 and L2 views are mandatory in every run. The L2 views come as a pair: a structure view first, then a wired view.
 - L3 views exist only for functions that are in scope (`02_scope`).
 - L4 is not a diagram. It appears only in a map panel, built from the source snapshot, never on the linear

@@ -49,6 +49,7 @@ export function checkStoryboard(report) {
     if (v.level === 'L1' || v.level === 'L2') report.check(v.scope === M.system?.id, `view "${v.id}" (${v.level}) must be scoped to the system "${M.system?.id}"`);
     if (v.level === 'L3') report.check(M.els.get(v.scope)?.type === 'function', `view "${v.id}" (L3) must be scoped to a function`);
     if (v.level === 'flow') report.check(flows.has(v.scope), `view "${v.id}" (flow) scope "${v.scope}" is not a flow`);
+    report.check(!v.figure || v.level === 'before', `view "${v.id}": a figure is for before views only`);
     if (v.mode === 'structure') report.check(v.level === 'L2' || v.level === 'L3', `view "${v.id}": mode structure is for L2 and L3 views only`);
     if (v.level === 'L3') report.check(!M.mapOnly.has(v.scope), `L3 view "${v.id}" zooms into "${v.scope}", which scope.md lists as map_only`);
   }

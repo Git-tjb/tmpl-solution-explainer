@@ -2,4 +2,6 @@ schema_version: 1
 id: before-pains
 level: before
 scope: before
-title: "Before: what hurt"
+title: "Before: every run from nothing"
+figure: repeat
+subject: weekly-work

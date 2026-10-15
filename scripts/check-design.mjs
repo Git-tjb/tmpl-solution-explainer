@@ -7,12 +7,75 @@ import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loa
 
 const TITLE = { before: 'Before', L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
 
-// The elements a before view draws: the spec's list, or the whole before model (system-model.md).
-export function beforeViewElements(B, spec) {
-  return spec?.elements?.length ? spec.elements.filter((id) => B.els.has(id)) : [...B.els.keys()];
+// What a problem figure draws (iteration 003, D8; notation.md, Problem figures), and what it lacks. Every
+// figure leads with the user, joined to its subject by the shortest chain of relationships (at most one element
+// between), and shows the pains on what it draws.
+export const FIGURES = ['map', 'repeat', 'drift', 'scatter', 'gap', 'wait', 'cost'];
+const MAX_PAINS = 3, MAX_SATELLITES = 6;
+function chainTo(B, target) {
+  const user = B.data.user;
+  if (target === user) return { els: [user], rels: [] };
+  const next = (id) => B.rels.filter((r) => r.from === id || r.to === id).map((r) => ({ r, to: r.from === id ? r.to : r.from }))
+    .filter((x) => B.els.get(x.to)?.type !== 'pain');
+  for (const a of next(user)) if (a.to === target) return { els: [user, target], rels: [a.r.id] };
+  for (const a of next(user)) for (const b of next(a.to)) if (b.to === target) return { els: [user, a.to, target], rels: [a.r.id, b.r.id] };
+  return { els: [user, target], rels: [] };
 }
-// The relationships and pain lines among them, as highlight targets.
-export function beforeViewRelationships(B, els) {
+export function figureContent(B, spec) {
+  const figure = spec?.figure || 'map';
+  const problems = [];
+  const sub = spec?.subject;
+  const S = B.els.get(sub), R = B.rels.find((r) => r.id === sub);
+  let els = [], rels = [], measures = [], satellites = [];
+  const need = (ok, msg) => { if (!ok) problems.push(msg); return ok; };
+  if (figure === 'map') {
+    els = spec?.elements?.length ? spec.elements.filter((id) => B.els.has(id)) : [...B.els.keys()];
+    const has = new Set(els);
+    rels = B.rels.filter((r) => has.has(r.from) && has.has(r.to)).map((r) => r.id);
+    return { figure, els, rels, measures, satellites, pains: els.filter((id) => B.els.get(id).type === 'pain'), problems };
+  }
+  if (figure === 'cost') {
+    measures = spec?.measures || [];
+    const known = new Set((B.data.measures || []).map((m) => m.id));
+    if (need(measures.length >= 1 && measures.length <= 3, 'the cost figure shows one to three measures (measures in the view spec)')) for (const m of measures) need(known.has(m), `measure "${m}" is not in the before model`);
+    if (spec?.compare) for (const m of measures) need((B.data.measures || []).find((x) => x.id === m)?.after, `measure "${m}" has no after value to compare`);
+    els = [B.data.user];
+  } else if (figure === 'gap') {
+    if (need(!!R, `the gap figure's subject must be a relationship (got "${sub}")`)) {
+      const c = chainTo(B, R.from);
+      els = [...c.els, R.to]; rels = [...c.rels, R.id];
+      need([...B.els.values()].some((p) => p.type === 'pain' && p.hurts === R.id), `the gap figure needs a pain that hurts "${R.id}"`);
+    }
+  } else {
+    const want = { repeat: ['task'], drift: ['means'], scatter: ['task', 'person'], wait: ['person', 'task'] }[figure];
+    if (need(!!S && want.includes(S.type), `the ${figure} figure's subject must be a ${want.join(' or ')} (got "${sub}")`)) {
+      const c = chainTo(B, sub);
+      els = [...c.els]; rels = [...c.rels];
+      if (figure === 'repeat') need(!!S.recurs, `"${sub}" has no recurs; the repeat figure draws its runs`);
+      if (figure === 'drift') need(!!S.versions, `"${sub}" has no versions; the drift figure draws them`);
+      if (figure === 'wait') need(!!S.queue, `"${sub}" has no queue; the wait figure draws it`);
+      if (figure === 'scatter') {
+        const links = B.rels.filter((r) => (r.from === sub || r.to === sub) && !rels.includes(r.id))
+          .map((r) => ({ r, to: r.from === sub ? r.to : r.from })).filter((x) => !els.includes(x.to) && B.els.get(x.to)?.type !== 'pain');
+        satellites = links.slice(0, MAX_SATELLITES).map((x) => x.to);
+        need(satellites.length >= 3, `"${sub}" draws on ${satellites.length} place(s); the scatter figure needs at least 3`);
+        els.push(...satellites); rels.push(...links.slice(0, MAX_SATELLITES).map((x) => x.r.id));
+      }
+    }
+  }
+  // The pains on what the figure draws, in model order, at most three.
+  const drawn = new Set([...els, ...rels]);
+  const pains = [...B.els.values()].filter((p) => p.type === 'pain' && drawn.has(p.hurts)).map((p) => p.id);
+  if (pains.length > MAX_PAINS) problems.push(`${pains.length} pains fall on this figure; it shows the first ${MAX_PAINS} (${pains.slice(MAX_PAINS).join(', ')} left out)`);
+  const shown = pains.slice(0, MAX_PAINS);
+  need(shown.length > 0 || measures.length > 0, `the ${figure} figure shows no pain or measure, so it does not show the problem`);
+  need(els.length + shown.length <= 9, `the ${figure} figure draws ${els.length + shown.length} elements (max 9)`);
+  return { figure, els: [...els, ...shown], rels, measures, satellites, pains: shown, problems };
+}
+// The elements a before view draws, and its relationships (highlight targets).
+export function beforeViewElements(B, spec) { return figureContent(B, spec).els; }
+export function beforeViewRelationships(B, els, spec) {
+  if (spec?.figure && spec.figure !== 'map') return figureContent(B, spec).rels;
   const has = new Set(els);
   return B.rels.filter((r) => has.has(r.from) && has.has(r.to)).map((r) => r.id);
 }
@@ -100,11 +163,19 @@ export function checkDesign(report) {
     if (v.level === 'before') {
       if (!report.check(!!B, `view "${v.id}": before-model.yaml is missing (stage 01)`)) continue;
       for (const id of spec.elements || []) report.check(B.els.has(id), `view "${v.id}": "${id}" is not in the before model`);
-      const els = beforeViewElements(B, spec);
+      // Problem figures (D8): the figure named in scenes.json, with the data it needs.
+      const fig = figureContent(B, spec);
+      report.check((v.figure || 'map') === fig.figure, `views/${v.id}.yaml: figure "${fig.figure}" must match scenes.json ("${v.figure || 'map'}")`);
+      for (const p of fig.problems) (/ left out\)$/.test(p) ? report.note : report.fail).call(report, `view "${v.id}": ${p}`);
+      report.check(fig.figure === 'map' || !(spec.elements || []).length, `view "${v.id}": "elements" narrows a map only; a figure draws what its subject needs`);
+      report.check(fig.figure === 'cost' ? !spec.subject : !!spec.subject || fig.figure === 'map', `view "${v.id}": the ${fig.figure} figure ${fig.figure === 'cost' ? 'takes measures, not a subject' : 'needs a subject'}`);
+      report.check(!spec.compare || fig.figure === 'cost', `view "${v.id}": compare is for the cost figure`);
+      if (spec.compare) for (const s of S.scenes.filter((x) => x.view === v.id)) report.check(s.section === 'why', `${s.id}: view "${v.id}" compares before with after, so it belongs in a why scene; a problem scene shows no solution`);
+      const els = fig.els;
       report.check(els.length <= 9, `view "${v.id}": ${els.length} elements (max 9)`);
       report.check(els.includes(B.data.user), `view "${v.id}": the before picture leads with the user ("${B.data.user}"); keep it in the view`);
-      ids = new Set(els);
-      const relIds = new Set(beforeViewRelationships(B, els));
+      ids = new Set([...els, ...fig.measures.map((m) => `measure:${m}`)]);
+      const relIds = new Set(fig.rels);
       for (const [name, st] of Object.entries(spec.states || {})) {
         for (const id of st.elements || []) report.check(ids.has(id), `view "${v.id}" state "${name}": "${id}" is not in the view`);
         for (const id of st.relationships || []) report.check(relIds.has(id), `view "${v.id}" state "${name}": relationship "${id}" is not in the view`);
@@ -174,7 +245,7 @@ export function checkDesign(report) {
       const targets = new Set();
       if (v?.level === 'flow') { const f = flows.get(v.scope); f?.nodes.forEach((n) => { targets.add(n.id); targets.add(`step-${n.step}`); }); f?.edges.forEach((e) => targets.add(`${e.from}--${e.to}`)); }
       else if (v?.level === 'before') {
-        if (B) { const els = beforeViewElements(B, vs); els.forEach((e) => targets.add(e)); beforeViewRelationships(B, els).forEach((r) => targets.add(r)); }
+        if (B) { const fig = figureContent(B, vs); fig.els.forEach((e) => targets.add(e)); fig.rels.forEach((r) => targets.add(r)); fig.measures.forEach((m) => targets.add(`measure:${m}`)); }
       } else if (v) {
         const els = viewElements(M, v, vs);
         els.forEach((e) => targets.add(e));

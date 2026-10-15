@@ -34,3 +34,27 @@ Context: setup answer to question 6 (what hurt, second item).
 ## OPN08
 Context: setup answer to question 6 (what hurt, third item).
 > Nothing was checked before the next step
+
+## OPN09
+Context: setup answer to question 6 (what could be counted, first item).
+> About four runs a month
+
+## OPN10
+Context: setup answer to question 6 (what could be counted, second item).
+> Three different copies of the notes by the end of a month
+
+## OPN11
+Context: setup answer to question 6 (what could be counted, third item).
+> Each run took about two days
+
+## OPN12
+Context: setup answer to question 6 (what could be counted, fourth item).
+> Up to five requests waiting for each weekly run
+
+## OPN13
+Context: setup answer to question 6 (what could be counted, fifth item).
+> It also pulled files from a shared drive
+
+## OPN14
+Context: stage 01 gate, asked what a run takes now.
+> With the kit a run takes about half a day

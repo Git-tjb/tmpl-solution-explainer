@@ -117,6 +117,35 @@ export function checkBefore(report) {
     for (const f of r.sources) report.check(facts.has(f), `before-model: relationship "${r.id}" cites ${f}, which is not in the fact sheet`);
   }
 
+  // The figures' data (system-model.md, The before model; iteration 003, D8): on the right types, short, cited.
+  const short = (s, n) => words(s) <= n;
+  for (const e of raw.elements) {
+    if (e.recurs) {
+      report.check(e.type === 'task', `before-model: "${e.id}" has recurs, which is for a task (it is a ${e.type})`);
+      report.check(short(e.recurs.every, 4), `before-model: "${e.id}" recurs.every has more than four words`);
+      for (const f of e.recurs.sources) report.check(facts.has(f), `before-model: "${e.id}" recurs cites ${f}, which is not in the fact sheet`);
+    }
+    if (e.versions) {
+      report.check(e.type === 'means', `before-model: "${e.id}" has versions, which are for a means (it is a ${e.type})`);
+      e.versions.forEach((v, i) => {
+        report.check(short(v.label, 4), `before-model: "${e.id}" version ${i + 1} has more than four words`);
+        for (const f of v.sources) report.check(facts.has(f), `before-model: "${e.id}" version ${i + 1} cites ${f}, which is not in the fact sheet`);
+      });
+    }
+    if (e.queue) {
+      report.check(['person', 'task'].includes(e.type), `before-model: "${e.id}" has a queue, which is for a person or a task (it is a ${e.type})`);
+      report.check(short(e.queue.label, 4), `before-model: "${e.id}" queue.label has more than four words`);
+      for (const f of e.queue.sources) report.check(facts.has(f), `before-model: "${e.id}" queue cites ${f}, which is not in the fact sheet`);
+    }
+  }
+  const mIds = new Set();
+  for (const m of raw.measures || []) {
+    report.check(!mIds.has(m.id) && !ids.has(m.id) && !relIds.has(m.id), `before-model: measure id "${m.id}" is used twice`);
+    mIds.add(m.id);
+    report.check(short(m.label, 6), `before-model: measure "${m.id}" label has more than six words`);
+    for (const f of [...m.sources, ...(m.after?.sources || [])]) report.check(facts.has(f), `before-model: measure "${m.id}" cites ${f}, which is not in the fact sheet`);
+  }
+
   // No solution in the picture: nothing shares an ID or a name with the system or anything inside it, or with
   // the operator's canonical names for its parts. Actors and externals are not the solution, so the user may
   // be the same person as an actor.

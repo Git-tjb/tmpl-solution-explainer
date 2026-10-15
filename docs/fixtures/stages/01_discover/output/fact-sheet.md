@@ -16,6 +16,16 @@
 | F023 | Every run started from nothing. | `operator-notes.md` OPN06 |
 | F024 | The steps drifted from one run to the next. | `operator-notes.md` OPN07 |
 | F025 | Nothing was checked before the next step. | `operator-notes.md` OPN08 |
+| F026 | The weekly work ran about four times a month. | `operator-notes.md` OPN09 |
+| F027 | The notes ended each month as three different copies. | `operator-notes.md` OPN10 |
+| F028 | Each run took about two days. | `operator-notes.md` OPN11 |
+| F029 | Up to five requests waited for each weekly run. | `operator-notes.md` OPN12 |
+| F030 | The weekly work also pulled files from a shared drive. | `operator-notes.md` OPN13 |
+
+## outcomes
+| ID | Claim | Source |
+| --- | --- | --- |
+| F031 | With the kit, a run takes about half a day. | `operator-notes.md` OPN14 |
 
 ## components
 | ID | Claim | Source |
