@@ -331,17 +331,20 @@ function buildFlowGraph(M, view, spec, flow, aspect, rooms) {
   // the line's tooltip.
   const types = new Map(flow.nodes.map((n) => [n.id, n.type]));
   const textOf = (x) => (types.get(x.from) === 'decision' && x.condition ? x.condition : x.label);
+  // Lines into one node with the same label (a fan-in) likewise share one label, by the target.
   const seen = new Set();
   const edges = flow.edges.map((e, i) => {
     const text = textOf(e);
-    const key = `${e.from}|${text}`;
-    const shared = flow.edges.filter((x) => x.from === e.from && textOf(x) === text).length > 1;
+    const fanOut = flow.edges.filter((x) => x.from === e.from && textOf(x) === text).length > 1;
+    const fanIn = !fanOut && flow.edges.filter((x) => x.to === e.to && textOf(x) === text).length > 1;
+    const key = fanIn ? `in|${e.to}|${text}` : `out|${e.from}|${text}`;
     const o = { id: `e${i}`, sources: [e.from], targets: [e.to], _fedge: e };
     if (!seen.has(key)) {
       seen.add(key);
       const ls = labelSize(text, `view ${view.id}, line ${e.from}--${e.to}`);
-      // A decision's branch labels and a shared label sit on the line's first segment, by the source.
-      o._label = { text, width: ls.w, height: ls.h, _lines: ls.lines, first: shared || types.get(e.from) === 'decision' };
+      // A decision's branch labels and a fan-out's label sit on the line's first segment, by the source; a
+      // fan-in's on its last, by the target.
+      o._label = { text, width: ls.w, height: ls.h, _lines: ls.lines, first: fanOut || types.get(e.from) === 'decision', last: fanIn };
     }
     return o;
   });
@@ -475,13 +478,16 @@ function emit(view, spec, laid, tokens, M) {
       const raw = [s.startPoint, ...(s.bendPoints || []), s.endPoint];
       const segs = [];
       for (let k = 0; k < raw.length - 1; k++) segs.push({ a: raw[k], b: raw[k + 1], len: Math.hypot(raw[k + 1].x - raw[k].x, raw[k + 1].y - raw[k].y), k });
-      if (L.first) segs.sort((p, q) => p.k - q.k); else segs.sort((p, q) => q.len - p.len);
+      if (L.first) segs.sort((p, q) => p.k - q.k); else if (L.last) segs.sort((p, q) => q.k - p.k); else segs.sort((p, q) => q.len - p.len);
+      // Positions along each segment, then beside it at growing distances (item 4: try harder before a leader).
       const on = [], side = [];
-      for (const g of segs) for (const t of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+      for (const g of segs) for (const t of [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9]) {
         const mx = g.a.x + (g.b.x - g.a.x) * t, my = g.a.y + (g.b.y - g.a.y) * t;
         on.push({ x: mx - L.width / 2, y: my - L.height / 2, w: L.width, h: L.height });
-        if (Math.abs(g.a.x - g.b.x) < 1) { side.push({ x: mx + 8, y: my - L.height / 2, w: L.width, h: L.height }); side.push({ x: mx - 8 - L.width, y: my - L.height / 2, w: L.width, h: L.height }); }
-        else { side.push({ x: mx - L.width / 2, y: my - 8 - L.height, w: L.width, h: L.height }); side.push({ x: mx - L.width / 2, y: my + 8, w: L.width, h: L.height }); }
+        for (const d of [8, 22, 40]) {
+          if (Math.abs(g.a.x - g.b.x) < 1) { side.push({ x: mx + d, y: my - L.height / 2, w: L.width, h: L.height }); side.push({ x: mx - d - L.width, y: my - L.height / 2, w: L.width, h: L.height }); }
+          else { side.push({ x: mx - L.width / 2, y: my - d - L.height, w: L.width, h: L.height }); side.push({ x: mx - L.width / 2, y: my + d, w: L.width, h: L.height }); }
+        }
       }
       let pick = [...on, ...side].find((r) => inside(r) && !hit(r) && !crossesLine(r, ei));
       let leader = '';
@@ -494,11 +500,15 @@ function emit(view, spec, laid, tokens, M) {
           const cx = ax + ox * d, cy = ay + oy * d;
           around.push({ x: cx - (ox < 0 ? L.width : ox > 0 ? 0 : L.width / 2), y: cy - (oy < 0 ? L.height : oy > 0 ? 0 : L.height / 2), w: L.width, h: L.height });
         }
-        pick = around.find((r) => inside(r) && !hit(r) && !crossesLine(r, ei)) || around.find((r) => inside(r) && !hit(r));
-        if (pick) {
+        // Last resort: the spot that crosses the fewest other lines, never over a box.
+        const crossings = (r) => segRects.reduce((a, rs, j) => a + (j !== ei && rs.some((b) => overlaps(r, b)) ? 1 : 0), 0);
+        pick = around.find((r) => inside(r) && !hit(r) && !crossesLine(r, ei))
+          || [...on, ...side, ...around].filter((r) => inside(r) && !hit(r)).sort((a, b) => crossings(a) - crossings(b))[0];
+        // A leader only for a spot beside the line's start; a spot on or beside the line needs none.
+        if (pick && around.includes(pick)) {
           const bx = Math.max(pick.x, Math.min(ax, pick.x + pick.w)), by = Math.max(pick.y, Math.min(ay, pick.y + pick.h));
           leader = `<path class="leader" d="M${f1(bx + PADX)} ${f1(by + TOP)} L${f1(ax + PADX)} ${f1(ay + TOP)}"/>`;
-        } else pick = on[0];
+        } else if (!pick) pick = on[0];
       }
       blocked.push(pick);
       cx0 = Math.min(cx0, pick.x); cy0 = Math.min(cy0, pick.y); cx1 = Math.max(cx1, pick.x + pick.w); cy1 = Math.max(cy1, pick.y + pick.h);

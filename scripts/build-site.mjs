@@ -65,7 +65,7 @@ function detailBlock(p) {
   return `<h4><code>${esc(name)}</code></h4><pre>${esc(lines.slice(0, 60).join('\n'))}${lines.length > 60 ? '\n…' : ''}</pre>`;
 }
 
-export function buildSite(siteDir) {
+export function buildSite(siteDir, { strict = true } = {}) {
   const S = readJson(P.scenes);
   const SS = readYaml(P.sceneSpecs);
   const M = loadModel();
@@ -136,7 +136,11 @@ export function buildSite(siteDir) {
   const unfit = [];
   // `inset` is what the element's own padding and rule take from the column (the message has a 4px rule and
   // 16px padding); 2% is kept back for rounding between the measured and the drawn text.
+  // A run theme can change the fonts and the text column, which the build cannot measure: with a theme the
+  // runtime fits titles and messages in the browser, and AC-26 checks the result.
+  const themed = fs.existsSync(path.join(P.theme, 'theme.css'));
   const fit = (text, layout, base, face, what, sid, inset = 0) => {
+    if (themed) return '';
     const w = ((TEXT_COLUMN[layout] || TEXT_COLUMN.statement) - inset) * 0.98;
     const i = FIT_STEPS.findIndex((k) => wrap(text, w, base * k, face).length <= 2);
     if (i < 0) unfit.push(`${sid}: the ${what} needs more than two lines at ${Math.round(base * FIT_STEPS.at(-1))}px in the ${w}px column at 1440x900; shorten it in stage 03 (scenes.json)`);
@@ -158,7 +162,8 @@ export function buildSite(siteDir) {
       + `</section>`;
   }).join('\n');
 
-  if (unfit.length) throw new UserError(`build-site: ${unfit.length} title or message(s) do not fit:\n  - ${unfit.join('\n  - ')}`);
+  if (unfit.length && !strict) for (const u of unfit) console.log(`WARN ${u}`);
+  else if (unfit.length) throw new UserError(`build-site: ${unfit.length} title or message(s) do not fit:\n  - ${unfit.join('\n  - ')}`);
 
   // Map: overview views plus a panel per element
   const panelIds = new Set(S.map.panels.map((p) => p.element));

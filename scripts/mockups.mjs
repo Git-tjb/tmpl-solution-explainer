@@ -24,7 +24,7 @@ main(async () => {
   const shots = out('04', 'mockups');
   for (const d of [site, shots]) fs.rmSync(d, { recursive: true, force: true });
   await renderAll(path.join(site, 'assets', 'diagrams'), { strict: false });
-  buildSite(site);
+  buildSite(site, { strict: false });
   fs.mkdirSync(shots, { recursive: true });
 
   let browser;

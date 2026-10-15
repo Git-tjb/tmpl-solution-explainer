@@ -23,7 +23,7 @@ stage 06 agent and recorded in the report.
 | AC-10 | Scene 1 is answer-first and the last scene returns to it; one mode and one level per scene; no reference content on the path; usage examples introduce no new elements | script, then review |
 | AC-11 | Every scene in the page maps to a storyboard scene ID, and every on-screen claim traces to a fact in the fact sheet | script (IDs), review (claims) |
 | AC-16 | Every scene shows its level in the one form `notation.md` defines (the level indicator in the chrome, the badge in every diagram), and the orientation scene comes before the first L2 or L3 scene | script |
-| AC-17 | Every element with `what_it_does` can be expanded to show it in any wired or flow view (a structure view shows it in the box), and the bullets trace to the fact sheet | script |
+| AC-17 | Every element with `what_it_does` can be expanded to show it in any wired or flow view (a structure view shows it in the box), and the bullets trace to the fact sheet; at both viewports the popover never covers its own marker, and its close control, the marker, and Escape each close it | script |
 | AC-18 | The functional structure (a structure view) is shown before any flow | script |
 
 ## Quality

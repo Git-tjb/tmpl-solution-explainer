@@ -108,6 +108,8 @@ and model order; the same inputs give byte-identical files.
 | D-24 | Boundary titles wrap to their boundary and sit in a gap between crossing lines, or under a halo when the floor leaves no room; AC-28 still flags the halo case | ELK ignores a minimum size on nested nodes; lines ran through titles (iteration 002, W5) |
 | D-25 | The control bar never wraps; a position strip and a first-screen hint tell a viewer where they are and how to advance | Controls wrapped and clipped at 1440 wide; nothing told a viewer how to drive it (iteration 002, D6) |
 | D-26 | Legibility is checked at every scene and step, at both viewports, in three browsers (AC-19 to AC-28), and measured in the mockups at design | A viewer found what the scripted checks never looked at (iteration 002, D7) |
+| D-27 | Titles and messages are fitted in the browser; the build predicts the fit only for the default look | A run theme's fonts and column are not measurable at build time (iteration 002, W7) |
+| D-28 | A popover is placed beside, below, or above its box, never over its marker, and has its own close control | A popover could cover the only control that closed it (iteration 002, W7) |
 
 ### How the format meets the output-format requirements (AC-15)
 | Requirement | How |
@@ -149,6 +151,8 @@ template itself:
 - A line can still pass under a boundary title (with a halo) when no gap is wide enough and wrapping the
   title would cost the view its label floor; AC-28 reports it, and stage 04 narrows the view.
 - A traced line's arrowhead keeps the line colour; the line and its label take the focus colour.
+- In a crowded view a line label can still land on another line when no free spot exists; AC-28 reports it.
+- `check-model` notes, but does not decide, when a store's exact name looks like one file without `form: file`.
 - An L3 view laid out left to right keeps its L2 neighbours' order only approximately.
 - The figure sizes `render-diagrams` predicts with (`FIGURE` in `scripts/lib/common.mjs`) are derived from
   `base.css`; a change to the page layout must update both.

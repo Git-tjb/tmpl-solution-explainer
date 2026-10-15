@@ -110,6 +110,17 @@ async function expandProblems(page, sceneId) {
     if (!got) { probs.push(`${sceneId}: "${id}" did not open its popover`); continue; }
     if (got.items.join('|') !== got.want.join('|')) probs.push(`${sceneId}: "${id}" popover shows different bullets than the model`);
     if (!got.inView) probs.push(`${sceneId}: "${id}" popover extends past the viewport`);
+    // The popover never covers the marker that opened it, and its close control closes it.
+    const covered = await page.evaluate((id) => {
+      const m = document.querySelector(`.scene.current svg.diagram [data-expand="${id}"] .expand-mark`);
+      if (!m) return false;
+      const r = m.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!hit && !!hit.closest('.popover');
+    }, id);
+    if (covered) probs.push(`${sceneId}: the "${id}" popover covers its own expand marker`);
+    await page.locator(`.scene.current .popover[data-for="${id}"] .popclose`).click({ timeout: 3000 });
+    if ((await page.evaluate(() => window.__explainer.popovers().length)) !== 0) probs.push(`${sceneId}: the close control did not close "${id}"`);
+    await page.locator(`.scene[data-scene="${sceneId}"] svg.diagram [data-expand="${id}"]`).first().click({ timeout: 3000 });
     await page.keyboard.press('Escape');
     if ((await page.evaluate(() => window.__explainer.popovers().length)) !== 0) probs.push(`${sceneId}: Escape did not close "${id}"`);
   }
@@ -298,10 +309,11 @@ main(async () => {
           if (first) {
             const r = await new AxeBuilder({ page }).options({ preload: false }).include('.scene.current').include('.chrome').analyze();
             for (const v of r.violations) if (['critical', 'serious'].includes(v.impact)) fail('AC-13', `${s.id}: ${v.id} (${v.impact}): ${v.help} [${v.nodes.length} node(s)]`);
-            const ex = await expandProblems(page, s.id);
-            expandCount += ex.count;
-            for (const p of ex.probs) fail('AC-17', `${label} ${p}`);
           }
+          // Popovers at both viewports: placement depends on the room the figure has.
+          const ex = await expandProblems(page, s.id);
+          if (first) expandCount += ex.count;
+          for (const p of ex.probs) fail('AC-17', `${label} ${p}`);
         }
       }
       if (B.name === 'chromium' && first) {

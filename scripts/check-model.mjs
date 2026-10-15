@@ -31,6 +31,7 @@ export function checkModel(report) {
       for (const f of item.sources) report.check(facts.has(f), `element "${e.id}": what_it_does item ${i + 1} cites ${f}, which is not in the fact sheet`);
     }
     if (e.type === 'function' && !e.exact_name) report.note(`function "${e.id}" has no exact_name`);
+    if (e.type === 'store' && e.form !== 'file' && /\.[a-z0-9]{1,5}$/i.test(e.exact_name || '')) report.note(`store "${e.id}" (${e.exact_name}) looks like one file; set form: file if it is, so it is drawn as a file`);
   }
   for (const r of raw.relationships) {
     report.check(!relIds.has(r.id), `relationship id "${r.id}" is used twice`);

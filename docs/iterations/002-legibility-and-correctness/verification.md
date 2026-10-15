@@ -15,7 +15,8 @@ The operator agreed the requirements (every open question at its default) and ap
 | W3 renderer | D4, D5 | `d1a2802` | Font widths measured in Chromium (the design's stated fallback); the map keeps each SVG's own legend; a line through a boundary title was found and moved to W5 as AC-28 |
 | W4 control bar and page text | D6 | `c8ad01a` | Fixture S01, S04, S08 started empty and were changed to show content at step 0 |
 | W5 checks at every step | D7 | `c76098e` | AC-28 added (operator, W3 gate) and kept strict (W5 gate); boundary titles wrap and avoid lines; level key limited to flows |
-| W6 fixtures, documents, close | D8 | this close | See below |
+| W6 fixtures, documents, close | D8 | `d0469dc` | See below |
+| W7 fixes from rebuilding trial run 2 | — | this close | Added after W6: the operator rebuilt trial run 2's explainer on 0.2.0 before merging; see "Rebuild of trial run 2" |
 
 ## Requirements
 
@@ -75,6 +76,31 @@ Predicted label sizes on the fixtures (`render-diagrams --preview`):
 - Trial run 2's level-key patch treated an L2 view's actor as a second level; the template's rule now limits the
   level key to flows.
 - ELK ignores a minimum size on nested nodes, so boundary titles reserve their lines in the top padding instead.
+
+## Rebuild of trial run 2 (W7)
+Before merging, trial run 2's approved stage 01-04 outputs were copied from its archive (read only) into a
+scratch copy of the 0.2.0 template and rebuilt. Against 0.1.0, the traced lines and their labels are at full
+strength, dimmed text is readable, diagrams render at 16-24px at 1920x1080 (several were 13-14px), no text is
+cut or overflows its box, and the control bar is one row.
+
+The new checks flagged run 2's content and theme as expected: empty first frames (S01, S05, S11, S12), a
+focus colour 2 degrees from the Context colour and a near-neutral Flow colour, a 230-270px text column that
+puts messages on five to seven lines, and the S12 routing flow below the floor at 1440x900. These belong to a
+run's stages 03 and 04, not the template.
+
+The rebuild also exposed six template problems, fixed in W7:
+1. `mockups.mjs` stopped when a title did not fit; it now warns, and the build stays strict.
+2. Title and message fit was predicted with the template's fonts and column, wrong under a run theme; the page
+   now fits them in the browser, and the build predicts only for the default look.
+3. Lines into one node with the same label stacked their labels (S12's four "gives"); a fan-in now shares one
+   label by the target.
+4. A line label with no free spot landed on another line; placement tries more spots and, failing all, takes
+   the one crossing the fewest lines. S06's "route agents to" remains a crowded case that AC-28 reports.
+5. An open popover could cover its own expand marker (S06), leaving no visible way to close it; popovers get a
+   close control and are placed beside, below, or above the box, never over the marker. AC-17 now checks this
+   at both viewports.
+6. Run 2's `context.local.yml` was drawn as a store: its model predates `form: file`. `check-model` now notes a
+   store whose exact name looks like one file but has no `form: file`.
 
 ## Known limits (in `docs/design.md`)
 - Laned flows cannot wrap: beyond about seven steps they fall below the floor (seed S11). The 12-node limit

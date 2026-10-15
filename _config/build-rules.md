@@ -67,8 +67,8 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 
 ## Expanding an element
 In any wired or flow view, an element with `what_it_does` carries a small expand marker. Clicking it, or
-pressing Enter on it, opens a popover beside the element with its bullets; Escape or a second click closes
-it. The popover is HTML over the diagram, so the layout never moves. A flow node opens its bound element's
+pressing Enter on it, opens a popover beside the element (or below or above it) with its bullets, never over
+the marker; its × control, a second click on the marker, or Escape closes it. The popover is HTML over the diagram, so the layout never moves. A flow node opens its bound element's
 bullets. A structure view shows the bullets inside the boxes, so it has no markers. The map panel lists
 them under "What it does".
 
@@ -113,9 +113,10 @@ with these limits, in OKLCH:
 - The first scene shows a one-line hint (how to advance, the map, expanding a box) until the first advance.
 
 ## Scene text
-- A scene's title and its message each fit in two lines at 1440x900 (`text-wrap: balance`). `build-site`
-  steps the size down (to 0.86 and 0.78 of `--size-title` or `--size-point`) to fit, and fails naming the
-  scene when even the smallest needs three lines.
+- A scene's title and its message each fit in two lines (`text-wrap: balance`). The page steps the size
+  down in the browser (to 0.86 and 0.78 of `--size-title` or `--size-point`) until they do, so a run theme's
+  fonts and column count. With the default look, `build-site` also predicts it and fails naming the scene
+  when even the smallest size needs three lines at 1440x900; with a run theme, AC-26 and the mockups check it.
 - Step 0 of every scene shows at least one element of its diagram (`check-design`).
 
 ## Targets

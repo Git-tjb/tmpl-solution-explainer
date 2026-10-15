@@ -53,6 +53,11 @@
     p.setAttribute('data-for', id);
     p.setAttribute('role', 'note');
     p.setAttribute('aria-label', data.name + ': what it does');
+    var x = document.createElement('button');
+    x.type = 'button'; x.className = 'popclose'; x.textContent = '\u00d7';
+    x.setAttribute('aria-label', 'Close'); x.title = 'Close (Escape)';
+    x.addEventListener('click', function (ev) { ev.stopPropagation(); collapse(sceneEl, id); });
+    p.appendChild(x);
     var h = document.createElement('h3'); h.textContent = data.name; p.appendChild(h);
     var ul = document.createElement('ul');
     data.items.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
@@ -64,14 +69,23 @@
     each(expandTargets(sceneEl, id), function (n) { n.setAttribute('aria-expanded', 'true'); n.classList.add('expanded'); });
     animate(p, [{ opacity: 0 }, { opacity: 1 }], ms);
   }
+  // Beside the box, then below or above it; never over its expand marker, so the marker can close it again.
   function place(sceneEl, node, p) {
     var sr = sceneEl.getBoundingClientRect(), r = node.getBoundingClientRect(), pw = p.offsetWidth, ph = p.offsetHeight, gap = 14;
-    var left = r.right - sr.left + gap;
-    if (left + pw > sr.width - gap) left = r.left - sr.left - gap - pw;
-    if (left < gap) left = Math.max(gap, Math.min(sr.width - pw - gap, r.left - sr.left));
-    var top = Math.max(gap, Math.min(sr.height - ph - gap, r.top - sr.top));
-    p.style.left = left + 'px';
-    p.style.top = top + 'px';
+    var mk = node.querySelector('.expand-mark'), m = mk ? mk.getBoundingClientRect() : r;
+    var bx = { l: r.left - sr.left, t: r.top - sr.top, r: r.right - sr.left, b: r.bottom - sr.top };
+    var mm = { l: m.left - sr.left - 6, t: m.top - sr.top - 6, r: m.right - sr.left + 6, b: m.bottom - sr.top + 6 };
+    var clampX = function (x) { return Math.max(gap, Math.min(sr.width - pw - gap, x)); };
+    var clampY = function (y) { return Math.max(gap, Math.min(sr.height - ph - gap, y)); };
+    var tries = [
+      [bx.r + gap, clampY(bx.t)], [bx.l - gap - pw, clampY(bx.t)],
+      [clampX(bx.l), bx.b + gap], [clampX(bx.l), bx.t - gap - ph],
+    ];
+    var fits = function (c) { return c[0] >= gap - 0.5 && c[1] >= gap - 0.5 && c[0] + pw <= sr.width - gap + 0.5 && c[1] + ph <= sr.height - gap + 0.5; };
+    var clear = function (c) { return c[0] >= mm.r || c[0] + pw <= mm.l || c[1] >= mm.b || c[1] + ph <= mm.t; };
+    var pick = tries.filter(fits).filter(clear)[0] || tries.map(function (c) { return [clampX(c[0]), clampY(c[1])]; }).filter(clear)[0] || [clampX(bx.r + gap), clampY(bx.t)];
+    p.style.left = pick[0] + 'px';
+    p.style.top = pick[1] + 'px';
   }
   function collapse(sceneEl, id) {
     each(sceneEl.querySelectorAll('.popover' + (id ? '[data-for="' + id + '"]' : '')), function (p) { p.remove(); });
@@ -168,6 +182,17 @@
     }
   }
 
+  // ---------- titles and messages in two lines (R18), measured here so a run theme's fonts and column count ----------
+  function linesOf(el) { return Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)); }
+  function fitText(sceneEl) {
+    each(sceneEl.querySelectorAll('h2, .text p.point'), function (el) {
+      if (!el.offsetParent) return;
+      el.classList.remove('fit-2', 'fit-3');
+      if (linesOf(el) > 2) el.classList.add('fit-2');
+      if (linesOf(el) > 2) { el.classList.remove('fit-2'); el.classList.add('fit-3'); }
+    });
+  }
+
   // ---------- legend: one row; behind a "Legend" control when it would not fit (D4) ----------
   function fitLegend(sceneEl) {
     var lg = sceneEl.querySelector('.figure div.legend');
@@ -182,9 +207,9 @@
     b.addEventListener('click', function () { var on = !lg.classList.contains('open'); lg.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
     lg.insertBefore(b, lg.firstChild);
   });
-  window.addEventListener('resize', function () { if (state.si >= 0) fitLegend(scenes[state.si]); });
+  window.addEventListener('resize', function () { if (state.si >= 0) { fitLegend(scenes[state.si]); fitText(scenes[state.si]); } });
   // Text widths change when the bundled fonts arrive, so measure again then.
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (state.si >= 0) fitLegend(scenes[state.si]); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (state.si >= 0) { fitLegend(scenes[state.si]); fitText(scenes[state.si]); } });
 
   // ---------- position strip and first-screen hint (R21) ----------
   var progress = document.querySelectorAll('.progress li');
@@ -220,6 +245,7 @@
     each(progress, function (li, i) { li.classList.toggle('current', i === si); li.classList.toggle('done', i < si); });
     if (si > 0 || step > 0) hideHint(); // anywhere but the very start, by any route
     fitLegend(sceneEl);
+    fitText(sceneEl);
     var h = '#' + id + (step ? '.' + step : '');
     lastSet = h;
     if (location.hash !== h) location.hash = h;
