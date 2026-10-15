@@ -6,6 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
+import { stepChecks } from './lib/page-checks.mjs';
 import { P, out, main, readJson, readText, loadTokens, loadModel, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
 import { checkModel } from './check-model.mjs';
@@ -226,7 +227,9 @@ main(async () => {
   fs.rmSync(shots, { recursive: true, force: true });
   fs.mkdirSync(shots, { recursive: true });
   const browsersRun = [];
-  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17']) crit(id);
+  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17', 'AC-19', 'AC-20', 'AC-21', 'AC-22', 'AC-23', 'AC-24', 'AC-25', 'AC-26', 'AC-27', 'AC-28']) crit(id);
+  const seenMsg = new Set();
+  const failOnce = (id, msg) => { if (!seenMsg.has(id + msg)) { seenMsg.add(id + msg); fail(id, msg); } };
   let expandCount = 0;
 
   for (const B of BROWSERS) {
@@ -243,6 +246,9 @@ main(async () => {
       page.on('request', (r) => { if (!/^(file|data|blob):/.test(r.url())) fail('AC-1', `${label}: network request to ${r.url()}`); });
       await page.goto(url);
       await page.waitForFunction(() => !!window.__explainer);
+      await page.evaluate(() => document.fonts.ready);
+      // AC-27: the first screen, as a visitor first sees it.
+      for (const [id, msgs] of Object.entries((await stepChecks(page, { first: true })).problems)) if (id === 'AC-27') for (const m of msgs) failOnce(id, `${label}: ${m}`);
       const first = vp.width === 1920;
       if (first) {
         await traverse(page, label, expected);
@@ -265,6 +271,19 @@ main(async () => {
         const hrefs = await page.$$eval('a[href^="#"]', (as) => as.map((a) => a.getAttribute('href')));
         const ids = new Set(S.scenes.map((s) => s.id));
         for (const h of new Set(hrefs)) if (!ids.has(h.slice(1).replace(/\.\d+$/, '')) && !/^#map:/.test(h)) fail('AC-5', `${label}: link ${h} has no target`);
+      }
+      // AC-6 and AC-19 to AC-28 at every scene and every step (iteration 002, D7).
+      for (const s of S.scenes) {
+        const last = Math.max(0, ...s.reveals.map((r) => r.step));
+        for (let k = 0; k <= last; k++) {
+          await page.evaluate((h) => { location.hash = h; }, `${s.id}${k ? '.' + k : ''}`);
+          await page.waitForFunction((want) => { const x = window.__explainer.state(); return `${x.scene}.${x.step}` === want; }, `${s.id}.${k}`);
+          await settle(page);
+          const r = await stepChecks(page);
+          for (const [id, msgs] of Object.entries(r.problems)) if (id !== 'AC-27') for (const m of msgs) failOnce(id, `${label}: ${m}`);
+          const floor = 16 * Math.min(1, vp.height / 1080);
+          if (r.minLabelPx !== null && r.minLabelPx < floor - 0.05) failOnce('AC-6', `${label} ${s.id}.${k}: diagram labels render at ${r.minLabelPx.toFixed(1)}px (min ${floor.toFixed(1)}px)`);
+        }
       }
       // Legibility, screenshots, accessibility: every scene at its final step
       for (const s of S.scenes) {

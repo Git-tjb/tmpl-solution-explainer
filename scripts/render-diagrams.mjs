@@ -113,6 +113,24 @@ function flowBox(n, M, who) {
   for (const r of rows) r.y += offY;
   return { w, h, rows, kind };
 }
+// A boundary's or lane's title: "name (exact_name) [type]", wrapped to the narrowest the boundary can be (its
+// widest part plus padding), so it never runs past the boundary (A10). ELK ignores a minimum size on a nested
+// node, so the boundary reserves the lines in its top padding instead.
+const TITLE_PX = 18, TITLE_LINE = 23;
+function boundaryTitle(e, parts, rooms) {
+  const room = rooms?.get(e.id) ?? Math.max(200, ...parts.map((c) => c.width)) + 40 - 32;
+  const lines = wrap(`${shownName(e)} [${e.type}]`, room, TITLE_PX, 600);
+  const w = Math.ceil(Math.max(...lines.map((l) => textWidth(l, TITLE_PX, 600))));
+  return { lines, w, padTop: 14 + lines.length * TITLE_LINE + 12, type: `[${e.type}]` };
+}
+function titleSvg(t, x, y) {
+  return `<rect class="tbg" x="${f1(x - 6)}" y="${f1(y + 10)}" width="${f1(t.w + 12)}" height="${f1(t.lines.length * TITLE_LINE + 8)}"/>` + t.lines.map((l, i) => {
+    const typeAt = l.endsWith(t.type) ? l.length - t.type.length : -1;
+    const body = typeAt >= 0 ? `${esc(l.slice(0, typeAt))}<tspan class="type">${esc(t.type)}</tspan>` : esc(l);
+    return `<text x="${f1(x)}" y="${f1(y + 30 + i * TITLE_LINE)}">${body}</text>`;
+  }).join('');
+}
+
 function labelSize(text, who) {
   const lines = limit(wrap(text, 220, FONT.edge_label), LIMITS.edge_label, `${who} line label "${text}"`);
   return { lines, w: Math.ceil(Math.max(...lines.map((l) => textWidth(l, FONT.edge_label)))) + 14, h: lines.length * LINE(FONT.edge_label) + 6 };
@@ -194,6 +212,7 @@ function styleBlock(tokens) {
 .diagram .boundary.b-system rect{stroke:${v('--c-system')};stroke-dasharray:2 0;}
 .diagram .boundary.b-lane rect{stroke:${v('--c-dim')};stroke-width:2px;stroke-dasharray:4 6;}
 .diagram .boundary text{fill:${v('--text-muted')};font-size:18px;font-weight:600;}
+.diagram .boundary rect.tbg{fill:${v('--bg')};stroke:none !important;}
 .diagram .edge path.line{fill:none;stroke:${v('--c-edge')};stroke-width:2px;}
 .diagram .edge.k-data path.line{stroke-dasharray:9 6;}
 .diagram .edge.k-human path.line{stroke:${v('--c-human')};stroke-dasharray:2 5;stroke-linecap:round;}
@@ -215,7 +234,7 @@ function styleBlock(tokens) {
 
 // ---------- graph building ----------
 // `dir` is the layout candidate's direction (D4): DOWN or RIGHT.
-function buildStructureGraph(M, view, spec, priorLayout, dir) {
+function buildStructureGraph(M, view, spec, priorLayout, dir, rooms) {
   const structure = spec?.mode === 'structure';
   const els = viewElements(M, view, spec);
   // A structure view draws no lines (views.md, Modes).
@@ -233,13 +252,12 @@ function buildStructureGraph(M, view, spec, priorLayout, dir) {
     const inner = els.filter((id) => M.els.get(id).parent === view.scope);
     const outer = els.filter((id) => !inner.includes(id));
     const be = M.els.get(view.scope);
-    // A boundary is at least as wide as its title (A10).
-    const titleW = Math.ceil(textWidth(`${shownName(be)} [${be.type}]`, 18, 600) + 40);
+    const kids = inner.map(nodeOf);
+    const title = boundaryTitle(be, kids, rooms);
     // Structure views lay the parts out as a grid inside the boundary (rectpacking), not as layers.
-    const inside = structure ? { ...profile.structure_grid } : { ...spacing(profile.structure), 'elk.padding': '[top=48,left=20,bottom=20,right=20]' };
-    inside['elk.nodeSize.constraints'] = 'MINIMUM_SIZE';
-    inside['elk.nodeSize.minimum'] = `(${titleW}, 80)`;
-    boundary = { id: `boundary:${view.scope}`, _boundary: be, layoutOptions: inside, children: inner.map(nodeOf) };
+    const inside = structure ? { ...profile.structure_grid } : { ...spacing(profile.structure) };
+    inside['elk.padding'] = `[top=${title.padTop},left=20,bottom=20,right=20]`;
+    boundary = { id: `boundary:${view.scope}`, _boundary: be, _title: title, layoutOptions: inside, children: kids };
     children = [...outer.map(nodeOf)];
     // Keep neighbors and the zoomed function where the L2 view put them (views.md rule 5).
     if (view.level === 'L3' && priorLayout) {
@@ -287,7 +305,7 @@ function pinOpts(spec, id) {
   return p ? { 'elk.layered.layering.layerChoiceConstraint': String(p.layer), 'elk.layered.crossingMinimization.positionChoiceConstraint': String(p.order) } : {};
 }
 // `aspect` is the layout candidate's aspect-ratio target (D4).
-function buildFlowGraph(M, view, spec, flow, aspect) {
+function buildFlowGraph(M, view, spec, flow, aspect, rooms) {
   const nodes = [...flow.nodes].sort((a, b) => a.step - b.step);
   const nodeOf = (n) => { const b = flowBox(n, M, `view ${view.id}, step ${n.step}`); return { id: n.id, width: b.w, height: b.h, _box: b, _node: n, layoutOptions: pinOpts(spec, n.id) }; };
   let children;
@@ -304,8 +322,8 @@ function buildFlowGraph(M, view, spec, flow, aspect) {
       const members = nodes.filter((n) => laneOf(n) === l).map(nodeOf);
       if (l === '_edge') return members;
       const le = M.els.get(l);
-      const titleW = Math.ceil(textWidth(`${shownName(le)} [${le.type}]`, 18, 600) + 40);
-      return [{ id: `lane:${l}`, _lane: le, layoutOptions: { ...spacing(profile.flow), 'elk.padding': '[top=48,left=20,bottom=20,right=20]', 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${titleW}, 80)` }, children: members }];
+      const title = boundaryTitle(le, members, rooms);
+      return [{ id: `lane:${l}`, _lane: le, _title: title, layoutOptions: { ...spacing(profile.flow), 'elk.padding': `[top=${title.padTop},left=20,bottom=20,right=20]` }, children: members }];
     }).flat();
   } else children = nodes.map(nodeOf);
   // Lines leaving one node with the same label share one label, placed near the source (R12).
@@ -338,8 +356,9 @@ const PADX = 24, TOP = 52;
 const LG_ORDER = ['actor', 'system', 'external', 'function', 'component', 'store', 'file', 'trigger', 'step', 'gate', 'decision', 'output'];
 
 function emit(view, spec, laid, tokens, M) {
-  // A view whose nodes come from more than one level (usually a flow) outlines each node in its level's
-  // colour and adds a level key to the legend; a single-level view needs neither (notation.md, Level key).
+  // A flow whose steps come from more than one level outlines each node in its level's colour and adds a level
+  // key to the legend (notation.md, Level key). A context, functions, or components view is one level by
+  // definition (views.md): its actors and externals are context, not a second level, so it needs neither.
   const nodeLevels = new Set();
   const collect = (n) => {
     if (n._el) nodeLevels.add(elementLevel(M, n._el));
@@ -348,7 +367,7 @@ function emit(view, spec, laid, tokens, M) {
   };
   for (const c of laid.children) collect(c);
   nodeLevels.delete(null);
-  const mixed = nodeLevels.size > 1;
+  const mixed = view.level === 'flow' && nodeLevels.size > 1;
   const lvClass = (e) => (mixed && elementLevel(M, e) ? ` lv-${elementLevel(M, e)}` : '');
   // A structure view shows what_it_does inside the box, so nothing there needs expanding.
   const canExpand = (e) => spec.mode !== 'structure' && (e?.what_it_does || []).length > 0;
@@ -356,12 +375,13 @@ function emit(view, spec, laid, tokens, M) {
   const edgeKinds = new Set();
   const parts = { boundaries: [], nodes: [], edges: [] };
   const positions = {};
+  const bounds = []; // boundaries and lanes: drawn after routing, so their titles can sit clear of the lines
+  const retitle = []; // titles that found no gap between the lines crossing their strip
   const visit = (n) => {
     const x = n.x + PADX, y = n.y + TOP;
     if (n._boundary || n._lane) {
       const e = n._boundary || n._lane;
-      const cls = n._lane ? 'b-lane' : `b-${e.type}`;
-      parts.boundaries.push(`<g class="boundary ${cls}" data-el="${esc(e.id)}"><rect x="${f1(x)}" y="${f1(y)}" width="${f1(n.width)}" height="${f1(n.height)}"/><text x="${f1(x + 16)}" y="${f1(y + 30)}">${esc(shownName(e))} <tspan class="type">[${e.type}]</tspan></text></g>`);
+      bounds.push({ e, n, cls: n._lane ? 'b-lane' : `b-${e.type}` });
       positions[e.id] = { x: +f1(x), y: +f1(y), w: +f1(n.width), h: +f1(n.height) };
       if (!n._lane) legendTypes.add(e.type);
     }
@@ -393,7 +413,6 @@ function emit(view, spec, laid, tokens, M) {
   const blocked = [];
   const addBlock = (n) => {
     if (n._el || n._node) blocked.push({ x: n.x - 4, y: n.y - 4, w: n.width + 8, h: n.height + 8 });
-    if (n._boundary || n._lane) blocked.push({ x: n.x, y: n.y, w: Math.min(n.width, 420), h: 44 });
     for (const c of n.children || []) addBlock(c);
   };
   for (const c of laid.children) addBlock(c);
@@ -411,6 +430,28 @@ function emit(view, spec, laid, tokens, M) {
     }
     return o;
   });
+  // A boundary title goes in the first gap of its title strip that no routed line crosses (AC-28): at the left,
+  // or just past a crossing. If there is no such gap it stays at the left.
+  for (const bd of bounds) {
+    const { n } = bd, t = n._title;
+    const top = n.y, bottom = n.y + t.padTop - 6;
+    const cross = [];
+    for (const rs of segRects) for (const r of rs) if (r.y < bottom && r.y + r.h > top && r.x < n.x + n.width && r.x + r.w > n.x) cross.push([r.x - 6, r.x + r.w + 6]);
+    const left = n.x + 16, right = n.x + n.width - 12;
+    const free = (c) => c + t.w <= right && !cross.some(([a, b]) => a < c + t.w && b > c);
+    let tx = [left, ...cross.map(([, b]) => b + 4).sort((a, b) => a - b)].find(free);
+    if (tx === undefined) {
+      // No gap fits: ask for another layout with the title wrapped to the widest gap (renderAll), and draw it at
+      // the left meanwhile.
+      const edges = [left, ...cross.map(([, b]) => b + 4)].sort((a, b) => a - b);
+      let widest = 0;
+      for (const c of edges) { const stop = Math.min(right, ...cross.map(([a]) => a).filter((a) => a > c)); widest = Math.max(widest, stop - c); }
+      retitle.push({ id: bd.e.id, room: Math.floor(widest - 4) });
+      tx = left;
+    }
+    blocked.push({ x: tx - 6, y: top, w: t.w + 12, h: t.padTop - 4 });
+    parts.boundaries.push(`<g class="boundary ${bd.cls}" data-el="${esc(bd.e.id)}"><rect x="${f1(n.x + PADX)}" y="${f1(n.y + TOP)}" width="${f1(n.width)}" height="${f1(n.height)}"/>${titleSvg(t, tx + PADX, n.y + TOP)}</g>`);
+  }
   const crossesLine = (r, own) => segRects.some((rs, j) => j !== own && rs.some((b) => overlaps(r, b)));
   const inside = (r) => r.x >= -PADX + 4 && r.y >= -TOP + 50;
   // The drawn content's bounds (D4): nodes and boundaries, then every placed label.
@@ -505,9 +546,9 @@ function emit(view, spec, laid, tokens, M) {
     + `<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`
     + `<g class="badge"><rect x="${PADX}" y="14" width="${badgeW}" height="30" rx="4"/><text x="${PADX + 12}" y="35">${BADGE[view.level]}</text></g>`
     + `<text class="title" x="${PADX + badgeW + 14}" y="36">${esc(spec.title)}</text>`
-    + `<g class="boundaries">${parts.boundaries.join('')}</g><g class="edges">${parts.edges.join('')}</g><g class="nodes">${parts.nodes.join('')}</g>`
+    + `<g class="edges">${parts.edges.join('')}</g><g class="boundaries">${parts.boundaries.join('')}</g><g class="nodes">${parts.nodes.join('')}</g>`
     + `<g class="legend">${lg.join('')}</g></svg>\n`;
-  return { svg, layout: { w: W, h: H, content, legend: legend.map(({ key, label, draw }) => ({ key, label, draw })), nodes: positions } };
+  return { svg, retitle, layout: { w: W, h: H, content, legend: legend.map(({ key, label, draw }) => ({ key, label, draw })), nodes: positions } };
 }
 
 // ---------- layout candidates (D4) ----------
@@ -559,34 +600,53 @@ export async function renderAll(outDir, { strict = true } = {}) {
     if (v.level === 'flow') {
       const f = flows.get(v.scope);
       if (!f) throw new UserError(`view ${v.id}: flow ${v.scope} not found`);
-      candidates = profile.flow_aspect_candidates.map((a) => ({ name: `aspect ${a}`, graph: () => buildFlowGraph(M, v, spec, f, a) }));
+      candidates = profile.flow_aspect_candidates.map((a) => ({ name: `aspect ${a}`, graph: (rooms) => buildFlowGraph(M, v, spec, f, a, rooms) }));
     } else {
       const prior = v.level === 'L3' && spec.inherit_from ? layouts[spec.inherit_from] : null;
       const dirs = spec.mode === 'structure' ? ['DOWN'] : profile.structure_direction_candidates;
-      candidates = dirs.map((d) => ({ name: d === 'DOWN' ? 'top-to-bottom' : 'left-to-right', graph: () => buildStructureGraph(M, v, spec, prior, d) }));
+      candidates = dirs.map((d) => ({ name: d === 'DOWN' ? 'top-to-bottom' : 'left-to-right', graph: (rooms) => buildStructureGraph(M, v, spec, prior, d, rooms) }));
     }
     let best = null;
     for (const c of candidates) {
       const before = tooLong.length;
-      const laid = await elk.layout(c.graph());
-      const r = emit(v, spec, laid, tokens, M);
+      // A boundary title that found no gap between crossing lines is wrapped to the widest gap and the view
+      // laid out again (AC-28); at most twice, so the output stays deterministic and bounded.
+      const rooms = new Map();
+      const fitOf = (x) => (figures.length ? fitScore(x.layout.content, figures) : { score: 1, px: {} });
+      let r = null, rFit = null;
+      for (let attempt = 0; ; attempt++) {
+        const laid = await elk.layout(c.graph(rooms));
+        const a = emit(v, spec, laid, tokens, M), aFit = fitOf(a);
+        // The label floor comes first: a narrower title that costs the view its floor is not taken.
+        if (!r || aFit.score >= 1 - 1e-9) { r = a; rFit = aFit; } else break;
+        const fixable = a.retitle.filter((x) => x.room >= 80 && x.room < (rooms.get(x.id) ?? Infinity));
+        if (!fixable.length || attempt === 2) break;
+        for (const x of fixable) rooms.set(x.id, x.room);
+        tooLong.length = before;
+      }
       if (best) tooLong.length = before; // text problems are the same in every candidate; report them once
-      const fit = figures.length ? fitScore(r.layout.content, figures) : { score: 0, px: {} };
+      const fit = figures.length ? rFit : { score: 0, px: {} };
       if (!best || fit.score > best.fit.score + 1e-9) best = { ...r, fit, name: c.name };
       if (!figures.length) break; // a map-only view keeps the first candidate
     }
     best.layout.chosen = best.name;
     writeText(path.join(outDir, `${v.id}.svg`), best.svg);
     layouts[v.id] = best.layout;
-    if (figures.length) report.push({ view: v.id, chosen: best.name, fit: best.fit, figures, content: best.layout.content });
+    if (figures.length) {
+      // What sets the extent: the elements at the two ends of the binding dimension (A11).
+      const byHeight = figures.some((f) => f.box.h / best.layout.content.h < f.box.w / best.layout.content.w);
+      const ns = Object.entries(best.layout.nodes).filter(([id]) => !M.els.get(id) || M.els.get(id).type !== 'system');
+      const lo = ns.reduce((a, b) => ((byHeight ? b[1].y < a[1].y : b[1].x < a[1].x) ? b : a), ns[0]);
+      const hi = ns.reduce((a, b) => ((byHeight ? b[1].y + b[1].h > a[1].y + a[1].h : b[1].x + b[1].w > a[1].x + a[1].w) ? b : a), ns[0]);
+      report.push({ view: v.id, chosen: best.name, fit: best.fit, figures, content: best.layout.content, bound: byHeight ? 'height' : 'width', ends: [lo?.[0], hi?.[0]] });
+    }
   }
   writeText(path.join(outDir, 'layout.json'), JSON.stringify(layouts, null, 1) + '\n');
   const problems = [...new Set(tooLong)].map((t) => `${t}: shorten it at that stage (text is never cut, R8)`);
   for (const r of report) if (r.fit.score < 1 - 1e-9) {
     const worst = Object.entries(r.fit.px).map(([vp, px]) => `${px.toFixed(1)}px at ${vp} (min ${LABEL_FLOOR[vp].toFixed(1)})`).join(', ');
     const scenes = [...new Set(r.figures.map((f) => `${f.scene} (${f.layout})`))].join(', ');
-    const byHeight = r.figures.some((f) => f.box.h / r.content.h < f.box.w / r.content.w);
-    problems.push(`view ${r.view} in ${scenes}: labels would render at ${worst}; best layout ${r.chosen}, content ${r.content.w}x${r.content.h}, limited by its ${byHeight ? 'height' : 'width'}. Narrow or split the view at stage 04, or give the scene the "diagram" layout`);
+    problems.push(`view ${r.view} in ${scenes}: labels would render at ${worst}; best layout ${r.chosen}, content ${r.content.w}x${r.content.h}, limited by its ${r.bound}, which runs from "${r.ends[0]}" to "${r.ends[1]}". Narrow or split the view at stage 04, or give the scene the "diagram" layout`);
   }
   if (problems.length) {
     if (strict) throw new UserError(`render-diagrams: ${problems.length} problem(s):\n  - ${problems.join('\n  - ')}`);
@@ -604,6 +664,7 @@ if (process.argv[1]?.endsWith('render-diagrams.mjs')) {
     const { layouts, report } = await renderAll(dir, { strict: !preview });
     console.log(`Rendered ${Object.keys(layouts).length} view(s) into ${rel(dir)}`);
     // Predicted label size per view, at both viewports (build-rules.md: labels >= 16px at 1080p).
-    for (const r of report) console.log(`  ${r.view.padEnd(28)} ${r.chosen.padEnd(14)} ${Object.entries(r.fit.px).map(([vp, px]) => `${vp} ${px.toFixed(1)}px`).join('  ')}`);
+    console.log(`  ${'view'.padEnd(28)} ${'layout'.padEnd(14)} ${'1920x1080'.padEnd(10)} ${'1440x900'.padEnd(10)} limited by`);
+    for (const r of report) console.log(`  ${r.view.padEnd(28)} ${r.chosen.padEnd(14)} ${Object.keys(FIGURE).map((vp) => `${(r.fit.px[vp] ?? 0).toFixed(1)}px`.padEnd(10)).join(' ')} ${r.bound}: ${r.ends[0]} .. ${r.ends[1]}${r.fit.score < 1 - 1e-9 ? '  BELOW THE FLOOR' : ''}`);
   });
 }

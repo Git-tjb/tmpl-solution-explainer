@@ -95,7 +95,7 @@ svg.diagram .is-hidden, .text p.is-hidden { opacity: 0; }
    opacity on text. Expand markers are never dimmed. In a flow, a highlight emphasises its steps and dims
    nothing, so the rest of the flow never looks switched off. */
 svg.diagram.has-hl:not([data-level="flow"]) .node:not(.hl) .shape,
-svg.diagram.has-hl:not([data-level="flow"]) .boundary:not(.hl) rect { stroke: var(--c-dim) !important; }
+svg.diagram.has-hl:not([data-level="flow"]) .boundary:not(.hl) rect:not(.tbg) { stroke: var(--c-dim) !important; }
 svg.diagram.has-hl:not([data-level="flow"]) .node:not(.hl) text,
 svg.diagram.has-hl:not([data-level="flow"]) .boundary:not(.hl) text,
 svg.diagram.has-hl:not([data-level="flow"]) .edge:not(.hl) text { fill: var(--text-dim); }

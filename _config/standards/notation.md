@@ -63,9 +63,10 @@ Functions, Components, Code** (L1 to L4), top to bottom or left to right.
 
 ## Level key
 
-A view whose elements, or whose flow nodes' bound elements, come from more than one level outlines each node
-in its level's colour (`--lv-1` to `--lv-3`) and adds the levels present to its legend. A view at one level does
-neither: the badge and the level indicator already say the level.
+A flow whose nodes' bound elements come from more than one level outlines each node in its level's colour
+(`--lv-1` to `--lv-3`) and adds the levels present to its legend. A context, functions, or components view is one
+level by definition (`views.md`; its actors and externals are context, not a second level), so it does neither:
+the badge and the level indicator already say the level.
 
 ## Legend
 

@@ -37,3 +37,28 @@ stage 06 agent and recorded in the report.
 | --- | --- | --- |
 | AC-14 | Every stage produces the same result on any workshop machine with its tooling installed: re-running `render-diagrams` and `build-site` on the same inputs yields byte-identical output | script |
 | AC-15 | The output format and how it meets each output-format requirement is recorded in the template's `docs/design.md` | review (template, once) |
+
+## Legibility at every step
+Checked at every scene and every reveal step, at 1920x1080 and 1440x900, in all three browsers (`verify.mjs`,
+through `scripts/lib/page-checks.mjs`). AC-6's label size runs at every step too.
+
+| ID | Criterion | Check |
+| --- | --- | --- |
+| AC-19 | What a step highlights or traces (elements, lines, and line labels) is drawn at full strength in the focus colour | script |
+| AC-20 | Expand markers are never dimmed, and dimmed text keeps at least 4.5:1 as drawn | script |
+| AC-21 | Every control is one line high and inside the viewport | script |
+| AC-22 | Every text stays inside its shape: box text in its box (a decision's in its diamond), boundary titles in their boundary, line labels on their backing | script |
+| AC-23 | No on-screen text is cut: nothing ends in an ellipsis, nothing is clipped (the control bar's scope label may shorten, with its full text in a tooltip) | script |
+| AC-24 | Step 0 of every scene shows at least one element of its diagram | script |
+| AC-25 | Each scene shows one title: the diagram's own title row is hidden and the control bar repeats none | script |
+| AC-26 | Every scene title and message is at most two lines | script |
+| AC-27 | The first screen shows how to advance (the hint) and where the viewer is (the position and the strip) | script |
+| AC-28 | No line runs through text other than its own label | script |
+
+## Review at stage 06
+Judged by the stage 06 agent from the screenshots, and recorded in `verify-report.md`:
+- Branching flows read cleanly: branch labels sit on their lines, labels do not overlap, and lines do not cross
+  where a layout without crossings exists.
+- Line labels on the path are plain language a first-time viewer understands; no counts or shorthand.
+- Colour reads as one meaning per role: focus, level, and neutral structure (`check-design` checks the tokens;
+  this checks the page).
