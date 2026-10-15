@@ -4,7 +4,7 @@ How the template changes to meet `requirements-prompt.md` (rev 3, agreed 2026-10
 default). Requirements say *what*; this says *how*. Each section names the requirements (R) and the sources it
 serves (S = seed in `docs/seeds.md`; O and A = trial run 2's gate feedback, through its retro).
 
-The build follows the workstreams (W1-W6) in order, on branch `claude/iteration-003`, with one gate with the
+The build follows the workstreams (W1-W6, with W3b added after W3 by addendum D8) in order, on branch `claude/iteration-003`, with one gate with the
 operator after each. Each workstream updates the fixtures it needs and ends with the dry run passing. Approved
 by the operator 2026-10-15.
 
@@ -265,6 +265,74 @@ deliverables:
 
   Any criterion that fails only in the single file is named.
 
+## D8. Problem figures (W3b; R2, R5; addendum)
+
+Added at the W3 gate (2026-10-15, at the operator's request). Approved by the operator 2026-10-15. The requirements are unchanged; this is a better mechanism for R2 and R5. W3's before view is a
+node-link map of the old way. A pain such as "every run started from nothing" or "the copies drifted" reads
+better as a picture of the pattern than as a box on a map. Problem scenes can now use a small set of
+conceptual figures. Each figure is still drawn by the renderer from the before model, cites its facts, and is
+checked like any diagram. Freehand or illustrated pictures stay out (banned patterns 9 and 10, R2's
+traceability, AC-6/22/28, AC-14).
+
+- **Figures.** A before view gains `figure` (in its view spec, and mirrored in `scenes.json` `views`, as `mode`
+  is) and a `subject`. The default figure is `map`, which is W3's view, unchanged.
+
+| Figure | Shows | Subject | Data it needs |
+| --- | --- | --- | --- |
+| `map` | The old way as a node-link picture (W3) | — | the before model |
+| `repeat` | The same task redone run after run, each run starting empty, with a restart mark between | a task | `recurs` on the task |
+| `drift` | One thing as copies that diverge: versions fanning out from a common start | a means | `versions` on the means |
+| `scatter` | What a task needs, spread over many places at uneven distances | a task | its relationships to 3 or more means or people |
+| `gap` | Two steps with the link between them broken, and the pain sitting in the break | a relationship | a pain that hurts it |
+| `wait` | Work piling up in front of one person or task: a stack of waiting items | a person or task | `queue` on it |
+| `cost` | What it cost, as one to three measured bars on a common scale; in a `why` scene, before beside after | measure IDs | `measures` |
+
+- **The user leads every figure.** Each figure draws the user (the `person` stadium) at its left, joined to
+  the subject. So R2's "the picture centres the user and the problem" holds for every figure, and W3's
+  check-design rule (the before view keeps the user) applies unchanged.
+- **Every figure shows the problem.** Each figure draws the pains that hurt its subject as W3's pain tags, and
+  `cost` draws its measures' labels and values. `check-design` fails a figure that shows neither.
+- **The before model gains optional fields** (`before-model.schema.json`; `system-model.md`, The before
+  model). Each cites facts:
+  - `recurs: { every, shown }` on a task: `every` is the period in at most four words ("every week"); `shown`
+    is how many runs to draw (3 to 6, default 4).
+  - `versions: [{ label }]` on a means: 2 to 5 labels of at most four words each.
+  - `queue: { size, label }` on a person or task: `size` is 2 to 12 items to draw; `label` names an item in
+    at most four words ("requests").
+  - Top-level `measures: [{ id, label, value, unit, after }]`. `label` is at most six words; `value` is a
+    positive number; `after` is the value with the solution, optional, with its own sources.
+- **Before and after belong in `why`.** A `cost` figure that shows `after` values (`compare: true` in the view
+  spec) is allowed only in `why` scenes: an after value is a fact about the solution, and the problem scenes
+  show no solution (R2).
+- **Drawing.** Each figure is a small fixed composition, computed by the renderer without ELK.
+  - Boxes and text use W3's `beforeBox` with measured text, the same SVG conventions (`.node.el` with
+    `data-el`, `.edges`, badge, title, legend) and the same content box. The page's checks (AC-6, AC-19 to
+    AC-28) and the 16px floor apply as to any view.
+  - The layout fits the scene's figure area: it stretches along the wide axis, and `repeat` and `wait` choose
+    how many marks to draw within the shown range. Under the floor, the build fails as for any view.
+  - Figure-specific marks are geometry, never text: the restart arrow, the fan of versions, the queue stack,
+    the broken link, the bar scale. The legend names each mark that is drawn.
+- **Highlights.** A figure's states and step actions target the same IDs: the subject, its pains, the user, and
+  `measure:<id>` for a bar. So reveals and highlights work as in any view, and `check-design` checks the
+  targets.
+- **Choosing a figure.** A new stage reference, `stages/03_storyboard/references/problem-figures.md`, says
+  which figure fits which kind of pain, what data each needs, and what to do when the data is missing. The
+  usual answer is a map, or asking stage 01 for the count. Stage 03 names a figure per before view, and
+  stage 04's spec matches it. The reference is in the template, not a workshop skill, so the template still
+  works outside the workshop.
+- **Capture.** Setup question 6 adds an optional follow-up: for each pain, anything countable (how often, how
+  long, how many places or copies, how much waited). The extraction guide records the answers as `before`
+  facts, and stage 01 fills the new fields only from them, never by estimate.
+- **Checks.**
+  - `check-model` validates the new fields: the types they sit on, their ranges, and that every cited fact
+    exists.
+  - `check-design` validates each figure: the subject's type and its data, the user drawn, a pain or a measure
+    shown, `compare` only in `why`, and targets that exist.
+  - `verify`'s AC-9 counts figure elements as rendered from data, as for any view.
+- **Fixtures.** S03 ("What hurt") becomes a `repeat` figure on the weekly work. The fixture before model gains
+  `recurs`, `versions`, `queue`, and one measure. A W3b test variant renders every figure, `cost` with
+  `compare` in a `why` scene included, and runs the page checks on them.
+
 ## D7. Checks and acceptance criteria (each workstream adds its own)
 
 | AC | Change | Requirement |
@@ -309,6 +377,7 @@ The review list in `acceptance-criteria.md` gains:
 | W1 | D1: questionnaire, `run.md`, visual references, snapshot of references, before model (schema, standard, extraction guide, `check-model`), stage 01 contract | The fixture `run.md` has the new fields, and the snapshot copies its image reference. The fixture before model passes `check-model`. Negative tests fail it: a before element named after a solution part, a pain without `hurts`, and no `person` |
 | W2 | D2, D3: arc, IA rules, `scope.md` `purpose_line`, scenes schema v2, budget, lines with facts, `lines.md`, repeat and reveal rules, stage 02-04 contracts | The fixture storyboard (title, problem, answer ... close on a new picture) passes. Negative tests: S01 not title, a problem scene on an L1 view, a repeated view without `adds`, a line with no facts, a section over budget, mixed reveals. The line-repeat WARN fires on a seeded line |
 | W3 | D4: before views in the renderer, notation, title art and `assemble`, the title image path, the title layout | The fixture's before view renders at least 16px at both viewports with no solution element. Title art carries `data-el` on every shape and animates, or jumps under reduced motion. A run with a fixture title image passes `check-design`; an SVG with a script fails it |
+| W3b | D8: problem figures (before-model fields, figure renderer, notation, `problem-figures.md`, setup follow-up, checks) | Each of the seven figures renders from fixture data at the 16px floor at both viewports. Each passes the page checks (AC-6, AC-19 to AC-28) in a test build, and every element in it carries a model ID. `check-model` rejects bad new fields. `check-design` rejects a figure missing its data, a figure without the user or without a pain or measure, and `compare` outside `why`. The dry run passes (AC-16 aside, as approved) |
 | W4 | D5: Levels panel and key, pills, hover and pressed, clickable strip, overlay state, map panel sections | AC-16 (revised), AC-29 and AC-30 pass in three browsers at both viewports. The orientation scene and layout are gone |
 | W5 | D6: `export-single`, `deliverables.yml`, `verify --single`, AC-31, stage 05 and 06 contracts | The single file opens offline with no other files. AC-31 passes. Exporting twice gives identical bytes. `site/` is byte-identical before and after export |
 | W6 | Fixtures complete, documents (`docs/design.md`, README, standards, acceptance criteria), close | The dry run passes AC-1 to AC-31 in Chromium, Edge, and Firefox at 1920x1080 and 1440x900, for the page set and the single file. `verification.md` is written. `Test-Workspace -Template` and the scrub scan pass |
@@ -328,6 +397,10 @@ The review list in `acceptance-criteria.md` gains:
 - **The title art may not read as "engaging".** A labelless schematic is honest and on-tone (the visual
   direction is an engineering schematic), but it is plain. The licensed-image path exists for runs that need
   more. Trial run 3 judges it, and W3's gate shows a mockup first.
+- **Problem figures are a fixed vocabulary (D8).** A real pain may fit none of the six; the `map` stays the
+  fallback, and a missing figure is a seed for a later iteration, not a reason for freehand art. Figures with
+  counts (`repeat`, `wait`, `cost`) need numbers the operator may not have; the reference says to fall back
+  rather than estimate.
 - **The before model asks the operator for more at setup and at stage 01.** It is small (at most 9 elements)
   and mostly quotes the setup answers.
 - **The line-repeat test is a heuristic.** It only flags lines, and the gate decides. The 60% threshold is a
