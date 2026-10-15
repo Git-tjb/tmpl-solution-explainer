@@ -37,6 +37,10 @@ stage 06 agent and recorded in the report.
 | --- | --- | --- |
 | AC-14 | Every stage produces the same result on any workshop machine with its tooling installed: re-running `render-diagrams` and `build-site` on the same inputs yields byte-identical output | script |
 | AC-15 | The output format and how it meets each output-format requirement is recorded in the template's `docs/design.md` | review (template, once) |
+| AC-31 | The run's single file (`verify.mjs --single`) is declared in `deliverables.yml` with a matching sha256, references no other file, and passes every criterion the page set passes; any criterion that fails only for the single file is named | script |
+
+Every criterion above runs on the page set and, with `verify.mjs --single`, on the single file; for the single
+file, AC-14 exports it again and compares the bytes.
 
 ## Legibility at every step
 Checked at every scene and every reveal step, at 1920x1080 and 1440x900, in all three browsers (`verify.mjs`,

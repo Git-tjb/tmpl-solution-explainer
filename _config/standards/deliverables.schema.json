@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "deliverables.schema.json",
+  "title": "Deliverables",
+  "description": "Structure of stages/05_build/output/deliverables.yml, written by scripts/export-single.mjs: the files a completed run hands over, for the workshop's close-out to file. It names no project, KB vault, or solution.",
+  "type": "object",
+  "required": ["schema_version", "deliverables"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "deliverables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["file", "kind", "media_type", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string", "pattern": "^[^/\\\\:*?\"<>|]+$", "description": "The file's name, in the same folder as this declaration" },
+          "kind": { "const": "explainer" },
+          "media_type": { "const": "text/html" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    }
+  }
+}

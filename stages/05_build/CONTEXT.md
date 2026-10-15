@@ -1,6 +1,7 @@
 # Stage 05: Build
 
-**Purpose:** Produce the explainer: a static page set that opens from the file system with no network.
+**Purpose:** Produce the explainer: a static page set that opens from the file system with no network, and the
+same explainer as one self-contained file, declared as the run's deliverable.
 
 Run the commands from the workspace root.
 
@@ -28,19 +29,28 @@ what the build needs); `../02_scope/output/`.
    snapshot.
 4. Open `output/site/index.html` and step through every scene once. If something is wrong, the fix belongs
    upstream: name the stage and the file, and stop.
-5. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 05`.
+5. Run `node scripts/export-single.mjs`. It reads `output/site/` without changing it and writes the whole
+   explainer as one self-contained file, `output/<YYYY-MM-DD> - <instance> - explainer.html` (the run's start
+   date and the workspace folder's name; `--name` sets another), with styles, the runtime, fonts, and pictures
+   inside it. It declares the file in `output/deliverables.yml` (`_config/standards/deliverables.schema.json`):
+   the file, its kind, and its sha256. Nothing here writes to a KB vault; filing the deliverable is the
+   workshop's close-out step. Used outside the workshop, the file simply stays in `output/`.
+6. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 05`.
 
 ## Outputs
 | File | Destination |
 | --- | --- |
 | `site/index.html` | `output/` |
 | `site/assets/` (css, js, fonts, diagrams) | `output/` |
+| `<YYYY-MM-DD> - <instance> - explainer.html` (the single file) | `output/` |
+| `deliverables.yml` | `output/` |
 | `gate-feedback.md` | `output/` |
 
 ## Verify
 Stage 06 runs the full checks.
 
 ## Human Check
-Open `output/site/index.html` and present it to yourself. This stage writes no content of its own: fix a
+Open `output/site/index.html` and present it to yourself; the single file in `output/` is the same explainer
+in one file, to open or share on its own. This stage writes no content of its own: fix a
 problem in the stage that owns it, re-run that stage, and every stage after it (`node scripts/status.mjs`
 lists the stale ones). Nothing advances without this.

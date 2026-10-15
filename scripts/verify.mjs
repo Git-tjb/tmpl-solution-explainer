@@ -7,10 +7,11 @@ import { pathToFileURL } from 'node:url';
 import { chromium, firefox } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import { stepChecks } from './lib/page-checks.mjs';
-import { P, out, main, readJson, readText, loadTokens, loadModel, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
+import { P, out, main, readJson, readText, readYaml, validate, loadTokens, loadModel, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
 import { checkModel, checkBefore } from './check-model.mjs';
 import { checkStoryboard } from './check-storyboard.mjs';
+import { exportSingle, fileReferences, DECLARATION } from './export-single.mjs';
 import { renderAll } from './render-diagrams.mjs';
 import { buildSite } from './build-site.mjs';
 
@@ -359,12 +360,16 @@ async function legibility(page, label, tokens) {
 main(async () => {
   const S = readJson(P.scenes);
   const tokens = loadTokens();
-  const indexFile = path.join(P.site, 'index.html');
-  if (!fs.existsSync(indexFile)) throw new Error('No site. Run stage 05 first.');
+  // --single checks the run's single file (iteration 003, D6) with the same checks, after the page set has been
+  // checked: its results go in a "single" section of verify-results.json, its screenshots in screenshots/single/.
+  const SINGLE = process.argv.includes('--single');
+  const declared05 = SINGLE ? readYaml(DECLARATION()) : null;
+  const indexFile = SINGLE ? out('05', declared05?.deliverables?.[0]?.file || 'none') : path.join(P.site, 'index.html');
+  if (!fs.existsSync(indexFile)) throw new Error(SINGLE ? 'No single file. Run scripts/export-single.mjs (stage 05) first.' : 'No site. Run stage 05 first.');
   const url = pathToFileURL(indexFile).href;
   const expected = [];
   S.scenes.forEach((s) => { for (let k = 0; k <= Math.max(0, ...s.reveals.map((r) => r.step)); k++) expected.push(`${s.id}.${k}`); });
-  const shots = out('06', 'screenshots');
+  const shots = SINGLE ? out('06', 'screenshots', 'single') : out('06', 'screenshots');
   fs.rmSync(shots, { recursive: true, force: true });
   fs.mkdirSync(shots, { recursive: true });
   const browsersRun = [];
@@ -556,8 +561,14 @@ main(async () => {
   for (const s of S.scenes) for (const t of s.text) if (!decode(html).includes(t.line)) fail('AC-11', `${s.id}: text "${t.line}" is not on the page`);
   if (C['AC-11'].result === 'pass') { C['AC-11'].result = 'review'; note('AC-11', 'Scene IDs and text match; each claim against its facts needs review.'); }
 
-  // AC-14 determinism: render and build again into this stage's output and compare byte for byte.
+  // AC-14 determinism: render and build again into this stage's output and compare byte for byte; for the single
+  // file, export it again and compare.
   crit('AC-14');
+  if (SINGLE) {
+    if (sha256(Buffer.from(exportSingle(P.site))) !== sha256(fs.readFileSync(indexFile))) fail('AC-14', `${path.basename(indexFile)} differs on a second export`);
+    await singleChecks(indexFile, declared05);
+    return report(true);
+  }
   const tmp = out('06', 'rebuild');
   fs.rmSync(tmp, { recursive: true, force: true });
   await renderAll(path.join(tmp, 'assets', 'diagrams'), { strict: false });
@@ -567,17 +578,38 @@ main(async () => {
   for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) if (a[k] !== b[k]) fail('AC-14', `${k} differs on rebuild${!a[k] || !b[k] ? ' (missing on one side)' : ''}`);
   fs.rmSync(tmp, { recursive: true, force: true });
 
-  crit('AC-12').result = 'review'; note('AC-12', 'Review the screenshots against _config/banned-patterns.md.');
-  crit('AC-15').result = 'review'; note('AC-15', "Recorded once in the template's docs/design.md.");
-  if (!browsersRun.length) for (const id of ['AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17']) fail(id, 'no browser ran');
+  return report(false);
 
-  const order = Object.keys(C).sort((x, y) => parseInt(x.slice(3)) - parseInt(y.slice(3)));
-  const result = { browsers: browsersRun, viewports: VIEWPORTS.map((v) => `${v.width}x${v.height}`), criteria: Object.fromEntries(order.map((k) => [k, C[k]])) };
-  writeText(out('06', 'verify-results.json'), JSON.stringify(result, null, 1) + '\n');
-  for (const k of order) {
-    console.log(`${k.padEnd(6)} ${C[k].result.toUpperCase()}`);
-    for (const d of C[k].details.slice(0, 8)) console.log(`         ${d}`);
-    if (C[k].details.length > 8) console.log(`         … ${C[k].details.length - 8} more in verify-results.json`);
+  // AC-31 (single file only): declared, references no file, and passes what the page set passes.
+  async function singleChecks(file, decl) {
+    crit('AC-31');
+    const r = new Report('deliverables');
+    if (!validate('deliverables.schema.json', decl, r, 'deliverables.yml')) for (const e of r.errors) fail('AC-31', e);
+    if (decl?.deliverables?.[0]?.sha256 !== sha256(fs.readFileSync(file))) fail('AC-31', `${path.basename(file)} does not match the sha256 in deliverables.yml; export again`);
+    for (const ref of fileReferences(readText(file)).slice(0, 10)) fail('AC-31', `${path.basename(file)} references another file: ${ref}`);
+    const pageSet = fs.existsSync(out('06', 'verify-results.json')) ? readJson(out('06', 'verify-results.json')).criteria : null;
+    if (!pageSet) { fail('AC-31', 'no page-set results to compare with; run verify.mjs before verify.mjs --single'); return; }
+    for (const [id, c] of Object.entries(C)) if (id !== 'AC-31' && c.result === 'fail' && pageSet[id]?.result !== 'fail') fail('AC-31', `${id} passes for the page set but fails for the single file`);
+    note('AC-31', `${path.basename(file)}, ${Math.round(fs.statSync(file).size / 1024)} KB`);
   }
-  console.log(`Wrote ${rel(out('06', 'verify-results.json'))} and ${walk(shots).length} screenshot(s).`);
+
+  function report(single) {
+    crit('AC-12').result = 'review'; note('AC-12', 'Review the screenshots against _config/banned-patterns.md.');
+    crit('AC-15').result = 'review'; note('AC-15', "Recorded once in the template's docs/design.md.");
+    if (!browsersRun.length) for (const id of ['AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17']) fail(id, 'no browser ran');
+
+    const order = Object.keys(C).sort((x, y) => parseInt(x.slice(3)) - parseInt(y.slice(3)));
+    const result = { browsers: browsersRun, viewports: VIEWPORTS.map((v) => `${v.width}x${v.height}`), criteria: Object.fromEntries(order.map((k) => [k, C[k]])) };
+    if (single) {
+      const all = readJson(out('06', 'verify-results.json'));
+      all.single = { file: path.basename(indexFile), ...result };
+      writeText(out('06', 'verify-results.json'), JSON.stringify(all, null, 1) + '\n');
+    } else writeText(out('06', 'verify-results.json'), JSON.stringify(result, null, 1) + '\n');
+    for (const k of order) {
+      console.log(`${k.padEnd(6)} ${C[k].result.toUpperCase()}`);
+      for (const d of C[k].details.slice(0, 8)) console.log(`         ${d}`);
+      if (C[k].details.length > 8) console.log(`         … ${C[k].details.length - 8} more in verify-results.json`);
+    }
+    console.log(`${single ? `Single file ${path.basename(indexFile)}: wrote` : 'Wrote'} ${rel(out('06', 'verify-results.json'))}${single ? ' (section "single")' : ''} and ${walk(shots).length} screenshot(s).`);
+  }
 });

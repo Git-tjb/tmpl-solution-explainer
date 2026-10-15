@@ -11,6 +11,11 @@ checks them.
 - Diagrams ship as prerendered SVG. No layout is computed while the explainer is shown.
 - The page runtime is the template's own (`scripts/site/`), copied in by `build-site`. A run adds no other
   runtime library unless `design-spec.md` justifies it.
+- The same explainer also ships as one self-contained HTML file (`export-single`, the last step of stage 05):
+  styles, the runtime, fonts, and pictures inlined as text and data URIs, referencing no other file, so it opens
+  by double-click on its own. It is made from `site/` without changing it, passes the same checks
+  (`verify.mjs --single`), and is declared in `deliverables.yml`. Nothing in a theme may stop it inlining: every
+  `url()` in `theme.css` names a font or image file in `theme/`.
 
 ## Run theme
 The template ships one default look and no themes. A run may bring its own: stage 04 writes `theme/` into

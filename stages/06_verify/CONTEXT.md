@@ -9,6 +9,7 @@ Run the commands from the workspace root.
 | Layer | Path | Use |
 | --- | --- | --- |
 | 4 | `../05_build/output/site/` | the explainer under test |
+| 4 | `../05_build/output/deliverables.yml` and the single file it declares | the same explainer as one file, under the same test |
 | 4 | `../03_storyboard/output/scenes.json` | what the explainer should contain |
 | 4 | `../01_discover/output/fact-sheet.md` | what every on-screen claim must trace to |
 | 4 | `../01_discover/output/system-model.yaml`, `flows.yaml` | for the model checks |
@@ -24,12 +25,15 @@ Run the commands from the workspace root.
 2. Run `node scripts/verify.mjs`. It runs the scripted criteria in Chromium, Edge, and Firefox at both
    viewports (the legibility criteria AC-6 and AC-19 to AC-28 at every scene and every reveal step), writes
    `output/verify-results.json`, and captures every scene at its final step into `output/screenshots/`.
+   Then run `node scripts/verify.mjs --single`: the same checks on the single file, with AC-31 (it is declared,
+   references no other file, and passes what the page set passes). Its results go in the `single` section of
+   `verify-results.json`, its screenshots in `screenshots/single/`.
 3. Review content fidelity: every line of on-screen text in `scenes.json` against the fact IDs it cites.
 4. Review the screenshots against `banned-patterns.md` (accepting only the exceptions listed in
    `design-spec.md`, if the run has a theme), the IA rules marked as review, and the "Review at stage 06"
    list in `acceptance-criteria.md` (branching flows, plain line labels, one meaning per colour).
-5. Write `verify-report.md`: pass or fail per criterion; each failure with its scene or element ID and the
-   stage that should be re-run.
+5. Write `verify-report.md`: pass or fail per criterion, for the page set and for the single file; each
+   failure with its scene or element ID and the stage that should be re-run.
 6. Write `gate-feedback.md` (`_config/gate-feedback.md`), then run `node scripts/stamp.mjs 06`.
 
 ## Outputs

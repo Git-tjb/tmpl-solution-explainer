@@ -19,8 +19,8 @@ main(() => {
     ['snapshot-sources.mjs'], ['inventory-sources.mjs'], ['place-fixtures'], ['check-model.mjs', '--scope'],
     ['stamp.mjs', '01'], ['stamp.mjs', '02'], ['check-storyboard.mjs'], ['stamp.mjs', '03'],
     ['check-design.mjs'], ['render-diagrams.mjs', '--preview'], ['mockups.mjs'], ['stamp.mjs', '04'],
-    ['render-diagrams.mjs'], ['build-site.mjs'], ['stamp.mjs', '05'],
-    ['verify.mjs'], ['stamp.mjs', '06'], ['status.mjs'],
+    ['render-diagrams.mjs'], ['build-site.mjs'], ['export-single.mjs'], ['stamp.mjs', '05'],
+    ['verify.mjs'], ['verify.mjs', '--single'], ['stamp.mjs', '06'], ['status.mjs'],
   ];
   const until = process.argv.includes('--until') ? process.argv[process.argv.indexOf('--until') + 1] : null;
   for (const [script, ...args] of steps) {

@@ -18,7 +18,7 @@ export function stageInputs(nn) {
       std('view.schema.json'), std('scene-spec.schema.json')];
     case '05': return ['_config/gate-feedback.md', o('04', 'tokens.css'), o('04', 'theme'), o('04', 'title'), o('04', 'views'), o('04', 'scene-specs.yaml'), o('03', 'scenes.json'), o('01', 'system-model.yaml'),
       o('01', 'flows.yaml'), o('01', 'sources'), '_config/build-rules.md', std('layout-profile.json'), 'scripts/site'];
-    case '06': return ['_config/gate-feedback.md', o('05', 'site'), o('03', 'scenes.json'), o('01', 'fact-sheet.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'),
+    case '06': return ['_config/gate-feedback.md', o('05', 'site'), o('05', 'deliverables.yml'), o('03', 'scenes.json'), o('01', 'fact-sheet.md'), o('01', 'system-model.yaml'), o('01', 'flows.yaml'),
       'stages/06_verify/references/acceptance-criteria.md', '_config/banned-patterns.md', '_config/information-architecture.md'];
     case '07': return ['01', '02', '03', '04', '06'].map((n) => o(n)).concat([o('05', 'site/index.html'), '_config/retro.md', run()]);
     default: return [];
