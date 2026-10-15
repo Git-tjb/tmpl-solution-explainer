@@ -35,6 +35,50 @@ function git(args, cwd) {
   catch { return ''; }
 }
 
+// Visual references and the title image (iteration 003, D1): every image or font file named in run.md is
+// copied into 01_discover/output/visual-refs/, so stage 04 uses them without reading the original location
+// or fetching a page. Colours, font names and URLs are text and stay in run.md.
+const REF_EXT = { image: ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif'], font: ['.woff2', '.woff', '.ttf', '.otf'] };
+const REF_MAX_BYTES = 10 * 1024 * 1024;
+function snapshotVisualRefs(run) {
+  const refs = run.visual_references || [];
+  if (!Array.isArray(refs)) throw new UserError('visual_references in _config/run.md must be a list.');
+  const files = [];
+  refs.forEach((r, i) => {
+    const at = `visual_references entry ${i + 1}`;
+    if (typeof r !== 'object' || r === null) throw new UserError(`${at} is plain text; give it as { kind, value, note } (setup question 11).`);
+    if (!['colour', 'font', 'image', 'url'].includes(r.kind)) throw new UserError(`${at}: kind must be colour, font, image, or url (got "${r.kind}").`);
+    if (!r.value || String(r.value).includes('{{')) throw new UserError(`${at} has no value.`);
+    if (r.kind === 'colour' && !/^#[0-9a-f]{6}$/i.test(String(r.value))) throw new UserError(`${at}: a colour is a hex value such as #1c1f24 (got "${r.value}").`);
+    if (r.kind === 'image') files.push({ kind: 'image', path: String(r.value), as: `ref-${String(i + 1).padStart(2, '0')}`, at });
+    if (r.kind === 'font' && r.path) files.push({ kind: 'font', path: String(r.path), as: `ref-${String(i + 1).padStart(2, '0')}`, at });
+  });
+  const tv = run.title_visual || { from: 'model' };
+  if (!['model', 'image'].includes(tv.from)) throw new UserError(`title_visual.from must be model or image (got "${tv.from}").`);
+  if (tv.from === 'image') {
+    if (!tv.image) throw new UserError('title_visual.from is image, but title_visual.image gives no path.');
+    if (!tv.licence || String(tv.licence).includes('{{')) throw new UserError('title_visual.image needs its licence (title_visual.licence).');
+    files.push({ kind: 'image', path: String(tv.image), as: 'title', at: 'title_visual.image' });
+  }
+
+  fs.rmSync(P.visualRefs, { recursive: true, force: true });
+  const records = [];
+  for (const f of files) {
+    const abs = path.resolve(ROOT, f.path);
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) throw new UserError(`${f.at}: file not found: ${f.path}`);
+    const ext = path.extname(abs).toLowerCase();
+    if (!REF_EXT[f.kind].includes(ext)) throw new UserError(`${f.at}: ${f.kind === 'image' ? 'an image' : 'a font'} must be ${REF_EXT[f.kind].join(', ')} (got ${f.path}).`);
+    const size = fs.statSync(abs).size;
+    if (size > REF_MAX_BYTES) throw new UserError(`${f.at}: ${f.path} is larger than ${REF_MAX_BYTES} bytes.`);
+    const name = `${f.as}-${slug(path.basename(abs, ext))}${ext}`;
+    fs.mkdirSync(P.visualRefs, { recursive: true });
+    fs.copyFileSync(abs, path.join(P.visualRefs, name));
+    records.push({ file: name, origin: f.path, kind: f.kind, for: f.as === 'title' ? 'title visual' : 'visual reference', copied_at: new Date().toISOString(), bytes: size });
+    console.log(`visual-refs/${name}: copied from ${f.path}`);
+  }
+  return records;
+}
+
 main(() => {
   const run = runAnswers();
   const sources = run.sources || [];
@@ -87,6 +131,7 @@ main(() => {
     records.push(record);
     console.log(`${name}: ${copied} file(s) copied, ${skipped.length} skipped${commit ? ` (commit ${commit.slice(0, 7)}${record.repo_dirty ? ', uncommitted changes' : ''})` : ''}`);
   });
-  writeText(path.join(P.sources, 'provenance.yml'), YAML.stringify({ schema_version: 1, sources: records }));
+  const visualRefs = snapshotVisualRefs(run);
+  writeText(path.join(P.sources, 'provenance.yml'), YAML.stringify({ schema_version: 1, sources: records, visual_refs: visualRefs }));
   console.log(`Wrote ${rel(path.join(P.sources, 'provenance.yml'))}`);
 });

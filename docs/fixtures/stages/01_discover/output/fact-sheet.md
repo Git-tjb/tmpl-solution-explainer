@@ -6,6 +6,17 @@
 | F001 | The kit turns recurring work into staged runs a person reviews at every step. | `sources/01-example-kit/README.md` §Purpose |
 | F002 | The operator runs and reviews every stage. | `sources/01-example-kit/docs/design.md` §Flow |
 
+## before
+| ID | Claim | Source |
+| --- | --- | --- |
+| F019 | The user is an operator who repeats the same work every week. | `operator-notes.md` OPN03 |
+| F020 | The operator wanted the weekly work done the same way each time. | `operator-notes.md` OPN04 |
+| F021 | Before the kit, the work ran from old notes and copied files. | `operator-notes.md` OPN05 |
+| F022 | Before the kit, each run used a fresh chat with a model. | `operator-notes.md` OPN05 |
+| F023 | Every run started from nothing. | `operator-notes.md` OPN06 |
+| F024 | The steps drifted from one run to the next. | `operator-notes.md` OPN07 |
+| F025 | Nothing was checked before the next step. | `operator-notes.md` OPN08 |
+
 ## components
 | ID | Claim | Source |
 | --- | --- | --- |

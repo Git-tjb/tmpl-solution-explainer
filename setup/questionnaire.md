@@ -16,21 +16,34 @@ default, offer it and let the operator accept or change it.
    problems and the conditions that drove the need, then how the design meets them". Stage 02 turns this
    into the opening the storyboard follows.
 5. **Takeaway** (`takeaway`): one sentence on what the audience should understand or do afterward.
-6. **Length** (`target_minutes`): default 15, at most 15.
-7. **Sources** (`sources`): each repo, folder, or file to read, with its absolute path, primary or
+6. **The user and the problem.** The explainer opens on these, before it shows the solution, so ask each one
+   and record the operator's words:
+   - **Who uses it** (`user`): the role, not a name.
+   - **What they were trying to do** (`user_goal`).
+   - **How it was done before** (`before`): the tools, steps, and people, before the solution existed.
+   - **What hurt** (`pains`): one to four items, one pain each.
+7. **Length** (`target_minutes`): default 15, at most 15.
+8. **Sources** (`sources`): each repo, folder, or file to read, with its absolute path, primary or
    supporting, and a note. Stage 01 copies them into the run before reading them; nothing is read from the
    original location after that.
-8. **Usage examples** (`usage_examples`): one or two real ways the operator uses the solution, or "let
+9. **Usage examples** (`usage_examples`): one or two real ways the operator uses the solution, or "let
    discovery propose".
-9. **Animation** (`animation`): allowed (default) or not.
-10. **Visual direction** (`visual`): always asked. Either `default` (the template's look), or a short
-    description of a look for this run, with up to three references (`visual_references`: examples or
-    styles to aim for). Also anything to avoid beyond `_config/banned-patterns.md` (`avoid`). A run look is
-    built in stage 04; the template ships none.
-11. **Must include, must exclude** (`must_include`, `must_exclude`): topics or components.
-12. **Where and how it runs** (`environment`): the machines, tools, and harnesses the solution runs on.
+10. **Animation** (`animation`): allowed (default) or not.
+11. **Visual direction** (`visual`): always asked. Either `default` (the template's look), or a short
+    description of a look for this run. Also anything to avoid beyond `_config/banned-patterns.md`
+    (`avoid`). A run look is built in stage 04; the template ships none.
+    - **References** (`visual_references`, up to three): ask for them as colours (hex values), fonts (a
+      family name, and the font file if the operator has it), or images (a screenshot or picture, by path).
+      A URL is allowed, but a page fetch does not return a site's styles, so ask for its colours, fonts, or
+      a screenshot as well. Image and font files are copied into the run by stage 01.
+    - **Title visual** (`title_visual`): the title scene opens the explainer with a picture of the solution.
+      By default (`from: model`) it is drawn from the solution's own structure. The operator may instead
+      supply an image (`from: image`) with its licence; stage 04 shows it for approval. Record what the
+      title should convey in `note`.
+12. **Must include, must exclude** (`must_include`, `must_exclude`): topics or components.
+13. **Where and how it runs** (`environment`): the machines, tools, and harnesses the solution runs on.
     Documents often leave this out, so ask it directly.
-13. **Intent and constraints** (`intent_notes`): what the operator meant the solution to achieve that the
+14. **Intent and constraints** (`intent_notes`): what the operator meant the solution to achieve that the
     documents may not say, and the conditions it had to work within (time, budget, tools, people, rules).
     Record the operator's words; stage 01 quotes them in `operator-notes.md`.
 

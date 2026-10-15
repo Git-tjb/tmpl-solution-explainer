@@ -30,6 +30,8 @@ export const P = {
   sources: out('01', 'sources'),
   factSheet: out('01', 'fact-sheet.md'),
   model: out('01', 'system-model.yaml'),
+  before: out('01', 'before-model.yaml'),
+  visualRefs: out('01', 'visual-refs'),
   flows: out('01', 'flows.yaml'),
   inventory: out('01', 'inventory.md'),
   scope: out('02', 'scope.md'),
@@ -152,6 +154,12 @@ export function loadModel() {
     for (const id of scope.map_only || []) if (els.has(id)) M.mapOnly.add(id);
   }
   return M;
+}
+// The before model (system-model.md, The before model): the user and the old way, with no solution in it.
+export function loadBefore() {
+  const data = readYaml(P.before) || {};
+  const els = new Map((data.elements || []).map((e) => [e.id, e]));
+  return { data, els, rels: data.relationships || [], user: els.get(data.user) };
 }
 export function loadFlows() {
   const data = readYaml(P.flows) || {};

@@ -103,6 +103,48 @@ Diagrams, panels, and the expand popover show an element as `name (exact_name)`.
 6. `responsibility` is at most 12 words, and so is each `what_it_does` text; each list has 3 to 5 items.
 7. A note (not a failure) for each `function` without an `exact_name`.
 
+## The before model
+
+A second, small model in `before-model.yaml` (`before-model.schema.json`): the user and the old way, before the
+solution existed. The explainer's problem scenes draw it, so the audience sees the problem before the answer.
+It holds **no part of the solution**.
+
+| Type | It is | It is not |
+| --- | --- | --- |
+| `person` | The user, or another person in the old way | A part of the solution |
+| `task` | What they were doing or trying to get done | A step of the solution |
+| `means` | What they did it with: a tool, a document, a place, a manual step | Anything the solution provides |
+| `pain` | One thing that hurt, at most 12 words, on the one element or relationship it `hurts` | A general complaint with nothing to point at |
+
+- `user` names the person element who is the user; that person is the picture's first element.
+- Elements have `id`, `name`, `type`, and `sources` (fact IDs, from the fact sheet's `before` topic). A
+  `means` may have an `exact_name` ("Spreadsheet (budget.xlsx)"). A `pain` has `hurts`.
+- Relationships have `id`, `from`, `to`, a present-tense `verb`, and `sources`. They join people, tasks, and
+  means; a pain connects only through `hurts`.
+- At most 9 elements, pains included (the per-view limit in `views.md`).
+
+Checked by `check-model`:
+1. The schema, with unique IDs; every cited fact exists.
+2. `user` is a `person`; there is at least one `pain`; every pain `hurts` an element or relationship that
+   exists and is not a pain; no relationship touches a pain.
+3. No orphans: every person, task, and means takes part in a relationship or is hurt by a pain.
+4. **No solution in the picture:** no element shares an `id`, `name`, or `exact_name` with the system or
+   anything inside it, or with a name in `canonical_names`. Actors and externals are not the solution, so
+   the user may be the same person as an actor in the system model.
+
+```yaml
+schema_version: 1
+user: analyst
+elements:
+  - { id: analyst, name: Analyst, type: person, sources: [F020] }
+  - { id: monthly-report, name: Build the monthly report, type: task, sources: [F021] }
+  - { id: spreadsheet, name: Shared spreadsheet, exact_name: report.xlsx, type: means, sources: [F022] }
+  - { id: pain-copy, name: Two days of copying numbers by hand, type: pain, hurts: uses-spreadsheet, sources: [F023] }
+relationships:
+  - { id: builds, from: analyst, to: monthly-report, verb: builds, sources: [F021] }
+  - { id: uses-spreadsheet, from: monthly-report, to: spreadsheet, verb: is assembled in, sources: [F022] }
+```
+
 ## Example
 
 ```yaml

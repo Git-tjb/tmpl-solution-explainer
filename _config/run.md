@@ -12,6 +12,11 @@ intent:
   secondary:                # optional, same values
 opening: "{{the operator's words: how the explainer should open}}"
 takeaway: "{{one sentence: what the audience should understand or do afterward}}"
+user: "{{who uses the solution: the role, in the operator's words}}"
+user_goal: "{{what they were trying to get done}}"
+before: "{{how it was done before the solution existed: tools, steps, people}}"
+pains:                      # what hurt before the solution, one item per pain (1-4), in the operator's words
+  - "{{a pain}}"
 target_minutes: 15          # at most 15
 sources:                    # copied into the run by scripts/snapshot-sources.mjs before discovery reads them
   - path: "{{absolute path to a repo, folder, or file}}"
@@ -21,7 +26,16 @@ usage_examples:             # 1-2, or the single entry "let discovery propose"
   - "{{a real way the operator uses the solution}}"
 animation: true             # false: no animation, reveals only
 visual: default             # default | a short description of this run's look (built in stage 04)
-visual_references: []       # optional: up to 3 examples or styles, as text
+visual_references: []       # optional, up to 3; each one of:
+                            #   - { kind: colour, value: "#1c1f24", note: "..." }
+                            #   - { kind: font, value: "Family Name", path: "<font file, optional>", note: "..." }
+                            #   - { kind: image, value: "<path to a screenshot or picture>", note: "..." }
+                            #   - { kind: url, value: "https://...", note: "..." }   (give its colours, fonts, or a screenshot too)
+title_visual:               # the picture on the title scene
+  from: model               # model: drawn from the solution's own structure | image: a licensed image
+  image:                    # from: image only: path to the image (PNG, JPEG, WebP, or SVG)
+  licence:                  # from: image only: the image's licence or permission
+  note: ""                  # the operator's words on what the title should convey
 avoid: []                   # anything to avoid beyond _config/banned-patterns.md
 must_include: []
 must_exclude: []

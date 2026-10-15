@@ -9,7 +9,7 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { stepChecks } from './lib/page-checks.mjs';
 import { P, out, main, readJson, readText, loadTokens, loadModel, hexToRgb, contrast, Report, walk, sha256, rel, writeText } from './lib/common.mjs';
 import { loadViewSpecs } from './check-design.mjs';
-import { checkModel } from './check-model.mjs';
+import { checkModel, checkBefore } from './check-model.mjs';
 import { checkStoryboard } from './check-storyboard.mjs';
 import { renderAll } from './render-diagrams.mjs';
 import { buildSite } from './build-site.mjs';
@@ -343,7 +343,7 @@ main(async () => {
   note('AC-7', `${S.scenes.length} scenes, ${minutes} minutes`);
 
   // AC-8 model, AC-10 IA (scripted part)
-  const r8 = new Report('check-model'); checkModel(r8);
+  const r8 = new Report('check-model'); checkModel(r8); checkBefore(r8);
   crit('AC-8'); r8.errors.forEach((e) => fail('AC-8', e));
   const r10 = new Report('check-storyboard'); checkStoryboard(r10);
   crit('AC-10'); r10.errors.forEach((e) => fail('AC-10', e));

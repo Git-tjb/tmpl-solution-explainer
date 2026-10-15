@@ -1,0 +1,14 @@
+schema_version: 1
+user: operator
+elements:
+  - { id: operator, name: Operator, type: person, sources: [F019] }
+  - { id: weekly-work, name: Do the weekly work again, type: task, sources: [F020] }
+  - { id: old-notes, name: Old notes and copied files, type: means, sources: [F021] }
+  - { id: fresh-chat, name: A fresh chat each run, type: means, sources: [F022] }
+  - { id: pain-from-nothing, name: Every run started from nothing, type: pain, hurts: fresh-chat, sources: [F023] }
+  - { id: pain-drift, name: The steps drifted between runs, type: pain, hurts: old-notes, sources: [F024] }
+  - { id: pain-unchecked, name: Nothing checked before the next step, type: pain, hurts: does-work, sources: [F025] }
+relationships:
+  - { id: does-work, from: operator, to: weekly-work, verb: does, sources: [F019, F020] }
+  - { id: work-from-notes, from: weekly-work, to: old-notes, verb: follows, sources: [F021] }
+  - { id: work-in-chat, from: weekly-work, to: fresh-chat, verb: runs in, sources: [F022] }

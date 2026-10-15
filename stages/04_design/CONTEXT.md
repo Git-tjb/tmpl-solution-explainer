@@ -11,10 +11,11 @@ Run the commands from the workspace root.
 | 4 | `../03_storyboard/output/storyboard.md` | the narrative intent behind each scene |
 | 4 | `../01_discover/output/system-model.yaml` | what each view draws |
 | 4 | `../01_discover/output/flows.yaml` | what each flow view draws |
+| 4 | `../01_discover/output/visual-refs/` | the image and font references and the title image from `run.md`, copied in by stage 01 |
 | 3 | `../../_config/visual-direction.md` | the default look and token values |
 | 3 | `../../_config/banned-patterns.md` | what never appears |
 | 3 | `../../_config/build-rules.md` | legibility, motion vocabulary, navigation |
-| 3 | `../../_config/run.md` | `visual`, `visual_references`, `avoid`, `animation` |
+| 3 | `../../_config/run.md` | `visual`, `visual_references`, `title_visual`, `avoid`, `animation` |
 | 3 | `../../_config/standards/notation.md` | type-to-shape mapping and color token meanings |
 | 3 | `../../_config/standards/views.md` | per-view rules |
 | 3 | `../../_config/standards/view.schema.json`, `scene-spec.schema.json` | output shapes |

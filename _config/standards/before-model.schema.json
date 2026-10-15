@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "before-model.schema.json",
+  "title": "Before model",
+  "description": "Structure of stages/01_discover/output/before-model.yaml: the user, what they were doing, what they did it with, and what hurt, before the solution existed. It holds no part of the solution. Rules that span records are in system-model.md (The before model) and enforced by scripts/check-model.mjs.",
+  "type": "object",
+  "required": ["schema_version", "user", "elements", "relationships"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "user": { "$ref": "#/$defs/id", "description": "The person element who is the user" },
+    "elements": { "type": "array", "minItems": 2, "maxItems": 9, "items": { "$ref": "#/$defs/element" } },
+    "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "line": { "type": "string", "minLength": 1, "pattern": "^[^\\n]+$" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^F[0-9]{3,}$" }
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "name", "type", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/line", "description": "What it is, in plain words; for a pain, what hurt, at most 12 words" },
+        "exact_name": { "$ref": "#/$defs/line", "description": "The real name of a means (a tool, a file), shown in parentheses" },
+        "type": { "enum": ["person", "task", "means", "pain"] },
+        "hurts": { "$ref": "#/$defs/id", "description": "pain only: the element or relationship this pain is about" },
+        "sources": { "$ref": "#/$defs/sources" }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "pain" } } }, "then": { "required": ["hurts"], "not": { "required": ["exact_name"] } }, "else": { "not": { "required": ["hurts"] } } }
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["id", "from", "to", "verb", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "verb": { "$ref": "#/$defs/line" },
+        "sources": { "$ref": "#/$defs/sources" }
+      }
+    }
+  }
+}

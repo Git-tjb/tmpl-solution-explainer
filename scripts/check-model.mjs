@@ -1,6 +1,7 @@
 // Validate system-model.yaml and flows.yaml against their schemas and the integrity rules in
 // _config/standards/system-model.md and flows.md. With --scope, also check stages/02_scope/output/scope.md.
-import { P, main, Report, validate, readYaml, factIds, loadModel, loadFlows, frontmatter, words } from './lib/common.mjs';
+import { P, main, Report, validate, readYaml, factIds, loadModel, loadFlows, loadBefore, frontmatter, words, descendants,
+  runAnswers } from './lib/common.mjs';
 
 export function checkModel(report) {
   const facts = factIds();
@@ -78,6 +79,61 @@ export function checkModel(report) {
   for (const f of flowsRaw.flows) if (f.continues) report.check(flowIds.has(f.continues), `flow "${f.id}": continues "${f.continues}", which does not exist`);
 }
 
+// The before model (system-model.md, The before model): the user and the old way, with what hurt. It holds no
+// part of the solution, so a problem scene can never show the solution (iteration 003, D1).
+export function checkBefore(report) {
+  const facts = factIds();
+  const raw = readYaml(P.before);
+  if (!validate('before-model.schema.json', raw, report, 'before-model.yaml')) return;
+  const B = loadBefore();
+  const ids = new Set();
+  for (const e of raw.elements) { report.check(!ids.has(e.id), `before-model: element id "${e.id}" is used twice`); ids.add(e.id); }
+  const relIds = new Set();
+  for (const r of raw.relationships) {
+    report.check(!relIds.has(r.id) && !ids.has(r.id), `before-model: relationship id "${r.id}" is used twice`);
+    relIds.add(r.id);
+  }
+  report.check(B.user?.type === 'person', `before-model: user "${raw.user}" must be a person element`);
+  const pains = raw.elements.filter((e) => e.type === 'pain');
+  report.check(pains.length >= 1, 'before-model: needs at least one pain (what hurt)');
+  for (const e of raw.elements) {
+    for (const f of e.sources) report.check(facts.has(f), `before-model: element "${e.id}" cites ${f}, which is not in the fact sheet`);
+    if (e.type === 'pain') {
+      report.check(words(e.name) <= 12, `before-model: pain "${e.id}" has ${words(e.name)} words (max 12)`);
+      const target = B.els.get(e.hurts);
+      report.check((target && target.type !== 'pain') || relIds.has(e.hurts), `before-model: pain "${e.id}" hurts "${e.hurts}", which is not a non-pain element or a relationship`);
+    } else {
+      const related = raw.relationships.some((r) => r.from === e.id || r.to === e.id) || pains.some((p) => p.hurts === e.id);
+      report.check(related, `before-model: element "${e.id}" is an orphan: no relationship and no pain`);
+    }
+  }
+  for (const r of raw.relationships) {
+    for (const end of ['from', 'to']) {
+      const e = B.els.get(r[end]);
+      if (report.check(!!e, `before-model: relationship "${r.id}": ${end} "${r[end]}" does not exist`)) {
+        report.check(e.type !== 'pain', `before-model: relationship "${r.id}" touches pain "${e.id}"; a pain connects only through its hurts line`);
+      }
+    }
+    for (const f of r.sources) report.check(facts.has(f), `before-model: relationship "${r.id}" cites ${f}, which is not in the fact sheet`);
+  }
+
+  // No solution in the picture: nothing shares an ID or a name with the system or anything inside it, or with
+  // the operator's canonical names for its parts. Actors and externals are not the solution, so the user may
+  // be the same person as an actor.
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const M = loadModel();
+  const solution = M.system ? [M.system, ...descendants(M, M.system.id).map((id) => M.els.get(id))] : [];
+  const taken = new Map();
+  for (const e of solution) for (const k of [e.id, e.name, e.exact_name]) if (norm(k)) taken.set(norm(k), `${e.type} "${e.id}"`);
+  for (const n of runAnswers().canonical_names || []) if (norm(n) && !String(n).includes('{{') && !taken.has(norm(n))) taken.set(norm(n), `canonical name "${n}"`);
+  for (const e of raw.elements) {
+    for (const k of [e.id, e.name, e.exact_name]) {
+      const hit = taken.get(norm(k));
+      report.check(!hit, `before-model: element "${e.id}" ("${k}") is part of the solution (${hit}); the before picture shows no solution`);
+    }
+  }
+}
+
 export function checkScope(report) {
   const M = loadModel();
   const { flows } = loadFlows();
@@ -110,6 +166,7 @@ if (process.argv[1]?.endsWith('check-model.mjs')) {
   main(() => {
     const report = new Report('check-model');
     checkModel(report);
+    checkBefore(report);
     if (process.argv.includes('--scope')) checkScope(report);
     report.exit();
   });
