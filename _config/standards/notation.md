@@ -60,6 +60,9 @@ Functions, Components, Code** (L1 to L4), top to bottom or left to right.
   pictures show no level of the solution. Their segments in the position strip are neutral (`--text-muted`).
 - It appears in the page chrome of every scene, and as a compact badge in the title row of every rendered
   diagram (`L2 · FUNCTIONS`), so a standalone diagram carries it too.
+- In the chrome its rungs are buttons: each opens the Levels panel (how to read the levels) at that level. Code
+  never lights on the path; its tooltip says it is in the map only, and its row in the Levels panel opens the
+  map.
 - A theme may restyle the indicator but may not remove it. Its colors come from the tokens above; filled
   versus outlined is the signal, not color.
 

@@ -141,16 +141,23 @@ svg.diagram .node.has-link { cursor: pointer; }
 .chrome .where { font-family: var(--font-mono); }
 
 /* Position strip above the bar (R21): one segment per scene, in its level's colour; the current one marked. */
-.progress { position: absolute; left: 0; right: 0; bottom: 5.9vh; height: 6px; margin: 0; padding: 0 24px; list-style: none; display: flex; gap: 3px; }
-.progress li { flex: 1; background: var(--c-dim); }
-.progress li[data-level="L1"] { background: var(--lv-1); }
-.progress li[data-level="L2"] { background: var(--lv-2); }
-.progress li[data-level="L3"] { background: var(--lv-3); }
-.progress li[data-level="flow"] { background: var(--lv-flow); }
+/* Each segment is a button (R12): the bar is 6px, the click target 16px tall. */
+.progress { position: absolute; left: 0; right: 0; bottom: 5.9vh; height: 16px; margin: 0; padding: 0 24px; list-style: none; display: flex; gap: 3px; z-index: 7; }
+.progress li { flex: 1; display: flex; --seg: var(--c-dim); }
+.progress li > button { flex: 1; position: relative; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.progress li > button::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: var(--seg); }
+.progress li[data-level="L1"] { --seg: var(--lv-1); }
+.progress li[data-level="L2"] { --seg: var(--lv-2); }
+.progress li[data-level="L3"] { --seg: var(--lv-3); }
+.progress li[data-level="flow"] { --seg: var(--lv-flow); }
 /* The title and before scenes show no level of the solution: their segments are neutral. */
-.progress li[data-level="title"], .progress li[data-level="before"] { background: var(--text-muted); }
-.progress li:not(.current):not(.done) { opacity: 0.35; }
-.progress li.current { box-shadow: 0 -4px 0 var(--text); }
+.progress li[data-level="title"], .progress li[data-level="before"] { --seg: var(--text-muted); }
+.progress li:not(.current):not(.done) > button::after { opacity: 0.35; }
+.progress li.current > button::after { box-shadow: 0 -4px 0 var(--text); }
+.progress li > button:hover { background: var(--surface); }
+.progress li > button:active { background: var(--c-dim); }
+/* While the map or the Levels panel is open, the strip is quiet and prev and next are disabled (R13). */
+[data-overlay] .progress, [data-overlay] .chrome .level-indicator { opacity: 0.35; }
 
 /* First-screen hint (R21): once, until the first advance. */
 .hint { position: absolute; right: 48px; bottom: calc(5.9vh + 18px); margin: 0; padding: 8px 14px; background: var(--surface); color: var(--text);
@@ -163,8 +170,9 @@ svg.diagram .node.has-link { cursor: pointer; }
 .level-indicator { display: flex; align-items: center; gap: 10px; color: var(--text); white-space: nowrap; }
 .level-indicator .rungs, .level-indicator .lv-tag { flex: none; }
 .level-indicator .rungs { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
-.level-indicator .rungs li { border: 2px solid var(--text-muted); color: var(--text-muted); padding: 2px 8px; font-size: 16px; }
-.level-indicator .rungs li.on { background: var(--text); border-color: var(--text); color: var(--bg); font-weight: 600; }
+/* The rungs are buttons that open the Levels panel at that level (R10). */
+.level-indicator .rungs [data-rung] { font: inherit; line-height: 1.2; background: transparent; border: 2px solid var(--text-muted); color: var(--text-muted); padding: 2px 8px; font-size: 16px; cursor: pointer; }
+.level-indicator .rungs [data-rung].on { background: var(--text); border-color: var(--text); color: var(--bg); font-weight: 600; }
 .level-indicator .lv-tag { font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .level-indicator .lv-tag:empty { display: none; }
 .level-indicator .lv-scope { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -172,6 +180,21 @@ svg.diagram .node.has-link { cursor: pointer; }
 /* Map: the reference layer */
 .map { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) calc(5.9vh + 6px) var(--frame-left, 0px); background: var(--bg); display: none; grid-template-columns: 1fr minmax(420px, 34%); }
 .map.open { display: grid; }
+/* The Levels panel (R9): the four levels and the scenes that use each, on demand. */
+.levels { position: absolute; inset: var(--frame-top, 0px) var(--frame-right, 0px) calc(5.9vh + 6px) var(--frame-left, 0px); background: var(--bg); display: none; overflow: auto; padding: 24px 64px 24px 32px; }
+.levels.open { display: block; }
+.levels h2 { margin: 0 0 8px; font-size: 32px; }
+.levels .label { color: var(--text-muted); font-size: 18px; margin: 0 0 20px; max-width: 70ch; }
+.levels .ladder li.asked, .levels .other-pictures li.asked { border-color: var(--text); background: var(--surface); }
+.levels .other-pictures { list-style: none; margin: 26px 0 0 40px; padding: 0; display: grid; gap: 14px; }
+.levels .other-pictures li { border: 3px dashed var(--text-muted); padding: 12px 22px; display: grid; grid-template-columns: 240px 1fr; column-gap: 24px; font-size: 22px; }
+.levels .other-pictures li strong { grid-row: 1 / span 2; align-self: center; text-transform: uppercase; letter-spacing: .06em; font-size: 26px; }
+.levels .other-pictures .uses, .levels .ladder .uses { font-family: var(--font-mono); font-size: 20px; color: var(--text-muted); }
+.levels .uses a { margin-right: 12px; }
+.levels .open-map { font: inherit; font-family: var(--font-sans, 'IBM Plex Sans', sans-serif); font-size: 18px; color: var(--text); background: var(--surface); border: 2px solid var(--c-dim); padding: 4px 12px; cursor: pointer; }
+/* The close control inside the map and the Levels panel (R13). */
+.overlay-close { position: absolute; top: 14px; right: 18px; z-index: 2; font: inherit; font-size: 28px; line-height: 1; padding: 4px 12px;
+  color: var(--text); background: var(--surface); border: 2px solid var(--c-dim); cursor: pointer; }
 .map .views { overflow: auto; padding: 24px 32px; }
 .map .views h2 { margin: 0 0 8px; font-size: 32px; }
 .map .views .label { color: var(--text-muted); font-size: 18px; margin: 0 0 16px; }
@@ -189,3 +212,25 @@ svg.diagram .node.has-link { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .reduced * { transition: none !important; }
+
+/* Map panels: a row of jumps to short sections, file trees collapsed until asked for (R14). */
+.map .panel .resp { margin: 10px 0 0; }
+.map .panel .jumps { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.map .panel .jump { font: inherit; font-size: 16px; color: var(--text); background: transparent; border: 2px solid var(--c-dim); padding: 3px 10px; cursor: pointer; }
+.map .panel details { margin: 0 0 8px; }
+.map .panel summary { cursor: pointer; font-size: 18px; padding: 4px 0; }
+
+/* Hover and pressed (R11): every button and every clickable diagram element answers the pointer, not only
+   focus. Structure and text tokens only; the focus colour stays focus's. */
+.chrome button:disabled { opacity: 0.4; cursor: default; }
+.chrome button.quiet:hover:not(:disabled), .overlay-close:hover, .popover .popclose:hover, .scene .figure .legend .lgtoggle:hover,
+.map .panel .jump:hover, .levels .open-map:hover, .level-indicator .rungs [data-rung]:hover:not(.on) { color: var(--text); border-color: var(--text); background: var(--surface); }
+.level-indicator .rungs [data-rung].on:hover { background: var(--text-muted); border-color: var(--text-muted); }
+.chrome .prev:hover:not(:disabled), .chrome .next:hover:not(:disabled) { background: var(--text-muted); border-color: var(--text-muted); }
+.chrome button:active:not(:disabled), .overlay-close:active, .popover .popclose:active, .scene .figure .legend .lgtoggle:active,
+.map .panel .jump:active, .levels .open-map:active, .level-indicator .rungs [data-rung]:active { transform: translateY(1px); background: var(--c-dim); color: var(--text); }
+.scene svg.diagram [data-expand][role="button"]:hover .shape, .map svg.diagram .has-link:hover .shape,
+.map svg.diagram .has-link:hover rect:not(.tbg) { stroke-width: 4px; stroke: var(--text); }
+.scene svg.diagram [data-expand][role="button"]:active .shape, .map svg.diagram .has-link:active .shape,
+.map svg.diagram .has-link:active rect:not(.tbg) { fill: var(--c-dim); }
+.map svg.diagram .has-link { cursor: pointer; }

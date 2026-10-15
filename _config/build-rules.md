@@ -32,7 +32,10 @@ its output, `build-site` copies it to `assets/theme/`, and the page loads `theme
 | `.scene .text p.point` | the scene's message, under the title (P hides it); `--lv` is the scene's level colour |
 | `.level-indicator` (and its `.rungs li`, `.lv-tag`, `.lv-scope`) | the level indicator; a theme may restyle it but not hide it |
 | `.popover` | the "what it does" popover |
-| `.map`, `.map .panel` | the map and its detail panel |
+| `.map`, `.map .panel` | the map and its detail panel (its section jumps `.jump`, collapsed `details`) |
+| `.levels` | the Levels panel: the level ladder and the other pictures |
+| `.overlay-close` | the close control inside the map and the Levels panel |
+| `.progress` | the position strip; each segment is a button, its bar drawn by `::after` in `--seg` |
 
 - Space a theme reserves for its frame shrinks the scene area, so keep it small: diagram labels must still
   render at 16px (a 14px reservation was enough to fail the fixture).
@@ -114,8 +117,9 @@ with these limits, in OKLCH:
 | Right arrow, Space | next reveal step, then next scene |
 | Left arrow | previous reveal step, then previous scene |
 | M | open or close the map |
+| L | open or close the Levels panel (how to read the levels) |
 | Enter (on a focused element) | open or close its "what it does" popover |
-| Escape | close open popovers, then the map |
+| Escape | close open popovers, then the map or the Levels panel |
 | Home | first scene |
 | 1-9, 0 | jump to scene 1-10 (scenes 11-12 from the map) |
 | R | toggle reduced motion |
@@ -123,9 +127,18 @@ with these limits, in OKLCH:
 
 - The URL hash is the current scene and step (`#S04` or `#S04.2`); opening a hash lands there.
 - On-screen controls do the same as the keys, in one row that never wraps: prev and next (the only filled
-  controls), the position ("3 / 13 · step 2 of 4"), the level indicator, then Message, Map, and a small
-  reduced-motion toggle as quiet buttons. The scope label shortens first, with its full text in a tooltip.
-- A thin strip above the bar shows one segment per scene in its level's colour, the current one marked.
+  controls), the position ("3 / 13 · step 2 of 4"), the level indicator, then Message, Levels, Map, and a
+  small reduced-motion toggle as quiet buttons. The scope label shortens first, with its full text in a
+  tooltip.
+- A thin strip above the bar shows one segment per scene in its level's colour, the current one marked. Each
+  segment is a button that goes to its scene, with the scene's title as its tooltip.
+- The level indicator's rungs are buttons: each opens the Levels panel at that level. Code's tooltip says it
+  is in the map only, and its row in the panel opens the map.
+- The map and the Levels panel are overlays, one at a time, each with a close control. While one is open, its
+  button shows pressed, the position reads "Map" or "Levels", prev and next are disabled, and the strip and the
+  level indicator are quiet.
+- Every button and clickable diagram element has a hover and a pressed state as well as focus, in structure and
+  text tokens; the focus colour stays focus's.
 - The first scene shows a one-line hint (how to advance, the map, expanding a box) until the first advance.
 
 ## Scene text

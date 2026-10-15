@@ -93,6 +93,135 @@ async function indicatorProblems(page, scene) {
   }, scene);
 }
 
+// AC-29: every button and clickable diagram element looks different on hover and when pressed than at rest
+// (R11). Real pointer input: hover the control, then press the mouse on it and move away before releasing, so no
+// click fires and the explainer's state never changes. A control "looks different" when any of its drawn
+// properties (or its box outline's, for a diagram element) differs from its value at rest.
+async function pointerProblems(page, url, S) {
+  const probs = [];
+  const snap = (h) => h.evaluate((el) => {
+    const props = ['color', 'background-color', 'border-top-color', 'transform', 'box-shadow', 'opacity', 'stroke', 'stroke-width', 'fill'];
+    const of = (x) => (x ? props.map((k) => getComputedStyle(x).getPropertyValue(k)).join('|') : '');
+    return of(el) + '#' + of(el.querySelector('.shape') || el.querySelector('rect:not(.tbg)')); // a box's outline, or a boundary's
+  });
+  const probe = async (sel, name) => {
+    const hs = (await page.$$(sel)).slice(0, 4);
+    for (const h of hs) {
+      if (!(await h.isVisible()) || (await h.evaluate((el) => el.disabled))) continue;
+      const label = `${name} "${((await h.getAttribute('aria-label')) || (await h.textContent()) || '').trim().slice(0, 24)}"`;
+      await page.mouse.move(2, 2);
+      const rest = await snap(h);
+      // A boundary is pointed at by its title, at its top left; its middle holds its parts.
+      const at = (await h.evaluate((el) => el.classList.contains('boundary'))) ? { position: { x: 30, y: 24 } } : {};
+      try { await h.hover({ timeout: 3000, ...at }); }
+      catch (e) {
+        const over = await h.evaluate((el) => { const r = el.getBoundingClientRect(); const t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return t ? `${t.tagName.toLowerCase()}.${[...t.classList].join('.')}` : 'nothing'; });
+        probs.push(`${label} cannot be reached by the pointer (covered by ${over})`);
+        continue;
+      }
+      const hover = await snap(h);
+      await page.mouse.down();
+      const pressed = await snap(h);
+      await page.mouse.move(2, 2);
+      await page.mouse.up();
+      if (hover === rest) probs.push(`${label} has no hover state`);
+      if (pressed === rest) probs.push(`${label} has no pressed state`);
+    }
+  };
+  // The bar, the strip, and a scene with expand markers.
+  const withExpand = await page.evaluate(() => {
+    const sc = [...document.querySelectorAll('.scene')].find((x) => x.querySelector('svg.diagram [data-expand][role="button"]'));
+    return sc ? sc.id : null;
+  });
+  if (withExpand) { await page.evaluate((h) => { location.hash = h; }, withExpand); await settle(page); }
+  await probe('.chrome button', 'control');
+  await probe('.progress button', 'strip segment');
+  await probe('.scene.current svg.diagram [data-expand][role="button"]', 'expand marker');
+  // The Levels panel.
+  await page.keyboard.press('l');
+  await probe('#levels .overlay-close', 'close control');
+  await probe('#levels .open-map', 'button');
+  await page.keyboard.press('Escape');
+  // The map, with a panel open.
+  await page.goto(`${url}#map:${S.map.panels[0]?.element || ''}`);
+  await page.waitForFunction(() => !!window.__explainer);
+  await probe('#map .overlay-close', 'close control');
+  await probe('#map .panel section:not([hidden]) .jump', 'panel jump');
+  await probe('#map svg.diagram .has-link', 'map element');
+  await page.keyboard.press('Escape');
+  return probs;
+}
+
+// AC-30: the strip takes the viewer to each scene; the map and the Levels panel show their button pressed, a
+// close control inside, and no scene position while open, and close by the control, their key, and Escape;
+// the level pills open the Levels panel, and its Code row opens the map (R12, R13, R15).
+async function overlayProblems(page, S) {
+  const probs = [];
+  const n = await page.locator('.progress button').count();
+  if (n !== S.scenes.length) probs.push(`the strip has ${n} segments for ${S.scenes.length} scenes`);
+  for (let i = 0; i < n; i++) {
+    await page.locator('.progress button').nth(i).click({ timeout: 3000 });
+    await settle(page);
+    const s = await st(page);
+    if (s.scene !== S.scenes[i].id || s.step !== 0) probs.push(`strip segment ${i + 1} landed on ${s.scene}.${s.step}, not ${S.scenes[i].id}`);
+  }
+  const state = () => page.evaluate(() => {
+    const vis = (el) => !!el && el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden';
+    return {
+      overlay: window.__explainer.overlay(),
+      map: document.getElementById('map').classList.contains('open'),
+      levels: document.getElementById('levels').classList.contains('open'),
+      mapPressed: document.querySelector('.chrome .maptoggle').getAttribute('aria-pressed'),
+      levelsPressed: document.querySelector('.chrome .levelstoggle').getAttribute('aria-pressed'),
+      mapClose: vis(document.querySelector('#map .overlay-close')),
+      levelsClose: vis(document.querySelector('#levels .overlay-close')),
+      where: document.querySelector('.chrome .where').textContent,
+      prev: document.querySelector('.chrome .prev').disabled, next: document.querySelector('.chrome .next').disabled,
+      asked: [...document.querySelectorAll('#levels .asked')].map((x) => x.id),
+    };
+  });
+  for (const [name, key, btn, word] of [['map', 'm', '.chrome .maptoggle', 'Map'], ['levels', 'l', '.chrome .levelstoggle', 'Levels']]) {
+    const check = (x, how) => {
+      if (x.overlay !== name || !x[name]) probs.push(`${how} did not open the ${name}`);
+      if (x[`${name}Pressed`] !== 'true') probs.push(`the ${word} button is not pressed while the ${name} is open`);
+      if (!x[`${name}Close`]) probs.push(`the ${name} has no visible close control`);
+      if (x.where !== word) probs.push(`the bar shows "${x.where}" while the ${name} is open`);
+      if (!x.prev || !x.next) probs.push(`prev and next are enabled while the ${name} is open`);
+      if (x.map && x.levels) probs.push('the map and the Levels panel are open together');
+    };
+    const closed = (x, how) => {
+      if (x.overlay || x[name]) probs.push(`${how} did not close the ${name}`);
+      else if (x[`${name}Pressed`] !== 'false' || !/\//.test(x.where) || x.prev || x.next) probs.push(`after ${how}, the bar still shows the ${name}`);
+    };
+    await page.locator(btn).click(); check(await state(), `the ${word} button`);
+    await page.locator(`#${name} .overlay-close`).click(); closed(await state(), 'its close control');
+    await page.keyboard.press(key); check(await state(), `the ${key.toUpperCase()} key`);
+    await page.keyboard.press('Escape'); closed(await state(), 'Escape');
+    await page.keyboard.press(key); await page.keyboard.press(key); closed(await state(), `the ${key.toUpperCase()} key, twice`);
+  }
+  await page.locator('.chrome [data-rung="L2"]').click();
+  let x = await state();
+  if (x.overlay !== 'levels' || !x.asked.includes('levels-L2')) probs.push('the Functions pill did not open the Levels panel at Functions');
+  await page.keyboard.press('Escape');
+  await page.locator('.chrome [data-rung="L4"]').click();
+  await page.locator('#levels .open-map').click();
+  x = await state();
+  if (x.overlay !== 'map' || x.levels) probs.push('"Map only" for Code did not open the map');
+  await page.keyboard.press('m'); await page.keyboard.press('l');
+  x = await state();
+  if (x.overlay !== 'levels' || x.map) probs.push('opening the Levels panel did not close the map');
+  const link = page.locator('#levels a[href^="#S"]').last();
+  if (await link.count()) {
+    const href = await link.getAttribute('href');
+    await link.click();
+    await settle(page);
+    const s = await st(page);
+    x = await state();
+    if (`#${s.scene}` !== href || x.overlay) probs.push(`the Levels link ${href} landed on ${s.scene}${x.overlay ? ' with the panel still open' : ''}`);
+  }
+  return probs;
+}
+
 // AC-17: every expandable element in the current scene opens its popover with its bullets, and closes.
 async function expandProblems(page, sceneId) {
   const ids = await page.$$eval(`.scene[data-scene="${sceneId}"] svg.diagram [data-expand][role="button"]`, (els) => [...new Set(els.map((e) => e.getAttribute('data-expand')))]);
@@ -239,7 +368,7 @@ main(async () => {
   fs.rmSync(shots, { recursive: true, force: true });
   fs.mkdirSync(shots, { recursive: true });
   const browsersRun = [];
-  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17', 'AC-19', 'AC-20', 'AC-21', 'AC-22', 'AC-23', 'AC-24', 'AC-25', 'AC-26', 'AC-27', 'AC-28']) crit(id);
+  for (const id of ['AC-1', 'AC-2', 'AC-3', 'AC-4', 'AC-5', 'AC-6', 'AC-13', 'AC-16', 'AC-17', 'AC-19', 'AC-20', 'AC-21', 'AC-22', 'AC-23', 'AC-24', 'AC-25', 'AC-26', 'AC-27', 'AC-28', 'AC-29', 'AC-30']) crit(id);
   const seenMsg = new Set();
   const failOnce = (id, msg) => { if (!seenMsg.has(id + msg)) { seenMsg.add(id + msg); fail(id, msg); } };
   let expandCount = 0;
@@ -261,6 +390,15 @@ main(async () => {
       await page.evaluate(() => document.fonts.ready);
       // AC-27: the first screen, as a visitor first sees it.
       for (const [id, msgs] of Object.entries((await stepChecks(page, { first: true })).problems)) if (id === 'AC-27') for (const m of msgs) failOnce(id, `${label}: ${m}`);
+      // AC-29 and AC-30: hover and pressed states, the strip, and the overlays (iteration 003, D5).
+      try { for (const m of await pointerProblems(page, url, S)) failOnce('AC-29', `${label}: ${m}`); }
+      catch (e) { fail('AC-29', `${label}: pointer check stopped: ${e.message.split(/\r?\n/)[0]}`); }
+      await page.goto(url);
+      await page.waitForFunction(() => !!window.__explainer);
+      try { for (const m of await overlayProblems(page, S)) failOnce('AC-30', `${label}: ${m}`); }
+      catch (e) { fail('AC-30', `${label}: overlay check stopped: ${e.message.split(/\r?\n/)[0]}`); }
+      await page.goto(url);
+      await page.waitForFunction(() => !!window.__explainer);
       const first = vp.width === 1920;
       if (first) {
         await traverse(page, label, expected);
@@ -323,6 +461,10 @@ main(async () => {
         await page.screenshot({ path: path.join(shots, `map-${vp.width}x${vp.height}.png`) });
         const r = await new AxeBuilder({ page }).options({ preload: false }).include('#map').analyze();
         for (const v of r.violations) if (['critical', 'serious'].includes(v.impact)) fail('AC-13', `map: ${v.id} (${v.impact}): ${v.help} [${v.nodes.length} node(s)]`);
+        await page.keyboard.press('l');
+        await page.screenshot({ path: path.join(shots, `levels-${vp.width}x${vp.height}.png`) });
+        const rl = await new AxeBuilder({ page }).options({ preload: false }).include('#levels').analyze();
+        for (const v of rl.violations) if (['critical', 'serious'].includes(v.impact)) fail('AC-13', `levels: ${v.id} (${v.impact}): ${v.help} [${v.nodes.length} node(s)]`);
       }
       await ctx.close();
     }
@@ -385,10 +527,6 @@ main(async () => {
   // AC-16 level shown in the one defined form (the chrome part ran in the browsers above)
   crit('AC-16');
   for (const id of declared) if (!/<g class="badge"><rect /.test(readText(path.join(P.site, 'assets', 'diagrams', `${id}.svg`)))) fail('AC-16', `${id}.svg has no level badge in its title row`);
-  const orientAt = S.scenes.findIndex((s) => s.section === 'orientation');
-  const firstDeep = S.scenes.findIndex((s) => s.level === 'L2' || s.level === 'L3');
-  if (orientAt < 0) fail('AC-16', 'no orientation scene');
-  else if (firstDeep >= 0 && orientAt > firstDeep) fail('AC-16', `the orientation scene comes after ${S.scenes[firstDeep].id}`);
 
   // AC-17 every element with what_it_does can be expanded (the browser part ran in Chromium above)
   crit('AC-17');

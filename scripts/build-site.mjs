@@ -58,11 +58,12 @@ function detailBlock(p) {
   const abs = path.join(P.sources, p);
   if (!fs.existsSync(abs)) return `<p>Not in the snapshot: <code>${esc(p)}</code></p>`;
   const name = p.replace(/^\d\d-/, '');
-  if (fs.statSync(abs).isDirectory()) return `<h4><code>${esc(name)}/</code></h4><pre>${esc(treeOf(abs))}</pre>`;
+  // File trees and file previews stay collapsed until asked for (R14).
+  if (fs.statSync(abs).isDirectory()) return `<details><summary><code>${esc(name)}/</code></summary><pre>${esc(treeOf(abs))}</pre></details>`;
   const ext = path.extname(abs).toLowerCase();
-  if (!TEXT_EXT.has(ext) || fs.statSync(abs).size > 200 * 1024) return `<h4><code>${esc(name)}</code></h4><p>(binary or large file, not shown)</p>`;
+  if (!TEXT_EXT.has(ext) || fs.statSync(abs).size > 200 * 1024) return `<p><code>${esc(name)}</code> (binary or large file, not shown)</p>`;
   const lines = fs.readFileSync(abs, 'utf8').replace(/\r\n/g, '\n').split('\n');
-  return `<h4><code>${esc(name)}</code></h4><pre>${esc(lines.slice(0, 60).join('\n'))}${lines.length > 60 ? '\n…' : ''}</pre>`;
+  return `<details><summary><code>${esc(name)}</code></summary><pre>${esc(lines.slice(0, 60).join('\n'))}${lines.length > 60 ? '\n…' : ''}</pre></details>`;
 }
 
 export function buildSite(siteDir, { strict = true } = {}) {
@@ -92,17 +93,19 @@ export function buildSite(siteDir, { strict = true } = {}) {
     for (const id of new Set(ids)) { if (!appearsIn.has(id)) appearsIn.set(id, []); appearsIn.get(id).push(s); }
   }
 
-  // The orientation scene is drawn from data: the four levels, what each shows, and the scenes that use it.
+  // The Levels panel (R9) is drawn from data: the four levels, what each shows, and the scenes that use each, then
+  // the two kinds of picture that are not a level of the solution.
   const RUNGS = [
     ['L1', 'Context', 'The solution as one box, with the people and outside things it touches'],
     ['L2', 'Functions', 'The major parts and how they relate'],
     ['L3', 'Components', 'What is inside one part'],
     ['L4', 'Code', 'Folders, files, and config, in the map only'],
   ];
-  const ladderHtml = () => `<ol class="ladder">${RUNGS.map(([lvl, name, line]) => {
-    const used = S.scenes.filter((x) => x.level === lvl);
-    return `<li data-level="${lvl}"><strong>${name}</strong> <span class="line">${esc(line)}</span> <span class="uses">${used.length ? used.map((x) => `<a href="#${x.id}">${x.id}</a>`).join(' ') : 'Map only'}</span></li>`;
-  }).join('')}</ol>`;
+  const sceneLinks = (lvl) => S.scenes.filter((x) => x.level === lvl).map((x) => `<a href="#${x.id}" title="${esc(x.title)}">${x.id}</a>`).join(' ');
+  // Code is never a scene: its row says so and opens the map (R15).
+  const ladderHtml = () => `<ol class="ladder">${RUNGS.map(([lvl, name, line]) => `<li data-level="${lvl}" id="levels-${lvl}"><strong>${name}</strong> <span class="line">${esc(line)}</span> <span class="uses">${sceneLinks(lvl) || (lvl === 'L4' ? '<button class="open-map" type="button">Map only: open the map</button>' : 'No scene')}</span></li>`).join('')}</ol>`
+    + `<ul class="other-pictures">${[['before', 'Before', 'How it was done before the solution, and what hurt'], ['flow', 'Flow', 'One way it is used, step by step, through the parts already shown']]
+      .filter(([lvl]) => S.scenes.some((x) => x.level === lvl)).map(([lvl, name, line]) => `<li data-level="${lvl}" id="levels-${lvl}"><strong>${name}</strong> <span class="line">${esc(line)}</span> <span class="uses">${sceneLinks(lvl)}</span></li>`).join('')}</ul>`;
 
   // The level indicator for each scene (notation.md, Level indicator): which rungs are filled, the scope
   // beside it, and a tag on flow, title, and before scenes. A flow fills the rungs its steps come from; the
@@ -187,16 +190,21 @@ export function buildSite(siteDir, { strict = true } = {}) {
     const relsIn = M.rels.filter((r) => r.to === e.id).map((r) => `<li><strong>${esc(shownName(M.els.get(r.from)) || r.from)}</strong> ${esc(r.verb)} it <span class="type">(${r.kind})</span></li>`);
     const kids = (M.children.get(e.id) || []).map((c) => `<li>${esc(shownName(M.els.get(c)))} <span class="type">[${M.els.get(c).type}]</span></li>`);
     const scenesList = (appearsIn.get(e.id) || []).map((s) => `<li><a href="#${s.id}">${s.id}: ${esc(s.title)}</a></li>`);
+    // Short sections with a row of jumps at the top, so a long panel is never one long scroll (R14).
+    const secs = [
+      ['what', 'What it does', (e.what_it_does || []).length ? `<ul>${e.what_it_does.map((w) => `<li>${esc(w.text)}</li>`).join('')}</ul>` : ''],
+      ['why', 'Why separate', `<p>${esc(e.why_separate)}</p>`],
+      ['contains', 'Contains', kids.length ? `<ul>${kids.join('')}</ul>` : ''],
+      ['rels', 'Relationships', relsOut.length + relsIn.length ? `<ul>${[...relsOut, ...relsIn].join('')}</ul>` : ''],
+      ['inside', 'Inside', p.view ? linkify(inlineSvg(svgOf(p.view), `panel-${p.element}`)) : ''],
+      ['detail', 'Files', p.detail?.length ? p.detail.map(detailBlock).join('') : ''],
+      ['appears', 'Appears in', scenesList.length ? `<ul>${scenesList.join('')}</ul>` : '<p>Map only.</p>'],
+    ].filter(([, , body]) => body);
     return `<section data-panel="${esc(e.id)}" hidden>`
       + `<h3>${esc(shownName(e))}</h3><div class="type">[${e.type}]${e.tech ? ` · ${esc(e.tech)}` : ''}</div>`
-      + `<h4>Responsibility</h4><p>${esc(e.responsibility)}</p>`
-      + ((e.what_it_does || []).length ? `<h4>What it does</h4><ul>${e.what_it_does.map((w) => `<li>${esc(w.text)}</li>`).join('')}</ul>` : '')
-      + `<h4>Why it is separate</h4><p>${esc(e.why_separate)}</p>`
-      + (kids.length ? `<h4>Contains</h4><ul>${kids.join('')}</ul>` : '')
-      + (relsOut.length + relsIn.length ? `<h4>Relationships</h4><ul>${[...relsOut, ...relsIn].join('')}</ul>` : '')
-      + (p.view ? `<h4>Inside</h4>${linkify(inlineSvg(svgOf(p.view), `panel-${p.element}`))}` : '')
-      + (p.detail?.length ? `<h4>Detail</h4>${p.detail.map(detailBlock).join('')}` : '')
-      + `<h4>Appears in</h4>${scenesList.length ? `<ul>${scenesList.join('')}</ul>` : '<p>Map only.</p>'}`
+      + `<p class="resp">${esc(e.responsibility)}</p>`
+      + `<nav class="jumps" aria-label="Sections">${secs.map(([k, t]) => `<button class="jump" type="button" data-to="${k}">${t}</button>`).join('')}</nav>`
+      + secs.map(([k, t, body]) => `<h4 data-sec="${k}">${t}</h4>${body}`).join('')
       + `</section>`;
   }).join('\n');
 
@@ -223,6 +231,7 @@ ${hasTheme ? '<link rel="stylesheet" href="assets/theme/theme.css">' : ''}
 ${sceneHtml}
 </main>
 <div class="map" id="map" role="dialog" aria-label="Map: reference layer" aria-hidden="true">
+<button class="overlay-close" type="button" aria-label="Close the map" title="Close the map (M or Escape)">&#215;</button>
 <div class="views"><h2>Map</h2><p class="label">Reference layer. Select any element for its details. M or Escape closes the map.</p>
 ${overview}
 </div>
@@ -230,14 +239,20 @@ ${overview}
 ${panels}
 </aside>
 </div>
-<p class="hint" role="note" hidden>&#8594; or Space to advance &#183; M for the map &#183; &#8853; on a box for what it does</p>
-<ol class="progress" aria-hidden="true">${S.scenes.map((s) => `<li data-scene="${s.id}" data-level="${s.level}" title="${esc(s.id + ': ' + s.title)}"></li>`).join('')}</ol>
+<div class="levels" id="levels" role="dialog" aria-label="Levels: how to read the pictures" aria-hidden="true">
+<button class="overlay-close" type="button" aria-label="Close the levels" title="Close the levels (L or Escape)">&#215;</button>
+<h2>Levels</h2><p class="label">Each picture shows one level of the solution, from the whole down to its files. The bar shows the level of the scene on screen. L or Escape closes this.</p>
+${ladderHtml()}
+</div>
+<p class="hint" role="note" hidden>&#8594; or Space to advance &#183; M for the map &#183; L for the levels &#183; &#8853; on a box for what it does</p>
+<ol class="progress" aria-label="Scenes">${S.scenes.map((s) => `<li data-scene="${s.id}" data-level="${s.level}"><button type="button" data-scene="${s.id}" title="${esc(s.id + ': ' + s.title)}" aria-label="${esc(s.id + ': ' + s.title)}"></button></li>`).join('')}</ol>
 <nav class="chrome" aria-label="Presentation controls">
 <button class="prev" type="button" aria-label="Previous step" title="Previous (&#8592;)">&#8592;</button>
 <span class="where" aria-live="polite"></span>
-<div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li data-rung="L1">Context</li><li data-rung="L2">Functions</li><li data-rung="L3">Components</li><li data-rung="L4">Code</li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
+<div class="level-indicator" role="group" aria-label="Level"><ol class="rungs"><li><button type="button" data-rung="L1" title="Context: what this level shows">Context</button></li><li><button type="button" data-rung="L2" title="Functions: what this level shows">Functions</button></li><li><button type="button" data-rung="L3" title="Components: what this level shows">Components</button></li><li><button type="button" data-rung="L4" title="Code: in the map only, never a scene">Code</button></li></ol><span class="lv-tag"></span><span class="lv-scope"></span></div>
 <button class="pointtoggle quiet" type="button" aria-pressed="true" aria-keyshortcuts="P" title="Show or hide the message (P)">Message</button>
-<button class="maptoggle quiet" type="button" aria-keyshortcuts="M" title="Open the map (M)">Map</button>
+<button class="levelstoggle quiet" type="button" aria-pressed="false" aria-controls="levels" aria-keyshortcuts="L" title="How to read the levels (L)">Levels</button>
+<button class="maptoggle quiet" type="button" aria-pressed="false" aria-controls="map" aria-keyshortcuts="M" title="Open the map (M)">Map</button>
 <button class="rm quiet small" type="button" aria-pressed="false" aria-keyshortcuts="R" title="Reduced motion (R)">Less motion</button>
 <button class="next" type="button" aria-label="Next step" title="Next (&#8594; or Space)">&#8594;</button>
 </nav>

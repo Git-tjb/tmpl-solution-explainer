@@ -230,6 +230,8 @@
 
   // ---------- position strip and first-screen hint (R21) ----------
   var progress = document.querySelectorAll('.progress li');
+  // Each segment takes the viewer to its scene (R12).
+  each(document.querySelectorAll('.progress button'), function (b, i) { b.addEventListener('click', function () { closeOverlay(); go(i, 0, 'jump'); }); });
   var hint = document.querySelector('.hint');
   var hintDone = false;
   function hideHint() { hintDone = true; if (hint) hint.hidden = true; }
@@ -258,8 +260,7 @@
     var id = spec(si).id;
     root.setAttribute('data-scene', id);
     root.setAttribute('data-step', String(step));
-    // Position in the explainer (R21): scene of total, then the step when the scene has steps.
-    where.textContent = (si + 1) + ' / ' + scenes.length + (maxStep(si) ? ' · step ' + step + ' of ' + maxStep(si) : '');
+    showWhere();
     each(progress, function (li, i) { li.classList.toggle('current', i === si); li.classList.toggle('done', i < si); });
     if (si > 0 || step > 0) hideHint(); // anywhere but the very start, by any route
     fitLegend(sceneEl);
@@ -274,14 +275,52 @@
   function next() { if (state.step < maxStep(state.si)) go(state.si, state.step + 1, 'forward'); else if (state.si < scenes.length - 1) go(state.si + 1, 0, 'forward'); }
   function prev() { if (state.step > 0) go(state.si, state.step - 1, 'back'); else if (state.si > 0) go(state.si - 1, maxStep(state.si - 1), 'back'); }
 
-  // ---------- map ----------
-  function openMap(panelId) {
-    mapEl.classList.add('open');
-    mapEl.setAttribute('aria-hidden', 'false');
-    root.setAttribute('data-map', 'open');
-    if (panelId) showPanel(panelId);
+  // ---------- overlays: the map and the Levels panel (R9, R13) ----------
+  // One at a time. While one is open, its button shows pressed, the bar names it in place of the scene's position,
+  // prev and next are disabled, and the strip is quiet (base.css), so the bar shows no stale scene state.
+  var levelsEl = document.getElementById('levels');
+  var prevBtn = document.querySelector('.chrome .prev'), nextBtn = document.querySelector('.chrome .next');
+  var OVERLAYS = { map: [mapEl, document.querySelector('.chrome .maptoggle'), 'Map'], levels: [levelsEl, document.querySelector('.chrome .levelstoggle'), 'Levels'] };
+  var overlay = null;
+  // Position in the explainer (R21): scene of total, then the step when the scene has steps.
+  function showWhere() {
+    if (overlay) { where.textContent = OVERLAYS[overlay][2]; return; }
+    if (state.si >= 0) where.textContent = (state.si + 1) + ' / ' + scenes.length + (maxStep(state.si) ? ' · step ' + state.step + ' of ' + maxStep(state.si) : '');
   }
-  function closeMap() { mapEl.classList.remove('open'); mapEl.setAttribute('aria-hidden', 'true'); root.removeAttribute('data-map'); }
+  function setOverlay(name) {
+    overlay = name;
+    Object.keys(OVERLAYS).forEach(function (k) {
+      var o = OVERLAYS[k], on = k === name;
+      if (!o[0]) return;
+      o[0].classList.toggle('open', on);
+      o[0].setAttribute('aria-hidden', String(!on));
+      if (o[1]) o[1].setAttribute('aria-pressed', String(on));
+    });
+    if (name) root.setAttribute('data-overlay', name); else root.removeAttribute('data-overlay');
+    if (name === 'map') root.setAttribute('data-map', 'open'); else root.removeAttribute('data-map');
+    prevBtn.disabled = nextBtn.disabled = !!name;
+    showWhere();
+  }
+  function closeOverlay() { setOverlay(null); }
+  function openMap(panelId) { setOverlay('map'); if (panelId) showPanel(panelId); }
+  function closeMap() { if (overlay === 'map') closeOverlay(); }
+  // The Levels panel opens at a rung when a level pill asks for it (R10).
+  function openLevels(rung) {
+    setOverlay('levels');
+    var row = rung && document.getElementById('levels-' + rung);
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+    if (row) { each(levelsEl.querySelectorAll('.asked'), function (x) { x.classList.remove('asked'); }); row.classList.add('asked'); }
+  }
+  each(document.querySelectorAll('.overlay-close'), function (b) { b.addEventListener('click', closeOverlay); });
+  each(document.querySelectorAll('.chrome [data-rung]'), function (b) { b.addEventListener('click', function () { openLevels(b.getAttribute('data-rung')); }); });
+  each(document.querySelectorAll('#levels .open-map'), function (b) { b.addEventListener('click', function () { openMap(); }); });
+  // A map panel's sections: the jumps at its top scroll the panel to one (R14).
+  each(mapEl.querySelectorAll('.panel .jump'), function (b) {
+    b.addEventListener('click', function () {
+      var h = b.closest('section').querySelector('[data-sec="' + b.getAttribute('data-to') + '"]');
+      if (h && h.scrollIntoView) h.scrollIntoView({ block: 'start' });
+    });
+  });
   function showPanel(id) {
     var found = false;
     each(mapEl.querySelectorAll('.panel section'), function (s) { var on = s.getAttribute('data-panel') === id; s.hidden = !on; if (on) found = true; });
@@ -289,13 +328,13 @@
     if (empty) empty.hidden = found;
     root.setAttribute('data-panel', found ? id : '');
   }
-  each(mapEl.querySelectorAll('a[href^="#S"]'), function (a) {
+  each(document.querySelectorAll('#map a[href^="#S"], #levels a[href^="#S"]'), function (a) {
     a.addEventListener('click', function (ev) {
       ev.preventDefault();
       var s = /^#(S\d\d)(?:\.(\d+))?$/.exec(a.getAttribute('href'));
       var si = -1;
       D.scenes.forEach(function (x, i) { if (s && x.id === s[1]) si = i; });
-      closeMap();
+      closeOverlay();
       if (si >= 0) go(si, s[2] ? parseInt(s[2], 10) : 0, 'jump');
     });
   });
@@ -315,7 +354,7 @@
     var si = -1;
     D.scenes.forEach(function (x, i) { if (x.id === s[1]) si = i; });
     if (si < 0) return;
-    closeMap();
+    closeOverlay();
     go(si, s[2] ? parseInt(s[2], 10) : 0, 'jump');
   }
   window.addEventListener('hashchange', function () { if (location.hash === lastSet) return; fromHash(); });
@@ -329,14 +368,15 @@
   document.addEventListener('keydown', function (ev) {
     if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
     var k = ev.key;
-    if (k === 'm' || k === 'M') { if (mapEl.classList.contains('open')) closeMap(); else openMap(); ev.preventDefault(); return; }
+    if (k === 'm' || k === 'M') { if (overlay === 'map') closeOverlay(); else openMap(); ev.preventDefault(); return; }
+    if (k === 'l' || k === 'L') { if (overlay === 'levels') closeOverlay(); else openLevels(); ev.preventDefault(); return; }
     if (k === 'Escape') {
-      if (!mapEl.classList.contains('open') && state.si >= 0 && scenes[state.si].querySelector('.popover')) { collapse(scenes[state.si]); return; }
-      closeMap(); return;
+      if (!overlay && state.si >= 0 && scenes[state.si].querySelector('.popover')) { collapse(scenes[state.si]); return; }
+      closeOverlay(); return;
     }
     if (k === 'r' || k === 'R') { setReduced(!reducedToggle); return; }
     if (k === 'p' || k === 'P') { setPoints(root.classList.contains('hide-points')); return; }
-    if (mapEl.classList.contains('open')) return;
+    if (overlay) return;
     if (k === 'ArrowRight' || k === ' ' || k === 'PageDown') { ev.preventDefault(); next(); }
     else if (k === 'ArrowLeft' || k === 'PageUp') { ev.preventDefault(); prev(); }
     else if (k === 'Home') { ev.preventDefault(); go(0, 0, 'jump'); }
@@ -349,7 +389,8 @@
   });
   document.querySelector('.chrome .next').addEventListener('click', next);
   document.querySelector('.chrome .prev').addEventListener('click', prev);
-  document.querySelector('.chrome .maptoggle').addEventListener('click', function () { if (mapEl.classList.contains('open')) closeMap(); else openMap(); });
+  document.querySelector('.chrome .maptoggle').addEventListener('click', function () { if (overlay === 'map') closeOverlay(); else openMap(); });
+  document.querySelector('.chrome .levelstoggle').addEventListener('click', function () { if (overlay === 'levels') closeOverlay(); else openLevels(); });
   rmBtn.addEventListener('click', function () { setReduced(!reducedToggle); });
   if (mq.addEventListener) mq.addEventListener('change', function () { root.classList.toggle('reduced', reduced()); });
 
@@ -362,10 +403,11 @@
     sceneCount: scenes.length,
     hintShown: function () { return !!hint && !hint.hidden; },
     pointsShown: function () { return !root.classList.contains('hide-points'); },
+    overlay: function () { return overlay; },
   };
 
   root.classList.toggle('reduced', reduced());
-  closeMap();
+  closeOverlay();
   if (location.hash) fromHash();
   if (state.si < 0) go(0, 0, 'jump');
   // The hint shows once, on the first scene, until the first advance.

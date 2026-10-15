@@ -22,7 +22,7 @@ stage 06 agent and recorded in the report.
 | AC-9 | Every diagram is a rendered SVG from the model with a title, a legend, and type labels; one level per view; at most 9 elements per view and 12 nodes per flow; every flow node bound to an element | script |
 | AC-10 | Scene 1 is answer-first and the last scene returns to it; one mode and one level per scene; no reference content on the path; usage examples introduce no new elements | script, then review |
 | AC-11 | Every scene in the page maps to a storyboard scene ID, and every on-screen claim traces to a fact in the fact sheet | script (IDs), review (claims) |
-| AC-16 | Every scene shows its level in the one form `notation.md` defines (the level indicator in the chrome, the badge in every diagram), and the orientation scene comes before the first L2 or L3 scene | script |
+| AC-16 | Every scene shows its level in the one form `notation.md` defines (the level indicator in the chrome, the badge in every diagram); the title and before scenes fill no rung and carry their tag | script |
 | AC-17 | Every element with `what_it_does` can be expanded to show it in any wired or flow view (a structure view shows it in the box), and the bullets trace to the fact sheet; at both viewports the popover never covers its own marker, and its close control, the marker, and Escape each close it | script |
 | AC-18 | The functional structure (a structure view) is shown before any flow | script |
 
@@ -54,6 +54,14 @@ through `scripts/lib/page-checks.mjs`). AC-6's label size runs at every step too
 | AC-26 | Every scene title and message is at most two lines | script |
 | AC-27 | The first screen shows how to advance (the hint) and where the viewer is (the position and the strip) | script |
 | AC-28 | No line runs through text other than its own label | script |
+
+## Controls
+Checked once per browser and viewport, with real pointer and keyboard input.
+
+| ID | Criterion | Check |
+| --- | --- | --- |
+| AC-29 | Every button and clickable diagram element (the bar, the strip, expand markers, map elements, panel jumps, close controls) looks different on hover and when pressed than at rest | script |
+| AC-30 | Each strip segment lands on its scene. The map and the Levels panel each show their button pressed, a visible close control, and no scene position while open, with prev and next disabled; the close control, their key (M, L), and Escape each close them; only one is open at a time; a level pill opens the Levels panel at its level; "Map only" for Code opens the map; a scene link in the Levels panel lands on its scene | script |
 
 ## Review at stage 06
 Judged by the stage 06 agent from the screenshots, and recorded in `verify-report.md`:
