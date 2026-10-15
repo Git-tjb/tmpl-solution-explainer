@@ -72,10 +72,22 @@ a { color: var(--c-highlight); }
 
 /* Diagram states (notation.md, Highlight states) */
 svg.diagram .is-hidden, .text p.is-hidden { opacity: 0; }
-svg.diagram.has-hl .node:not(.hl), svg.diagram.has-hl .edge:not(.hl), svg.diagram.has-hl .boundary:not(.hl) { opacity: 0.35; }
+/* Dimmed: quiet but readable. Outlines take --c-dim, text takes --text-dim (at least 4.5:1), lines fade; no
+   opacity on text. Expand markers are never dimmed. In a flow, a highlight emphasises its steps and dims
+   nothing, so the rest of the flow never looks switched off. */
+svg.diagram.has-hl:not([data-level="flow"]) .node:not(.hl) .shape,
+svg.diagram.has-hl:not([data-level="flow"]) .boundary:not(.hl) rect { stroke: var(--c-dim) !important; }
+svg.diagram.has-hl:not([data-level="flow"]) .node:not(.hl) text,
+svg.diagram.has-hl:not([data-level="flow"]) .boundary:not(.hl) text,
+svg.diagram.has-hl:not([data-level="flow"]) .edge:not(.hl) text { fill: var(--text-dim); }
+svg.diagram.has-hl:not([data-level="flow"]) .node:not(.hl) .bullet { fill: var(--text-dim); }
+svg.diagram.has-hl:not([data-level="flow"]) .edge:not(.hl) path.line,
+svg.diagram.has-hl:not([data-level="flow"]) .edge:not(.hl) .leader { opacity: 0.45; }
+/* Highlighted or traced: full strength in the focus colour, the name bold (notation.md, Highlight states). */
 svg.diagram .node.hl .shape { stroke: var(--c-highlight) !important; stroke-width: 3px; }
-svg.diagram .edge.hl path.line { stroke: var(--c-highlight); stroke-width: 3px; }
-svg.diagram .edge.traced path.line { stroke: var(--c-highlight); }
+svg.diagram .node.hl .name, svg.diagram .node.hl .lbl { font-weight: 700; }
+svg.diagram .edge.hl path.line { stroke: var(--c-highlight); stroke-width: 3px; opacity: 1; }
+svg.diagram .edge.hl text { fill: var(--c-highlight); font-weight: 600; }
 svg.diagram .tracer { fill: var(--c-highlight); }
 svg.diagram .node.has-link { cursor: pointer; }
 

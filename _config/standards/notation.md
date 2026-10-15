@@ -8,22 +8,26 @@ A run never edits this file. Changes are made in the template.
 
 ## Color
 
-Color is semantic and limited: it encodes type or highlight state, never decoration. This file names the
-color tokens and what they mean; stage 04 sets their values in `tokens.css`, within
-`_config/visual-direction.md`. No meaning is carried by color alone: every type also differs by shape or
-outline, so it survives screen-share compression and color-vision differences.
+Color has roles, and each color one role: a color that means focus in one place never means a level or a
+type in another. Types are told apart by shape and line style (the tables below), so they use neutrals. This
+file names the tokens and their roles; stage 04 sets their values in `tokens.css` (or a run theme), within
+`_config/visual-direction.md`. `check-design` enforces the roles with the limits in `build-rules.md`.
 
-| Token | Meaning |
-| --- | --- |
-| `--c-system` | the system boundary and system element |
-| `--c-internal` | functions, components, and stores (inside the system) |
-| `--c-actor` | actors |
-| `--c-external` | externals |
-| `--c-human` | human relationships and gates |
-| `--c-highlight` | the highlighted subset in the current state |
-| `--c-dim` | everything not highlighted, when a highlight is active |
-| `--c-edge` | relationship and flow-edge lines and labels |
-| `--lv-1`, `--lv-2`, `--lv-3`, `--lv-flow` | the level (Context, Functions, Components, Flow): the scene's message rule, and level outlines in a mixed-level view |
+| Role | Token | Used for |
+| --- | --- | --- |
+| Focus | `--c-highlight` | what the current step highlights or traces, and keyboard focus. Nothing else. |
+| Level | `--lv-1`, `--lv-2`, `--lv-3`, `--lv-flow` | Context, Functions, Components, Flow: the scene's message rule, level outlines and the level key in a mixed-level view, and the level shown in the page chrome |
+| Structure (neutral) | `--c-system` | the system boundary and system element |
+| | `--c-internal` | functions, components, and stores |
+| | `--c-actor` | actors |
+| | `--c-external` | externals |
+| | `--c-human` | human relationships and gates |
+| | `--c-edge` | relationship and flow-edge lines and labels |
+| Quiet | `--c-dim` | outlines of what is not highlighted, when a highlight is active |
+| | `--text-dim` | text of what is not highlighted (at least 4.5:1) |
+
+Structure tokens may differ in lightness but not in hue: they are neutrals. Each focus and level color is a
+distinct hue.
 
 ## Element types
 
@@ -104,8 +108,14 @@ Every flow node shows its step number in a circle at its top-left corner. Flow e
 
 ## Highlight states
 
-- **Highlighted:** outline switches to `--c-highlight` at 3px; label weight unchanged.
-- **Dimmed:** the element keeps its shape and outline style and drops to 35% opacity. Text stays legible
-  against the background at 3:1 or better.
+- **Highlighted:** the outline switches to `--c-highlight` at 3px and the element's name turns bold. A
+  highlighted line is drawn in `--c-highlight` at 3px with its label in the same color.
+- **Traced:** a traced line is highlighted: it and its label stay at full strength in `--c-highlight` for the
+  rest of the scene's steps.
+- **Dimmed:** in a structure, context, or component view with a highlight active, everything else keeps its
+  shape and outline style, its outline takes `--c-dim`, its text takes `--text-dim` (at least 4.5:1, never by
+  opacity), and its lines fade. Expand markers are never dimmed.
+- **Flows:** a highlight in a flow view emphasises its steps and dims nothing, so the rest of the flow never
+  looks switched off.
 - **Revealed / hidden:** a hidden element is not drawn yet; reveal adds it in its final position. Layout
   never moves when something is revealed.

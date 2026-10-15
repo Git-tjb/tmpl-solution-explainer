@@ -3,11 +3,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { P, main, Report, validate, readJson, readYaml, readText, loadModel, loadFlows, runAnswers,
-  defaultViewElements, viewElements, viewRelationships, loadTokens, hexToRgb, contrast, walk } from './lib/common.mjs';
+  defaultViewElements, viewElements, viewRelationships, loadTokens, hexToRgb, contrast, oklch, hueGap, walk } from './lib/common.mjs';
 
 const TITLE = { L1: 'Context', L2: 'Functions', L3: 'Components', flow: 'Flow' };
 export const REQUIRED_TOKENS = ['--bg', '--surface', '--text', '--text-muted', '--c-system', '--c-internal', '--c-actor',
-  '--c-external', '--c-human', '--c-highlight', '--c-dim', '--c-edge', '--lv-1', '--lv-2', '--lv-3', '--lv-flow'];
+  '--c-external', '--c-human', '--c-highlight', '--c-dim', '--c-edge', '--lv-1', '--lv-2', '--lv-3', '--lv-flow', '--text-dim'];
+// Colour roles (notation.md, Colour): structure tokens are neutral; each role colour reads as its own hue.
+export const STRUCTURE_TOKENS = ['--c-system', '--c-internal', '--c-actor', '--c-external', '--c-human', '--c-edge'];
+export const ROLE_TOKENS = ['--c-highlight', '--lv-1', '--lv-2', '--lv-3', '--lv-flow'];
+export const ROLE_LIMITS = { neutral_max_chroma: 0.04, role_min_chroma: 0.06, role_min_hue_gap: 30 };
 
 export function loadViewSpecs() {
   const specs = new Map();
@@ -141,13 +145,28 @@ export function checkDesign(report) {
   const tokens = loadTokens();
   for (const t of REQUIRED_TOKENS) report.check(!!tokens[t], `tokens.css is missing ${t}`);
   const rgb = (t) => (tokens[t] ? hexToRgb(tokens[t]) : null);
-  const pairs = [['--text', '--bg', 7], ['--text-muted', '--bg', 7], ['--text', '--surface', 7], ['--text-muted', '--surface', 7]];
+  const pairs = [['--text', '--bg', 7], ['--text-muted', '--bg', 7], ['--text', '--surface', 7], ['--text-muted', '--surface', 7],
+    // Dimmed text is quiet but readable (build-rules.md); highlighted labels are text in the focus colour.
+    ['--text-dim', '--bg', 4.5], ['--text-dim', '--surface', 4.5], ['--c-highlight', '--bg', 7]];
   for (const t of REQUIRED_TOKENS.filter((t) => (t.startsWith('--c-') && t !== '--c-dim') || t.startsWith('--lv-'))) pairs.push([t, '--bg', 3]);
   for (const [a, b, min] of pairs) {
     const ca = rgb(a), cb = rgb(b);
     if (!report.check(!!ca && !!cb, `tokens ${a} and ${b} must be 3- or 6-digit hex colors`)) continue;
     const c = contrast(ca, cb);
     report.check(c >= min, `contrast ${a} on ${b} is ${c.toFixed(2)}:1 (min ${min}:1)`);
+  }
+  const lch = (t) => (rgb(t) ? oklch(rgb(t)) : null);
+  for (const t of STRUCTURE_TOKENS) {
+    const c = lch(t);
+    if (c) report.check(c.C <= ROLE_LIMITS.neutral_max_chroma, `${t} is a structure colour and must be neutral (OKLCH chroma ${c.C.toFixed(3)}, max ${ROLE_LIMITS.neutral_max_chroma}); types differ by shape and line, not colour`);
+  }
+  for (const t of ROLE_TOKENS) {
+    const c = lch(t);
+    if (c) report.check(c.C >= ROLE_LIMITS.role_min_chroma, `${t} must read as a colour (OKLCH chroma ${c.C.toFixed(3)}, min ${ROLE_LIMITS.role_min_chroma})`);
+  }
+  for (let i = 0; i < ROLE_TOKENS.length; i++) for (let j = i + 1; j < ROLE_TOKENS.length; j++) {
+    const a = lch(ROLE_TOKENS[i]), b = lch(ROLE_TOKENS[j]);
+    if (a && b) report.check(hueGap(a.h, b.h) >= ROLE_LIMITS.role_min_hue_gap, `${ROLE_TOKENS[i]} and ${ROLE_TOKENS[j]} are ${hueGap(a.h, b.h).toFixed(0)} degrees apart in hue (min ${ROLE_LIMITS.role_min_hue_gap}): one colour would mean two things`);
   }
 }
 

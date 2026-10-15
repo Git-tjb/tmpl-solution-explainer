@@ -79,7 +79,16 @@ them under "What it does".
   `render-diagrams --preview` warns per scene; narrow or split the view, or give the scene the
   `diagram-wide` or `diagram` layout.
 - No hairline strokes: every stroke at least 2px.
-- Text contrast at least 7:1 against its background; dimmed diagram text at least 3:1.
+- Text contrast at least 7:1 against its background, `--c-highlight` included (it colors highlighted labels);
+  dimmed diagram text (`--text-dim`) at least 4.5:1, on `--bg` and on `--surface`.
+
+## Color roles
+`standards/notation.md` gives each color one role. `check-design` checks the tokens (a run theme's included)
+with these limits, in OKLCH:
+- Structure tokens (`--c-system`, `--c-internal`, `--c-actor`, `--c-external`, `--c-human`, `--c-edge`) are
+  neutral: chroma at most 0.04.
+- Role colors (`--c-highlight`, `--lv-1`, `--lv-2`, `--lv-3`, `--lv-flow`) read as colors: chroma at least
+  0.06, and every two at least 30 degrees apart in hue.
 
 ## Navigation
 | Key | Does |

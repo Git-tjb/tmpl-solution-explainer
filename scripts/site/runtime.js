@@ -106,7 +106,7 @@
     var svg = sceneEl.querySelector('svg.diagram');
     if (!svg) return;
     svg.classList.add('has-hl');
-    ids.forEach(function (t) { each(find(sceneEl, t), function (el) { el.classList.add('hl'); animate(el, [{ opacity: 0.35 }, { opacity: 1 }], ms); }); });
+    ids.forEach(function (t) { each(find(sceneEl, t), function (el) { el.classList.add('hl'); animate(el, [{ opacity: 0.6 }, { opacity: 1 }], ms); }); });
   }
   function apply(sceneEl, si, a, animated) {
     var ms = animated ? (a.duration_ms || 0) : 0;
@@ -124,8 +124,9 @@
     else if (a.do === 'expand') targets.forEach(function (t) { expand(sceneEl, t, ms); });
     else if (a.do === 'collapse') targets.forEach(function (t) { collapse(sceneEl, t); });
   }
+  // A traced edge is part of what the step is about: it stays highlighted at full strength (notation.md).
   function trace(edge, ms) {
-    edge.classList.add('traced');
+    edge.classList.add('traced', 'hl');
     var path = edge.querySelector('path.line');
     if (!path || reduced() || !ms || !path.getTotalLength) return;
     var len = path.getTotalLength(), frames = [];

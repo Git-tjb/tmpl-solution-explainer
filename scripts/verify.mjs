@@ -193,7 +193,8 @@ async function legibility(page, label, tokens) {
       for (const t of svg.querySelectorAll('.nodes text, .edges text, .boundaries text')) {
         if (t.closest('.is-hidden')) continue;
         min = Math.min(min, parseFloat(getComputedStyle(t).fontSize) * scale);
-        if (!t.closest('.node:not(.hl)') || !svg.classList.contains('has-hl')) out.colors.push({ what: `diagram label "${t.textContent.slice(0, 20)}"`, c: rgb(getComputedStyle(t).fill) });
+        const dimmed = svg.classList.contains('has-hl') && svg.dataset.level !== 'flow' && !!t.closest('.node:not(.hl), .edge:not(.hl), .boundary:not(.hl)');
+        out.colors.push({ what: `${dimmed ? 'dimmed ' : ''}diagram label "${t.textContent.slice(0, 20)}"`, c: rgb(getComputedStyle(t).fill), min: dimmed ? 4.5 : 7 });
       }
       if (min < 16 * k - 0.05) out.small.push(`diagram labels render at ${min.toFixed(1)}px (scale ${scale.toFixed(2)}); min ${(16 * k).toFixed(1)}px`);
       if (r.right > innerWidth + 1 || r.bottom > innerHeight + 1) out.overflow.push('diagram extends past the viewport');
@@ -203,11 +204,12 @@ async function legibility(page, label, tokens) {
   });
   for (const m of [...res.small, ...res.overflow]) fail('AC-6', `${label}: ${m}`);
   const seen = new Set();
-  for (const { what, c } of res.colors) {
+  for (const { what, c, min: cmin } of res.colors) {
     if (c.length < 3) continue;
     const ratio = contrast(c, bg);
     const key = c.join(',');
-    if (ratio < 7 && !seen.has(key)) { seen.add(key); fail('AC-6', `${label}: ${what} contrast ${ratio.toFixed(2)}:1 (min 7:1)`); }
+    const min = cmin || 7;
+    if (ratio < min && !seen.has(key)) { seen.add(key); fail('AC-6', `${label}: ${what} contrast ${ratio.toFixed(2)}:1 (min ${min}:1)`); }
   }
 }
 

@@ -13,9 +13,11 @@ landing page. Diagrams carry the explanation; text is labels and short statement
 ## Palette
 - Deep neutral background, not pure black.
 - Neutrals for structure (boundaries, rules, secondary text).
-- A small set of semantic accents, one per notation color token. No accent is decorative.
+- Colour has roles (`standards/notation.md`, Colour): one focus accent, four level colours, and neutrals for
+  every element and line. No accent is decorative, and no colour has two roles.
 
-Default values (stage 04 may adjust; every text pair must still meet 7:1, see `build-rules.md`):
+Default values (stage 04 may adjust; every text pair must still meet 7:1, dimmed text 4.5:1, and the colour-role
+limits must hold, see `build-rules.md`):
 
 | Token | Default | Use |
 | --- | --- | --- |
@@ -24,12 +26,13 @@ Default values (stage 04 may adjust; every text pair must still meet 7:1, see `b
 | `--text` | `#eceae4` | body text |
 | `--text-muted` | `#b9b6ad` | secondary text |
 | `--c-system` | `#eceae4` | notation |
-| `--c-internal` | `#8fb8de` | notation |
-| `--c-actor` | `#e6c27a` | notation |
+| `--c-internal` | `#b4b8bd` | notation (neutral) |
+| `--c-actor` | `#d6d2c9` | notation (neutral) |
 | `--c-external` | `#a8a49a` | notation |
-| `--c-human` | `#e6c27a` | notation |
-| `--c-highlight` | `#7fd1b9` | notation |
-| `--c-dim` | `#5d6068` | notation |
+| `--c-human` | `#d6d2c9` | notation (neutral) |
+| `--c-highlight` | `#7fd1b9` | focus, the one accent for what a step is about |
+| `--c-dim` | `#5d6068` | dimmed outlines |
+| `--text-dim` | `#8a8d94` | dimmed text (5.4:1 on `--bg`) |
 | `--c-edge` | `#c9c6be` | notation |
 | `--lv-1` | `#e8b06a` | level: Context |
 | `--lv-2` | `#8fb8de` | level: Functions |
