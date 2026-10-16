@@ -55,3 +55,65 @@ colour, because the arrow markers are shared per line kind.
 `context-stroke` where all three browsers support it.
 
 **Touches.** `render-diagrams.mjs` (markers), `scripts/site/base.css`.
+
+## S13. Art direction and a critique of the look
+
+Raised 2026-10-15, from a review of the open-source taste-skill project (an art-direction skill for landing
+pages, MIT licence) for what it could add to stage 04.
+
+**What.** Every check in the template covers legibility, correctness, or a banned pattern. Nothing gives a run's
+look an idea of its own, and nothing judges composition. Stage 04 calls itself "where visual quality is set",
+but its agent only measures the mockups; judging the look is left entirely to the operator at the gate. The
+banned list covers the first wave of generated-page tells only, and a run theme is where the later ones would
+appear.
+
+**Wanted.**
+1. **A critique loop on the mockups, inside stage 04 before the operator's review.** After `mockups.mjs`, stage
+   04 critiques the contact sheet, judging the
+   pictures only, never the code. Passes, each made on its own:
+   - One second: one focal thing per scene, not "a diagram".
+   - Squint: two or three masses of clearly different size, not many medium ones.
+   - Cover the name: could this scene explain any other system? If so, the look has no idea.
+   - Edges: few, reused left edges across scenes.
+   - Sameness: one word for each scene's composition; the same word several times in a row is the template
+     showing.
+   - Accent: the focus colour marks one thing per screen, not ten.
+   - Holes: an empty area left by accident, not by decision.
+
+   The critique is written as a round: what was seen in one second, the idea, scores, caps applied, and the top
+   three problems, each with its screenshot and fix. Fix those three, run the mockups again, and stop after three
+   rounds or when a round finds nothing a stranger would notice. Only then does the stage stop for the operator,
+   who reviews the look with the rounds in front of them (in `design-spec.md` or beside the mockups). Stage 06's
+   screenshot review uses the same passes.
+2. **An idea for the look.** `design-spec.md` lists eight to twelve things only this solution has, taken from
+   the system model and storyboard (its name, its shape, what it produces, the artefacts of its world), then
+   states one sentence: "In this explainer, [something from that list] becomes [a visual device]." The
+   competitor test applies: with the nearest alternative's name in the sentence, it should stop working. The
+   sentence drives the theme (when `visual` is not `default`) and the title visual.
+3. **Later-wave tells added to `banned-patterns.md`**, worded for this template:
+   - Small uppercase letter-spaced labels and eyebrow labels above titles.
+   - Index numbering as ornament (01 / 02 / 03, "Step 02") where order is not the content.
+   - A cream ground with a terracotta or rust accent.
+   - One medium radius (12-16px) on every box.
+   - Monospace as a "technical" voice for anything other than paths, file names, and IDs.
+   - The focus accent used decoratively or in many places on one screen.
+4. **Explainer looks asked for at setup.** The template does not ship or offer a set of looks. The questionnaire
+   asks whether the operator has explainer looks in mind (other explainers, decks, or pages whose look they want
+   to draw on), and stage 04 works them into the design the way it works in the visual references.
+
+**Needs thought.** The operator wants to understand these better before deciding.
+- Scores and caps: a weighted score (taste-skill uses design, usability, creativity, content) with caps that
+  override it, or the written passes alone. Caps would need rewriting for this template (diagram legibility,
+  banned patterns, a scene with no focal point), since the source's are for marketing pages.
+- Measuring accent share per mockup (the source keeps the accent under 5% of any screen) in `mockups.mjs`.
+
+**Not taken from the source.** Its section library and the 247-site study (marketing pages), the floor of four
+photographs and the open-collection image search, the minimum number of moving elements (it conflicts with
+presenter-triggered motion), the ban on every line and on all monospace (diagrams need edges; IDs need
+monospace), the phone composition, its browser inspector (`mockups.mjs` and verify already measure), and a dealt
+library of looks (the operator decided against shipping looks; item 4 asks for them instead). Any text copied
+from the source keeps its MIT notice.
+
+**Touches.** `stages/04_design/CONTEXT.md` (process and Human Check), `stages/06_verify/CONTEXT.md` (the review),
+`_config/banned-patterns.md`, `_config/visual-direction.md` (the idea), `design-spec.md`'s expected sections,
+`setup/questionnaire.md` and `_config/run.md` (explainer looks), possibly `scripts/mockups.mjs` (accent share).
